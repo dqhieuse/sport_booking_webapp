@@ -90,8 +90,10 @@ Requirement ID: **FR-TIMESLOT**
 
 - The system has a list of bookable time slots.
 - Users can view available time slots for a court by date.
-- Vendor can manage bookable time slots for their own courts if needed.
+- Vendor can enable or disable bookable time slots for their own courts.
 - Admin can manage global time slot templates if the system uses shared time slots.
+- `time_slots` represents global slot templates.
+- `court_time_slots` represents which slots are enabled for each court.
 
 Example time slots:
 
@@ -106,6 +108,7 @@ Requirement ID: **FR-BOOKING**
 
 - Logged-in users can book a court.
 - Each booking belongs to one user, one court, one date, and one time slot.
+- The selected time slot must be enabled for the selected court.
 - The system does not allow duplicate bookings for the same court, date, and time slot.
 - The system does not allow bookings in the past.
 - Users can view their own booking history.

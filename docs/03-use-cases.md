@@ -199,6 +199,7 @@ Preconditions:
 
 - User is logged in.
 - The court exists.
+- The court has active configured time slots.
 - The selected date is not in the past.
 
 Main flow:
@@ -206,7 +207,7 @@ Main flow:
 1. User opens the booking page.
 2. User selects a booking date.
 3. Frontend calls the API to get available time slots for the court and date.
-4. The system loads all time slots.
+4. The system loads active time slots configured for the court from `court_time_slots`.
 5. The system excludes time slots that already have valid bookings.
 6. The system returns the available time slots.
 7. Frontend displays the available time slots.
@@ -214,6 +215,7 @@ Main flow:
 Alternative flow:
 
 - If the selected date is in the past, the system shows an error message.
+- If the court has no active configured time slots, the frontend shows that the court is not available for booking.
 - If there are no available time slots, the frontend shows a fully booked message.
 
 Result:
@@ -231,6 +233,7 @@ Preconditions:
 - User is logged in.
 - Court exists and is active.
 - Selected time slot is available.
+- Selected time slot is enabled for the selected court.
 - Booking date is not in the past.
 - User selects a payment method.
 
@@ -241,7 +244,7 @@ Main flow:
 3. User selects a time slot.
 4. User selects a payment method. The preferred method is prepaid online payment through VNPAY.
 5. User clicks confirm booking.
-6. The system validates the court, date, time slot, and payment method again.
+6. The system validates the court, date, time slot, court time slot configuration, and payment method again.
 7. The system checks duplicate bookings.
 8. The system creates a booking with status `PENDING`.
 9. The system creates payment information based on the selected payment method.
