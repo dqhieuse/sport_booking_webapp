@@ -15,6 +15,9 @@ Requirement ID: **FR-AUTH**
 - The system returns a JWT after successful login.
 - Logged-in users can view their profile information.
 - Passwords must be encrypted before being stored in the database.
+- Email/password accounts must verify email before they can log in and book courts.
+- Google login is allowed if Google returns a verified email.
+- Unverified accounts should be deleted or deactivated automatically after a configured period.
 - The system supports at least three roles: `USER`, `VENDOR`, and `ADMIN`.
 - `USER` represents a customer who books courts.
 - `VENDOR` represents a court owner or venue operator who manages their own venues, courts, and bookings.
@@ -120,7 +123,30 @@ Booking statuses:
 - `CANCELLED`: cancelled
 - `COMPLETED`: completed
 
-### 2.7. Vendor Dashboard
+### 2.7. Payment
+
+Requirement ID: **FR-PAYMENT**
+
+- Users must select a payment method when creating a booking.
+- The system supports two MVP payment methods: `VNPAY` and `CASH_AT_COURT`.
+- Prepaid `VNPAY` payment is the preferred method because it reduces no-show risk.
+- For `VNPAY`, the system creates a pending payment request and redirects the user to VNPAY.
+- The system must verify VNPAY callback/signature before marking payment as paid.
+- For `CASH_AT_COURT`, the booking is created as unpaid and Vendor marks it as paid after receiving cash.
+- Booking status and payment status must be tracked separately.
+- If a paid booking is cancelled, refund status must be tracked separately from booking status.
+
+Payment statuses:
+
+- `UNPAID`: not paid yet
+- `PENDING`: payment is being processed
+- `PAID`: payment completed
+- `FAILED`: payment failed
+- `REFUND_PENDING`: refund is requested or waiting for processing
+- `REFUNDED`: refund completed
+- `REFUND_FAILED`: refund failed and needs follow-up
+
+### 2.8. Vendor Dashboard
 
 Requirement ID: **FR-VENDOR**
 
@@ -131,7 +157,7 @@ Requirement ID: **FR-VENDOR**
 - Vendor can manage bookings for their own courts.
 - Vendor cannot manage venues, courts, or bookings that belong to another vendor.
 
-### 2.8. Admin Dashboard
+### 2.9. Admin Dashboard
 
 Requirement ID: **FR-ADMIN**
 
@@ -151,6 +177,7 @@ Requirement ID: **FR-ADMIN**
 Requirement ID: **NFR-SECURITY**
 
 - Passwords must be encrypted with BCrypt or an equivalent solution.
+- Email verification tokens and payment callback verification data must be handled securely.
 - Protected APIs must require a valid JWT.
 - Users must not access Vendor or Admin APIs.
 - Vendors must not access Admin APIs.
@@ -201,6 +228,7 @@ Requirement ID: **NFR-UI**
 - View the list of sports.
 - View the list of courts.
 - Book a court.
+- Pay by VNPAY or cash at court.
 - View booking history.
 - Vendor manages their own venues, courts, and bookings.
 - Admin manages sports and platform-level user/vendor administration.
@@ -222,7 +250,8 @@ Requirement ID: **NFR-UI**
 
 ### Won't Have in MVP
 
-- Online payment.
+- Advanced multi-provider online payment.
+- Automatic refund settlement.
 - Chat.
 - Map.
 - Court reviews.
