@@ -561,21 +561,19 @@ Response:
     "openingTime": "06:00",
     "closingTime": "22:00",
     "status": "ACTIVE",
+    "primaryImageUrl": "https://cdn.example.com/venues/venue-1-1.jpg",
     "vendor": {
       "id": 2,
       "fullName": "ABC Sports Owner"
-    },
-    "images": [
-      {
-        "id": 1,
-        "imageUrl": "https://cdn.example.com/venues/venue-1-1.jpg",
-        "isPrimary": true,
-        "sortOrder": 1
-      }
-    ]
+    }
   }
 }
 ```
+
+Note:
+
+- This endpoint returns only `primaryImageUrl`.
+- Use `GET /venues/{id}/images` to get the full venue image gallery.
 
 ### 6.3. Create Venue
 
@@ -710,6 +708,12 @@ Note:
 - Vendor can only upload images for venues they own.
 - Backend should validate file type and file size.
 - This API should reuse the same internal image storage service used by avatar and court image uploads.
+- `sortOrder` is optional. If omitted, the image is added to the end of the gallery.
+- If `sortOrder` is provided, existing images at that position and after it should be shifted down by one position.
+- If `sortOrder` is greater than the current image count + 1, backend should place the image at the end.
+- `sortOrder` must be greater than 0.
+- `isPrimary` is optional. If `true`, backend should unset `isPrimary` from other venue images in the same transaction.
+- If this is the first venue image, backend should set it as primary automatically.
 
 Content type:
 
@@ -721,6 +725,8 @@ Form data:
 
 ```text
 file=<image_file>
+sortOrder=2
+isPrimary=false
 ```
 
 Response:
@@ -884,25 +890,17 @@ Response:
       "openingTime": "06:00",
       "closingTime": "22:00"
     },
-    "images": [
-      {
-        "id": 1,
-        "imageUrl": "https://cdn.example.com/courts/court-1-1.jpg",
-        "isPrimary": true,
-        "sortOrder": 1
-      }
-    ],
-    "timeSlots": [
-      {
-        "id": 1,
-        "startTime": "06:00",
-        "endTime": "07:00",
-        "status": "ACTIVE"
-      }
-    ]
+    "primaryImageUrl": "https://cdn.example.com/courts/court-1-1.jpg"
   }
 }
 ```
+
+Note:
+
+- This endpoint returns only `primaryImageUrl`.
+- Use `GET /courts/{id}/images` to get the full court image gallery.
+- Use `GET /courts/{id}/available-slots?date=` to get user-facing available slots for a specific date.
+- Use `GET /vendor/courts/{id}/time-slots` for Vendor court slot configuration.
 
 ### 7.3. Get Available Time Slots for a Court
 
@@ -1150,6 +1148,12 @@ Note:
 - Vendor can only upload images for courts under their own venues.
 - Backend should validate file type and file size.
 - This API should reuse the same internal image storage service used by avatar and venue image uploads.
+- `sortOrder` is optional. If omitted, the image is added to the end of the gallery.
+- If `sortOrder` is provided, existing images at that position and after it should be shifted down by one position.
+- If `sortOrder` is greater than the current image count + 1, backend should place the image at the end.
+- `sortOrder` must be greater than 0.
+- `isPrimary` is optional. If `true`, backend should unset `isPrimary` from other court images in the same transaction.
+- If this is the first court image, backend should set it as primary automatically.
 
 Content type:
 
@@ -1161,6 +1165,8 @@ Form data:
 
 ```text
 file=<image_file>
+sortOrder=2
+isPrimary=false
 ```
 
 Response:
@@ -1652,7 +1658,7 @@ Response:
 GET /time-slots
 ```
 
-Auth: Not required
+Auth: VENDOR, ADMIN
 
 Response:
 

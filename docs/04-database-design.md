@@ -166,7 +166,10 @@ Stores images for venues.
 Constraints:
 
 - `venue_id` references `venues(id)`.
+- The pair `venue_id`, `sort_order` should be unique.
+- Only one image per venue should have `is_primary = true`.
 - Vendor can only manage images for venues they own.
+- When inserting an image at a specific `sort_order`, existing images with `sort_order >= newSortOrder` should be shifted by `+1` in the same transaction.
 
 ### 3.9. court_images
 
@@ -185,7 +188,10 @@ Stores images for courts.
 Constraints:
 
 - `court_id` references `courts(id)`.
+- The pair `court_id`, `sort_order` should be unique.
+- Only one image per court should have `is_primary = true`.
 - Vendor can only manage images for courts under their own venues.
+- When inserting an image at a specific `sort_order`, existing images with `sort_order >= newSortOrder` should be shifted by `+1` in the same transaction.
 
 ### 3.10. time_slots
 
