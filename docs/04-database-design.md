@@ -37,6 +37,7 @@ Stores account information.
 | full_name      | VARCHAR(100)  | Full name                                             |
 | email          | VARCHAR(150)  | Login email                                           |
 | phone          | VARCHAR(20)   | Phone number                                          |
+| avatar_url     | VARCHAR(500)  | User avatar URL, nullable                            |
 | password       | VARCHAR(255)  | Encrypted password, nullable for Google-only accounts |
 | role_id        | BIGINT        | FK to roles                                           |
 | provider       | VARCHAR(30)   | `LOCAL`, `GOOGLE`                                     |
@@ -69,7 +70,25 @@ Constraints:
 - `user_id` references `users(id)`.
 - `token` is unique.
 
-### 3.4. sports
+### 3.4. refresh_tokens
+
+Stores refresh tokens for login sessions. Only token hashes should be stored, not raw refresh tokens.
+
+| Column     | Data type    | Note                                    |
+| ---------- | ------------ | --------------------------------------- |
+| id         | BIGINT       | Primary key                             |
+| user_id    | BIGINT       | FK to users                             |
+| token_hash | VARCHAR(255) | Hash of the refresh token               |
+| expires_at | TIMESTAMP    | Token expiration time                   |
+| revoked_at | TIMESTAMP    | Time when token was revoked, nullable   |
+| created_at | TIMESTAMP    | Created date                            |
+
+Constraints:
+
+- `user_id` references `users(id)`.
+- `token_hash` is unique.
+
+### 3.5. sports
 
 Stores the list of sports.
 
@@ -86,7 +105,7 @@ Constraints:
 
 - `name` is unique.
 
-### 3.5. venues
+### 3.6. venues
 
 Stores venue information.
 
@@ -109,7 +128,7 @@ Constraints:
 - `vendor_id` references `users(id)`.
 - A vendor can only manage venues where `venues.vendor_id` matches the current user.
 
-### 3.6. courts
+### 3.7. courts
 
 Stores each specific court.
 
@@ -130,7 +149,45 @@ Constraints:
 - `sport_id` references `sports(id)`.
 - `venue_id` references `venues(id)`.
 
-### 3.7. time_slots
+### 3.8. venue_images
+
+Stores images for venues.
+
+| Column     | Data type    | Note                         |
+| ---------- | ------------ | ---------------------------- |
+| id         | BIGINT       | Primary key                  |
+| venue_id   | BIGINT       | FK to venues                 |
+| image_url  | VARCHAR(500) | Public image URL             |
+| public_id  | VARCHAR(255) | Storage provider file id     |
+| sort_order | INTEGER      | Display order                |
+| is_primary | BOOLEAN      | Whether this is primary image |
+| created_at | TIMESTAMP    | Created date                 |
+
+Constraints:
+
+- `venue_id` references `venues(id)`.
+- Vendor can only manage images for venues they own.
+
+### 3.9. court_images
+
+Stores images for courts.
+
+| Column     | Data type    | Note                         |
+| ---------- | ------------ | ---------------------------- |
+| id         | BIGINT       | Primary key                  |
+| court_id   | BIGINT       | FK to courts                 |
+| image_url  | VARCHAR(500) | Public image URL             |
+| public_id  | VARCHAR(255) | Storage provider file id     |
+| sort_order | INTEGER      | Display order                |
+| is_primary | BOOLEAN      | Whether this is primary image |
+| created_at | TIMESTAMP    | Created date                 |
+
+Constraints:
+
+- `court_id` references `courts(id)`.
+- Vendor can only manage images for courts under their own venues.
+
+### 3.10. time_slots
 
 Stores global bookable time slot templates.
 
@@ -147,7 +204,7 @@ Constraints:
 - The pair `start_time`, `end_time` should be unique.
 - `status` controls whether this global time slot template can still be used by the system.
 
-### 3.8. court_time_slots
+### 3.11. court_time_slots
 
 Stores which time slots are enabled for each court.
 
@@ -167,7 +224,7 @@ Constraints:
 - The pair `court_id`, `time_slot_id` should be unique.
 - A booking can only be created when the matching `court_time_slots` record is `ACTIVE`.
 
-### 3.9. bookings
+### 3.12. bookings
 
 Stores court bookings.
 
@@ -192,7 +249,7 @@ Constraints:
 - The pair `court_id`, `time_slot_id` must exist in `court_time_slots` with `ACTIVE` status when creating a booking.
 - Do not allow duplicate `court_id`, `booking_date`, and `time_slot_id` when booking status is `PENDING` or `CONFIRMED`.
 
-### 3.10. payments
+### 3.13. payments
 
 Stores booking payment information. Payment status is separated from booking status to keep booking workflow simple.
 
@@ -223,9 +280,12 @@ roles 1 - n users
 users 1 - n bookings
 users 1 - n venues
 users 1 - n email_verification_tokens
+users 1 - n refresh_tokens
 sports 1 - n courts
 venues 1 - n courts
+venues 1 - n venue_images
 courts 1 - n bookings
+courts 1 - n court_images
 time_slots 1 - n bookings
 courts 1 - n court_time_slots
 time_slots 1 - n court_time_slots
@@ -247,6 +307,7 @@ bookings 1 - 1 payments
   full_name
   email
   phone
+  avatar_url
   password
   provider
   email_verified
@@ -283,6 +344,7 @@ bookings 1 - 1 payments
   provider_transaction_id
 
 [users] 1 - n [email_verification_tokens]
+[users] 1 - n [refresh_tokens]
 
 [venues]
   id PK
@@ -294,6 +356,9 @@ bookings 1 - 1 payments
     v
 [courts]
 [users with VENDOR role] 1 - n [venues]
+
+[venues] 1 - n [venue_images]
+[courts] 1 - n [court_images]
 ```
 
 ## 6. Initial Seed Data

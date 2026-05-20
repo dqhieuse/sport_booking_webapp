@@ -105,7 +105,7 @@ Cleanup rule:
 
 Actor: Guest
 
-Goal: Log in to the system using email/password or Google account.
+Goal: Log in to the system using email/password, phone number/password, or Google account.
 
 Preconditions:
 
@@ -114,17 +114,17 @@ Preconditions:
 Main flow:
 
 1. Guest opens the login page.
-2. Guest enters email and password.
+2. Guest enters email or phone number and password.
 3. Guest clicks the login button.
-4. The system validates the email and password.
+4. The system validates the email/phone number and password.
 5. The system checks that the account is active and email is verified.
-6. The system generates a JWT.
-7. The frontend stores the token.
+6. The system generates an access token and a refresh token.
+7. The frontend stores the tokens.
 8. The system redirects the user to the home page or the previous page.
 
 Alternative flow:
 
-- If email or password is incorrect, the system shows an error message.
+- If email, phone number, or password is incorrect, the system shows an error message.
 - If the account is disabled, the system shows a login blocked message.
 - If the account email is not verified, the system asks the user to verify email or resend verification email.
 - If the user chooses Google login, the frontend redirects the user to Google authentication.
@@ -137,7 +137,61 @@ Result:
 
 - User logs in successfully and can call protected APIs.
 
-## 5. Use Case UC-03: View Court List
+## 5. Use Case UC-03: Refresh Access Token
+
+Actor: User, Vendor, Admin
+
+Goal: Get a new access token without logging in again.
+
+Preconditions:
+
+- Actor has a valid refresh token.
+- Refresh token is not expired or revoked.
+
+Main flow:
+
+1. Frontend detects that the access token is expired or close to expiration.
+2. Frontend sends the refresh token to the refresh API.
+3. The system validates the refresh token.
+4. The system issues a new access token.
+5. The system may rotate the refresh token.
+6. Frontend stores the new token values.
+
+Alternative flow:
+
+- If the refresh token is invalid, expired, or revoked, the system returns 401 and requires login again.
+
+Result:
+
+- Actor can continue using protected APIs without entering credentials again.
+
+## 6. Use Case UC-04: Log Out
+
+Actor: User, Vendor, Admin
+
+Goal: End the current login session.
+
+Preconditions:
+
+- Actor is logged in.
+
+Main flow:
+
+1. Actor clicks logout.
+2. Frontend sends the refresh token to the logout API.
+3. The system revokes the refresh token.
+4. Frontend clears local authentication data.
+5. The system redirects the actor to the login page or home page.
+
+Alternative flow:
+
+- If the refresh token is already expired or revoked, frontend still clears local authentication data.
+
+Result:
+
+- Actor is logged out and the refresh token can no longer be used.
+
+## 7. Use Case UC-05: View Court List
 
 Actor: Guest, User, Vendor, Admin
 
@@ -163,7 +217,7 @@ Result:
 
 - Actor can view the court list.
 
-## 6. Use Case UC-04: View Court Details
+## 8. Use Case UC-06: View Court Details
 
 Actor: Guest, User, Vendor, Admin
 
@@ -189,7 +243,7 @@ Result:
 
 - Actor can view court details.
 
-## 7. Use Case UC-05: View Available Time Slots
+## 9. Use Case UC-07: View Available Time Slots
 
 Actor: User
 
@@ -222,7 +276,7 @@ Result:
 
 - User knows which time slots can be booked.
 
-## 8. Use Case UC-06: Book Court
+## 10. Use Case UC-08: Book Court
 
 Actor: User
 
@@ -283,7 +337,7 @@ Result:
 - Payment information is created with one of the supported methods: `VNPAY` or `CASH_AT_COURT`.
 - Prepaid VNPAY booking is preferred because it reduces no-show risk.
 
-## 9. Use Case UC-07: View Booking History
+## 11. Use Case UC-09: View Booking History
 
 Actor: User
 
@@ -308,7 +362,7 @@ Result:
 
 - User can view their own booking history.
 
-## 10. Use Case UC-08: Cancel Booking
+## 12. Use Case UC-10: Cancel Booking
 
 Actor: User
 
@@ -348,7 +402,7 @@ Result:
 - Booking status is updated to `CANCELLED`.
 - If the booking was paid, refund status is tracked separately from booking status.
 
-## 11. Use Case UC-09: Vendor Manage Venues
+## 13. Use Case UC-11: Vendor Manage Venues
 
 Actor: Vendor
 
@@ -377,7 +431,7 @@ Result:
 
 - Venue data is updated.
 
-## 12. Use Case UC-10: Vendor Manage Courts
+## 14. Use Case UC-12: Vendor Manage Courts
 
 Actor: Vendor
 
@@ -407,7 +461,7 @@ Result:
 
 - Court data is updated.
 
-## 13. Use Case UC-11: Vendor Manage Bookings
+## 15. Use Case UC-13: Vendor Manage Bookings
 
 Actor: Vendor
 
@@ -436,7 +490,7 @@ Result:
 
 - Booking status is updated according to business rules.
 
-## 14. Use Case UC-12: Admin Moderate Platform Data
+## 16. Use Case UC-14: Admin Moderate Platform Data
 
 Actor: Admin
 

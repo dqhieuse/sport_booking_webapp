@@ -11,9 +11,15 @@ This document describes the functional and non-functional requirements of Sport 
 Requirement ID: **FR-AUTH**
 
 - Users can register an account with full name, email, phone number, and password or Google account.
-- Users can log in with email and password or Google account.
-- The system returns a JWT after successful login.
+- Users can log in with email/password, phone number/password, or Google account.
+- The system returns an access token and a refresh token after successful login.
+- Access token is used to call protected APIs and should have a short lifetime.
+- Refresh token is used to request a new access token and should be revocable.
+- The system supports logout by revoking the refresh token.
 - Logged-in users can view their profile information.
+- Logged-in users can upload or update their avatar.
+- Vendor can upload, list, delete, and set primary images for their own venues.
+- Vendor can upload, list, delete, and set primary images for their own courts.
 - Passwords must be encrypted before being stored in the database.
 - Email/password accounts must verify email before they can log in and book courts.
 - Google login is allowed if Google returns a verified email.
@@ -61,6 +67,7 @@ Venue information includes:
 - Contact phone number
 - Opening time
 - Closing time
+- Images
 
 ### 2.4. Court Management
 
@@ -83,6 +90,7 @@ Court information includes:
 - Hourly price
 - Operating status
 - Description
+- Images
 
 ### 2.5. Time Slot Management
 
@@ -181,7 +189,8 @@ Requirement ID: **NFR-SECURITY**
 
 - Passwords must be encrypted with BCrypt or an equivalent solution.
 - Email verification tokens and payment callback verification data must be handled securely.
-- Protected APIs must require a valid JWT.
+- Protected APIs must require a valid access token.
+- Refresh tokens must be stored securely and should be saved as hashes if stored in the database.
 - Users must not access Vendor or Admin APIs.
 - Vendors must not access Admin APIs.
 - Vendors can only manage venues, courts, and bookings that belong to them.
