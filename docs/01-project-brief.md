@@ -43,6 +43,18 @@ Main features:
 - Cancel a booking if allowed.
 - Search for courts by sport, date, and time slot.
 
+### Vendor
+
+A court owner or venue operator who rents out sports courts.
+
+Main features:
+
+- Manage their own venues.
+- Manage their own courts.
+- Manage bookings for their own courts.
+- Confirm or cancel bookings for their own courts.
+- View basic business statistics.
+
 ### Admin
 
 A person who manages the system.
@@ -50,11 +62,12 @@ A person who manages the system.
 Main features:
 
 - Manage sports.
-- Manage venues.
-- Manage courts.
-- Manage bookings.
-- Confirm or cancel bookings.
-- Statistics and reports.
+- Manage users and vendors.
+- Review and moderate venues.
+- Review and moderate courts.
+- Review and moderate bookings.
+- Configure platform-level settings.
+- View platform statistics and reports.
 
 ## 6. MVP Scope
 
@@ -64,7 +77,8 @@ The MVP focuses on the core features:
 - Public browsing: view sports, venues, courts, and court details.
 - Booking: book a court by date and time slot.
 - User dashboard: view personal booking history.
-- Admin dashboard: manage core system data.
+- Vendor dashboard: manage owned venues, courts, and bookings.
+- Admin dashboard: manage platform-level data and moderation.
 
 ## 7. Out of MVP Scope
 
@@ -76,7 +90,7 @@ The following features will be considered later:
 - Court reviews and comments.
 - Discount codes.
 - Mobile application.
-- Multi-owner venue management.
+- Advanced multi-branch vendor operations.
 
 ## 8. Tech Stack
 
@@ -116,6 +130,7 @@ When completed, the project should have:
 - A frontend that calls real backend APIs.
 - A database with clear relationships.
 - A working court booking flow.
-- Basic admin data management.
+- Basic vendor data management.
+- Basic admin platform management.
 - A README with setup and running instructions.
 - A local demo or deployed demo version.

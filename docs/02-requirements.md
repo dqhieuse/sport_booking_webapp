@@ -11,10 +11,19 @@ This document describes the functional and non-functional requirements of Sport 
 Requirement ID: **FR-AUTH**
 
 - Users can register an account with full name, email, phone number, and password or Google account.
-- Users can log in with email and password or Google account.
-- The system returns a JWT after successful login.
+- Users can log in with email/password, phone number/password, or Google account.
+- The system returns an access token and a refresh token after successful login.
+- Access token is used to call protected APIs and should have a short lifetime.
+- Refresh token is used to request a new access token and should be revocable.
+- The system supports logout by revoking the refresh token.
 - Logged-in users can view their profile information.
+- Logged-in users can upload or update their avatar.
+- Vendor can upload, list, delete, and set primary images for their own venues.
+- Vendor can upload, list, delete, and set primary images for their own courts.
 - Passwords must be encrypted before being stored in the database.
+- Email/password accounts must verify email before they can log in and book courts.
+- Google login is allowed if Google returns a verified email.
+- Unverified accounts should be deleted or deactivated automatically after a configured period.
 - The system supports at least three roles: `USER`, `VENDOR`, and `ADMIN`.
 - `USER` represents a customer who books courts.
 - `VENDOR` represents a court owner or venue operator who manages their own venues, courts, and bookings.
@@ -58,6 +67,7 @@ Venue information includes:
 - Contact phone number
 - Opening time
 - Closing time
+- Images
 
 ### 2.4. Court Management
 
@@ -80,6 +90,7 @@ Court information includes:
 - Hourly price
 - Operating status
 - Description
+- Images
 
 ### 2.5. Time Slot Management
 
@@ -87,8 +98,10 @@ Requirement ID: **FR-TIMESLOT**
 
 - The system has a list of bookable time slots.
 - Users can view available time slots for a court by date.
-- Vendor can manage bookable time slots for their own courts if needed.
+- Vendor can enable or disable bookable time slots for their own courts.
 - Admin can manage global time slot templates if the system uses shared time slots.
+- `time_slots` represents global slot templates.
+- `court_time_slots` represents which slots are enabled for each court.
 
 Example time slots:
 
@@ -103,6 +116,7 @@ Requirement ID: **FR-BOOKING**
 
 - Logged-in users can book a court.
 - Each booking belongs to one user, one court, one date, and one time slot.
+- The selected time slot must be enabled for the selected court.
 - The system does not allow duplicate bookings for the same court, date, and time slot.
 - The system does not allow bookings in the past.
 - Users can view their own booking history.
@@ -120,7 +134,30 @@ Booking statuses:
 - `CANCELLED`: cancelled
 - `COMPLETED`: completed
 
-### 2.7. Vendor Dashboard
+### 2.7. Payment
+
+Requirement ID: **FR-PAYMENT**
+
+- Users must select a payment method when creating a booking.
+- The system supports two MVP payment methods: `VNPAY` and `CASH_AT_COURT`.
+- Prepaid `VNPAY` payment is the preferred method because it reduces no-show risk.
+- For `VNPAY`, the system creates a pending payment request and redirects the user to VNPAY.
+- The system must verify VNPAY callback/signature before marking payment as paid.
+- For `CASH_AT_COURT`, the booking is created as unpaid and Vendor marks it as paid after receiving cash.
+- Booking status and payment status must be tracked separately.
+- If a paid booking is cancelled, refund status must be tracked separately from booking status.
+
+Payment statuses:
+
+- `UNPAID`: not paid yet
+- `PENDING`: payment is being processed
+- `PAID`: payment completed
+- `FAILED`: payment failed
+- `REFUND_PENDING`: refund is requested or waiting for processing
+- `REFUNDED`: refund completed
+- `REFUND_FAILED`: refund failed and needs follow-up
+
+### 2.8. Vendor Dashboard
 
 Requirement ID: **FR-VENDOR**
 
@@ -131,7 +168,7 @@ Requirement ID: **FR-VENDOR**
 - Vendor can manage bookings for their own courts.
 - Vendor cannot manage venues, courts, or bookings that belong to another vendor.
 
-### 2.8. Admin Dashboard
+### 2.9. Admin Dashboard
 
 Requirement ID: **FR-ADMIN**
 
@@ -151,7 +188,9 @@ Requirement ID: **FR-ADMIN**
 Requirement ID: **NFR-SECURITY**
 
 - Passwords must be encrypted with BCrypt or an equivalent solution.
-- Protected APIs must require a valid JWT.
+- Email verification tokens and payment callback verification data must be handled securely.
+- Protected APIs must require a valid access token.
+- Refresh tokens must be stored securely and should be saved as hashes if stored in the database.
 - Users must not access Vendor or Admin APIs.
 - Vendors must not access Admin APIs.
 - Vendors can only manage venues, courts, and bookings that belong to them.
@@ -201,6 +240,7 @@ Requirement ID: **NFR-UI**
 - View the list of sports.
 - View the list of courts.
 - Book a court.
+- Pay by VNPAY or cash at court.
 - View booking history.
 - Vendor manages their own venues, courts, and bookings.
 - Admin manages sports and platform-level user/vendor administration.
@@ -222,7 +262,8 @@ Requirement ID: **NFR-UI**
 
 ### Won't Have in MVP
 
-- Online payment.
+- Advanced multi-provider online payment.
+- Automatic refund settlement.
 - Chat.
 - Map.
 - Court reviews.
