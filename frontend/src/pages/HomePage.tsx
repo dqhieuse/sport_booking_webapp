@@ -5,6 +5,8 @@ const foundationItems = [
   'TypeScript',
   'Tailwind CSS',
   'React Router',
+  'Base app layout',
+  'Route skeleton',
   'Axios API client',
   'Environment-based API URL',
 ];
