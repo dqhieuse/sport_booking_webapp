@@ -76,3 +76,16 @@ Expected response:
     "errors": []
 }
 ```
+
+## Database Migrations
+
+Flyway runs automatically on startup.
+
+Current migrations:
+
+- `db/migration/common/V1__init_schema.sql` - initial migration marker
+- `db/migration/common/V2__create_initial_schema.sql` - core schema from `docs/04-database-design.md`
+- `db/migration/common/V3__seed_initial_reference_data.sql` - roles, sports, and time slots
+- `db/migration/postgresql/V4__add_postgresql_partial_indexes.sql` - PostgreSQL partial unique indexes
+
+The schema uses PostgreSQL constraints for foreign keys, enum-like status values, active booking uniqueness, and one primary image per venue/court.
