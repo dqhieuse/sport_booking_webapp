@@ -1,0 +1,2 @@
+-- Initial migration placeholder.
+-- Business tables will be added in the related backlog tasks.
