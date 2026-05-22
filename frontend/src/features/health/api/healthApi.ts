@@ -1,11 +1,6 @@
 import { apiClient } from '../../../lib/apiClient';
 
-export type ApiResponse<T> = {
-  success: boolean;
-  message: string;
-  data: T;
-  errors: string[];
-};
+import type { ApiSuccessResponse } from '@/types/api';
 
 export type BackendHealth = {
   status: string;
@@ -13,7 +8,6 @@ export type BackendHealth = {
   timestamp: string;
 };
 
-export async function getBackendHealth(): Promise<ApiResponse<BackendHealth>> {
-  const response = await apiClient.get<ApiResponse<BackendHealth>>('/health');
-  return response.data;
+export async function getBackendHealth(): Promise<ApiSuccessResponse<BackendHealth>> {
+  return apiClient.get<BackendHealth>('/health');
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { appEnv } from '@/config/env';
 
 import { getBackendHealth } from '../api/healthApi';
 
@@ -60,7 +61,7 @@ export function HealthCheckCard() {
       <CardContent>
         <p className="text-sm leading-6 text-muted-foreground">{message}</p>
         <p className="mt-4 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-          API base URL: {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'}
+          API base URL: {appEnv.apiBaseUrl}
         </p>
       </CardContent>
     </Card>

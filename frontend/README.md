@@ -17,6 +17,7 @@ Frontend web app for Sport Booking WebApp.
 ```text
 src
 ├── components     # Reusable UI components
+├── config         # Environment-driven app configuration
 ├── features      # Feature-based frontend modules
 ├── layouts       # Shared page layouts
 ├── lib           # Shared libraries such as API client
@@ -33,6 +34,14 @@ The frontend uses a shadcn/ui-style setup:
 - `tailwind.config.js` maps Tailwind tokens to those variables.
 - `src/lib/utils.ts` provides `cn()` for class merging.
 - `src/components/ui/` contains reusable primitives such as `Button`, `Card`, `Badge`, and `Separator`.
+
+## API Client
+
+- `VITE_API_BASE_URL` controls the backend API base URL.
+- `src/config/env.ts` centralizes environment values.
+- `src/lib/apiClient.ts` wraps Axios and returns the backend `{ success, message, data, errors }` response shape.
+- `src/lib/authTokenStore.ts` prepares access-token attachment for later auth tasks.
+- `src/lib/apiError.ts` normalizes Axios failures into `ApiError`.
 
 ## Route Skeleton
 
