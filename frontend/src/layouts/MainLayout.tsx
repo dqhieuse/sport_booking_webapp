@@ -1,6 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
-import { routePaths } from '../routes/routePaths';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { routePaths } from '@/routes/routePaths';
 
 const primaryNavigation = [
   { label: 'Home', to: routePaths.home },
@@ -16,32 +19,31 @@ const workspaceNavigation = [
 ];
 
 function navLinkClassName({ isActive }: { isActive: boolean }) {
-  const baseClassName = 'rounded-md px-3 py-2 text-sm font-medium no-underline transition';
-  return isActive
-    ? `${baseClassName} bg-brand-50 text-brand-700`
-    : `${baseClassName} text-slate-600 hover:bg-slate-100 hover:text-slate-950`;
+  return cn(
+    'rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors',
+    isActive
+      ? 'bg-accent text-accent-foreground'
+      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  );
 }
 
 export function MainLayout() {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+      <header className="border-b bg-card">
+        <div className="app-container py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center justify-between gap-4">
-              <NavLink to={routePaths.home} className="text-lg font-semibold text-slate-950 no-underline">
+              <NavLink to={routePaths.home} className="text-lg font-semibold text-foreground no-underline">
                 Sport Booking
               </NavLink>
               <div className="flex items-center gap-2 lg:hidden">
-                <NavLink to={routePaths.login} className="text-sm font-semibold text-slate-700 no-underline">
-                  Login
-                </NavLink>
-                <NavLink
-                  to={routePaths.register}
-                  className="rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white no-underline hover:bg-brand-700"
-                >
-                  Register
-                </NavLink>
+                <Button asChild variant="ghost" size="sm">
+                  <NavLink to={routePaths.login}>Login</NavLink>
+                </Button>
+                <Button asChild size="sm">
+                  <NavLink to={routePaths.register}>Register</NavLink>
+                </Button>
               </div>
             </div>
 
@@ -54,19 +56,18 @@ export function MainLayout() {
             </nav>
 
             <div className="hidden items-center gap-2 lg:flex">
-              <NavLink to={routePaths.login} className="text-sm font-semibold text-slate-700 no-underline">
-                Login
-              </NavLink>
-              <NavLink
-                to={routePaths.register}
-                className="rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white no-underline hover:bg-brand-700"
-              >
-                Register
-              </NavLink>
+              <Button asChild variant="ghost">
+                <NavLink to={routePaths.login}>Login</NavLink>
+              </Button>
+              <Button asChild>
+                <NavLink to={routePaths.register}>Register</NavLink>
+              </Button>
             </div>
           </div>
 
-          <nav aria-label="Workspace navigation" className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+          <Separator className="my-4" />
+
+          <nav aria-label="Workspace navigation" className="flex flex-wrap gap-2">
             {workspaceNavigation.map((item) => (
               <NavLink key={item.to} to={item.to} className={navLinkClassName}>
                 {item.label}
@@ -76,7 +77,7 @@ export function MainLayout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="app-container py-8">
         <Outlet />
       </main>
     </div>

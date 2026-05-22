@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { getBackendHealth } from '../api/healthApi';
 
 type HealthStatus = 'loading' | 'online' | 'offline' | 'unknown';
 
 const statusClassNames: Record<HealthStatus, string> = {
-  loading: 'bg-amber-50 text-amber-700 ring-amber-200',
-  online: 'bg-brand-50 text-brand-700 ring-brand-100',
-  offline: 'bg-red-50 text-red-700 ring-red-100',
-  unknown: 'bg-slate-100 text-slate-700 ring-slate-200',
+  loading: 'bg-amber-50 text-amber-700 hover:bg-amber-50',
+  online: 'bg-accent text-accent-foreground hover:bg-accent',
+  offline: 'bg-destructive text-destructive-foreground hover:bg-destructive',
+  unknown: 'bg-muted text-muted-foreground hover:bg-muted',
 };
 
 export function HealthCheckCard() {
@@ -45,25 +48,21 @@ export function HealthCheckCard() {
   }, []);
 
   return (
-    <aside className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <Card>
+      <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            API Status
-          </p>
-          <h2 className="mt-3 text-xl font-bold text-slate-950">Backend health</h2>
+          <CardDescription className="font-semibold uppercase tracking-wide">API Status</CardDescription>
+          <CardTitle className="mt-3 text-xl">Backend health</CardTitle>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-semibold ring-1 ${statusClassNames[status]}`}
-        >
-          {status}
-        </span>
-      </div>
+        <Badge className={statusClassNames[status]}>{status}</Badge>
+      </CardHeader>
 
-      <p className="mt-4 text-sm leading-6 text-slate-600">{message}</p>
-      <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500">
-        API base URL: {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'}
-      </p>
-    </aside>
+      <CardContent>
+        <p className="text-sm leading-6 text-muted-foreground">{message}</p>
+        <p className="mt-4 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          API base URL: {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api'}
+        </p>
+      </CardContent>
+    </Card>
   );
 }

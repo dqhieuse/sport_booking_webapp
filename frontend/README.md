@@ -8,6 +8,7 @@ Frontend web app for Sport Booking WebApp.
 - TypeScript
 - Vite
 - Tailwind CSS
+- shadcn/ui-style components
 - React Router
 - Axios
 
@@ -15,6 +16,7 @@ Frontend web app for Sport Booking WebApp.
 
 ```text
 src
+├── components     # Reusable UI components
 ├── features      # Feature-based frontend modules
 ├── layouts       # Shared page layouts
 ├── lib           # Shared libraries such as API client
@@ -22,6 +24,15 @@ src
 ├── routes        # React Router setup and path constants
 └── styles        # Global styles and Tailwind entry
 ```
+
+## UI Theme
+
+The frontend uses a shadcn/ui-style setup:
+
+- `src/styles/index.css` defines theme CSS variables.
+- `tailwind.config.js` maps Tailwind tokens to those variables.
+- `src/lib/utils.ts` provides `cn()` for class merging.
+- `src/components/ui/` contains reusable primitives such as `Button`, `Card`, `Badge`, and `Separator`.
 
 ## Route Skeleton
 
