@@ -1,6 +1,12 @@
 # Sport Booking Frontend
 
-Frontend web app for Sport Booking WebApp.
+React web app for Sport Booking WebApp.
+
+## Prerequisites
+
+- Node.js 20 or newer
+- npm 10 or newer
+- Git
 
 ## Tech Stack
 
@@ -23,7 +29,44 @@ src
 ├── lib           # Shared libraries such as API client
 ├── pages         # Route-level screens
 ├── routes        # React Router setup and path constants
-└── styles        # Global styles and Tailwind entry
+├── styles        # Global styles and Tailwind entry
+└── types         # Shared TypeScript types
+```
+
+## Environment
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Current variables:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080/api
+```
+
+Do not commit `.env`.
+
+## Run Locally
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the frontend:
+
+```bash
+npm run dev
+```
+
+The app runs at:
+
+```text
+http://localhost:5173
 ```
 
 ## UI Theme
@@ -55,33 +98,7 @@ The frontend uses a shadcn/ui-style setup:
 - `/vendor/*` - Vendor workspace
 - `/admin/*` - Admin workspace
 
-## Local Setup
-
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Copy environment file:
-
-```bash
-cp .env.example .env
-```
-
-3. Run the frontend:
-
-```bash
-npm run dev
-```
-
-The app runs at:
-
-```text
-http://localhost:5173
-```
-
-## Useful Commands
+## Verification
 
 ```bash
 npm run lint

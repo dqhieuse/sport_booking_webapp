@@ -2,6 +2,14 @@
 
 Spring Boot REST API for Sport Booking WebApp.
 
+## Prerequisites
+
+- Java 21 or newer
+- Docker Desktop with Docker Compose
+- Git
+
+Maven does not need to be installed globally because this project uses Maven Wrapper (`./mvnw`).
+
 ## Tech Stack
 
 - Java 21
@@ -11,55 +19,36 @@ Spring Boot REST API for Sport Booking WebApp.
 - Spring Security
 - PostgreSQL
 - Flyway
-- Maven Wrapper
+- H2 for automated tests only
 
 ## Project Structure
 
 ```text
-backend
-├── src/main/java/com/sportbooking
-│   ├── common      # Shared API response, exception, constants, helpers
-│   ├── config      # Spring configuration
-│   └── module      # Feature modules
-├── src/main/resources
-│   ├── application.yml
-│   ├── application-local.yml
-│   └── db/migration
-│       ├── common      # Migrations shared by PostgreSQL and H2 tests
-│       └── postgresql  # PostgreSQL-only migrations
-└── src/test
-    ├── java
-    └── resources/application-test.yml
+src/main/java/com/sportbooking
+├── common      # Shared API response, exception, constants, helpers
+├── config      # Spring configuration
+└── module      # Feature modules
+    ├── auth
+    ├── booking
+    ├── court
+    ├── health
+    ├── payment
+    ├── sport
+    ├── user
+    └── venue
 ```
 
-Prepared business modules:
-
-- `auth`
-- `booking`
-- `court`
-- `health`
-- `payment`
-- `sport`
-- `user`
-- `venue`
-
-Each business module is prepared for:
-
-- `controller`
-- `dto`
-- `entity`
-- `repository`
-- `service`
+Each business module is prepared for `controller`, `dto`, `entity`, `repository`, and `service` packages.
 
 ## Environment
 
-Copy the sample environment file before running locally:
+Create a local environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-Current environment variables:
+Current variables:
 
 ```text
 SPRING_PROFILES_ACTIVE=local
@@ -90,13 +79,7 @@ Run the backend:
 ./mvnw spring-boot:run
 ```
 
-The backend runs at:
-
-```text
-http://localhost:8080
-```
-
-Check the health API:
+Check the API:
 
 ```bash
 curl http://localhost:8080/api/health
@@ -120,23 +103,24 @@ Expected response:
 
 Flyway runs automatically when the backend starts.
 
-Runtime PostgreSQL uses both locations:
+Runtime PostgreSQL migration locations:
 
 ```text
 classpath:db/migration/common
 classpath:db/migration/postgresql
 ```
 
-Test profile uses only:
+Test migration location:
 
 ```text
 classpath:db/migration/common
 ```
 
-Why the split:
+The split exists because H2 is used for fast tests and does not support every PostgreSQL feature. PostgreSQL-only migrations contain partial unique indexes for rules such as:
 
-- `common` contains schema and seed data that can run on PostgreSQL and H2 test database.
-- `postgresql` contains PostgreSQL-specific constraints, such as partial unique indexes.
+- one primary image per venue
+- one primary image per court
+- no duplicate active booking for the same court, date, and time slot
 
 Current migrations:
 
@@ -145,35 +129,23 @@ Current migrations:
 - `common/V3__seed_initial_reference_data.sql` - roles, sports, and time slots
 - `postgresql/V4__add_postgresql_partial_indexes.sql` - PostgreSQL partial unique indexes
 
-Important PostgreSQL constraints:
+## Testing
 
-- One primary image per venue.
-- One primary image per court.
-- No duplicate active booking for the same `court_id`, `booking_date`, and `time_slot_id` when status is `PENDING` or `CONFIRMED`.
-
-## Test Database
-
-Tests use H2 in-memory database from `src/test/resources/application-test.yml`:
-
-```text
-jdbc:h2:mem:sport_booking_test;MODE=PostgreSQL
-```
-
-H2 is only used for automated tests. Local application runtime still uses PostgreSQL.
-
-## Useful Commands
-
-Run tests:
+Run backend tests:
 
 ```bash
 ./mvnw test
 ```
 
-Start PostgreSQL:
+Tests use H2 in-memory database with PostgreSQL compatibility mode:
 
-```bash
-docker compose up -d postgres
+```text
+jdbc:h2:mem:sport_booking_test;MODE=PostgreSQL
 ```
+
+The local application runtime still uses PostgreSQL.
+
+## Useful Commands
 
 Stop PostgreSQL:
 
@@ -190,13 +162,3 @@ docker compose up -d postgres
 ```
 
 Use reset only for local development because it deletes the Docker volume.
-
-## Current Verification
-
-The current backend foundation has been verified with:
-
-```bash
-./mvnw test
-```
-
-The PostgreSQL migrations have also been verified by starting the backend against the local Docker PostgreSQL database.
