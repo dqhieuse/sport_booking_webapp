@@ -10,6 +10,10 @@ public interface SportRepository extends JpaRepository<Sport, Long> {
 
     List<Sport> findByStatus(SportStatus status);
 
+    List<Sport> findByStatusOrderByNameAsc(SportStatus status);
+
+    Optional<Sport> findByIdAndStatus(Long id, SportStatus status);
+
     Optional<Sport> findByName(String name);
 
     boolean existsByName(String name);
