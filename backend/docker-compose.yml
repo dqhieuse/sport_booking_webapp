@@ -1,0 +1,24 @@
+services:
+    postgres:
+        image: postgres:16-alpine
+        container_name: sport-booking-postgres
+        environment:
+            POSTGRES_DB: ${DB_NAME:-sport_booking}
+            POSTGRES_USER: ${DB_USERNAME:-sport_booking}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-sport_booking}
+        ports:
+            - "${DB_PORT:-5432}:5432"
+        volumes:
+            - sport_booking_postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${DB_USERNAME:-sport_booking} -d ${DB_NAME:-sport_booking}",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    sport_booking_postgres_data:
