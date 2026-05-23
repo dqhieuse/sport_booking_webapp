@@ -15,6 +15,7 @@ import com.sportbooking.module.auth.dto.AuthUserResponse;
 import com.sportbooking.module.auth.dto.RegisterRequest;
 import com.sportbooking.module.auth.entity.EmailVerificationToken;
 import com.sportbooking.module.auth.repository.EmailVerificationTokenRepository;
+import com.sportbooking.module.auth.service.email.EmailVerificationMailService;
 import com.sportbooking.module.user.entity.AuthProvider;
 import com.sportbooking.module.user.entity.Role;
 import com.sportbooking.module.user.entity.RoleName;
@@ -34,6 +35,7 @@ public class AuthRegistrationService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final EmailVerificationMailService emailVerificationMailService;
     private final PasswordEncoder passwordEncoder;
     private final AuthProperties authProperties;
 
@@ -65,6 +67,7 @@ public class AuthRegistrationService {
         User savedUser = userRepository.save(user);
         EmailVerificationToken verificationToken = createVerificationToken(savedUser);
         emailVerificationTokenRepository.save(verificationToken);
+        emailVerificationMailService.sendVerificationEmail(savedUser, verificationToken.getToken());
 
         return AuthUserResponse.from(savedUser);
     }
