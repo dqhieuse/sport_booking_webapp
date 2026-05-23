@@ -27,6 +27,7 @@ public class SecurityConfig {
                                 "/api/venues/**",
                                 "/api/courts",
                                 "/api/courts/**",
+                                "/api/auth/**",
                                 "/actuator/health"
                         ).permitAll()
                         .anyRequest().authenticated()

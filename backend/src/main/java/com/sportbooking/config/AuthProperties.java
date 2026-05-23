@@ -14,5 +14,7 @@ public class AuthProperties {
 
     private Duration accessTokenTtl = Duration.ofMinutes(15);
 
+    private Duration emailVerificationTokenTtl = Duration.ofHours(24);
+
     private String issuer = "sport-booking-backend";
 }

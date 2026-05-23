@@ -27,6 +27,7 @@ app:
     auth:
         jwt-secret: ${JWT_SECRET:local-dev-jwt-secret-change-before-production-32-bytes}
         access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
+        email-verification-token-ttl: ${EMAIL_VERIFICATION_TOKEN_TTL:24h}
         issuer: ${JWT_ISSUER:sport-booking-backend}
 
 management:
