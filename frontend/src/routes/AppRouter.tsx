@@ -4,6 +4,7 @@ import { MainLayout } from '../layouts/MainLayout';
 import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
+import { SportsPage } from '../pages/SportsPage';
 import { routePaths } from './routePaths';
 
 export function AppRouter() {
@@ -14,7 +15,7 @@ export function AppRouter() {
           <Route index element={<HomePage />} />
           <Route
             path={routePaths.sports}
-            element={<RoutePlaceholderPage title="Sports" description="Browse active sport categories." />}
+            element={<SportsPage />}
           />
           <Route
             path={routePaths.venues}

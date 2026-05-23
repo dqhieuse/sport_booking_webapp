@@ -20,22 +20,22 @@ const workspaceNavigation = [
 
 function navLinkClassName({ isActive }: { isActive: boolean }) {
   return cn(
-    'rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors',
+    'rounded-full border px-3 py-2 text-sm font-medium no-underline transition-colors',
     isActive
-      ? 'bg-accent text-accent-foreground'
-      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+      ? 'border-primary/30 bg-primary/15 text-accent'
+      : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground',
   );
 }
 
 export function MainLayout() {
   return (
     <div className="min-h-screen">
-      <header className="border-b bg-card">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         <div className="app-container py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center justify-between gap-4">
-              <NavLink to={routePaths.home} className="text-lg font-semibold text-foreground no-underline">
-                Sport Booking
+              <NavLink to={routePaths.home} className="font-display text-lg font-extrabold text-foreground no-underline">
+                Sport<span className="text-primary">Zone</span>
               </NavLink>
               <div className="flex items-center gap-2 lg:hidden">
                 <Button asChild variant="ghost" size="sm">
