@@ -68,4 +68,25 @@ class PublicCourtControllerTest {
                 .andExpect(jsonPath("$.message", is("Court not found")))
                 .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
     }
+
+    @Test
+    void getCourtImagesReturnsGalleryWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/courts/{id}/images", 1))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].imageUrl").isNotEmpty())
+                .andExpect(jsonPath("$.data[0].isPrimary", is(true)))
+                .andExpect(jsonPath("$.data[0].sortOrder", is(0)));
+    }
+
+    @Test
+    void getCourtImagesReturnsNotFoundWhenCourtDoesNotExist() throws Exception {
+        mockMvc.perform(get("/api/courts/{id}/images", 9999))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Court not found")))
+                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+    }
 }

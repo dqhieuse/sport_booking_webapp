@@ -3,8 +3,10 @@ package com.sportbooking.module.venue.controller;
 import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.module.venue.dto.VenueDetailResponse;
+import com.sportbooking.module.venue.dto.VenueImageResponse;
 import com.sportbooking.module.venue.dto.VenueListResponse;
 import com.sportbooking.module.venue.service.PublicVenueService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -35,5 +37,10 @@ public class PublicVenueController {
     @GetMapping("/{id}")
     public ApiResponse<VenueDetailResponse> getVenueById(@PathVariable Long id) {
         return ApiResponse.success("Success", publicVenueService.getActiveVenueById(id));
+    }
+
+    @GetMapping("/{id}/images")
+    public ApiResponse<List<VenueImageResponse>> getVenueImages(@PathVariable Long id) {
+        return ApiResponse.success("Success", publicVenueService.getActiveVenueImages(id));
     }
 }

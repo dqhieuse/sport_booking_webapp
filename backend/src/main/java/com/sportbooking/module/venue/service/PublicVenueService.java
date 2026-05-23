@@ -3,6 +3,7 @@ package com.sportbooking.module.venue.service;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.module.venue.dto.VenueDetailResponse;
+import com.sportbooking.module.venue.dto.VenueImageResponse;
 import com.sportbooking.module.venue.dto.VenueListResponse;
 import com.sportbooking.module.venue.dto.VenueVendorResponse;
 import com.sportbooking.module.venue.entity.Venue;
@@ -41,6 +42,18 @@ public class PublicVenueService {
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
 
         return toDetailResponse(venue);
+    }
+
+    @Transactional(readOnly = true)
+    public List<VenueImageResponse> getActiveVenueImages(Long venueId) {
+        if (!venueRepository.existsByIdAndStatus(venueId, VenueStatus.ACTIVE)) {
+            throw new ResourceNotFoundException("Venue not found");
+        }
+
+        return venueImageRepository.findByVenueIdOrderBySortOrderAsc(venueId)
+                .stream()
+                .map(VenueImageResponse::from)
+                .toList();
     }
 
     private VenueListResponse toListResponse(Venue venue) {

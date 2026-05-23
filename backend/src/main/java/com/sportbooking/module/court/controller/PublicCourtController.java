@@ -3,8 +3,10 @@ package com.sportbooking.module.court.controller;
 import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.module.court.dto.CourtDetailResponse;
+import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.CourtListResponse;
 import com.sportbooking.module.court.service.PublicCourtService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,5 +39,10 @@ public class PublicCourtController {
     @GetMapping("/{id}")
     public ApiResponse<CourtDetailResponse> getCourtById(@PathVariable Long id) {
         return ApiResponse.success("Success", publicCourtService.getActiveCourtById(id));
+    }
+
+    @GetMapping("/{id}/images")
+    public ApiResponse<List<CourtImageResponse>> getCourtImages(@PathVariable Long id) {
+        return ApiResponse.success("Success", publicCourtService.getActiveCourtImages(id));
     }
 }

@@ -16,6 +16,8 @@ public interface VenueRepository extends JpaRepository<Venue, Long> {
 
     Optional<Venue> findByIdAndStatus(Long id, VenueStatus status);
 
+    boolean existsByIdAndStatus(Long id, VenueStatus status);
+
     @Query("""
             SELECT venue
             FROM Venue venue

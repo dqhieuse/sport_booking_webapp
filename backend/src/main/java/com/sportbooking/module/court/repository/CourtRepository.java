@@ -16,6 +16,8 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
 
     Optional<Court> findByIdAndStatus(Long id, CourtStatus status);
 
+    boolean existsByIdAndStatus(Long id, CourtStatus status);
+
     @Query("""
             SELECT court
             FROM Court court

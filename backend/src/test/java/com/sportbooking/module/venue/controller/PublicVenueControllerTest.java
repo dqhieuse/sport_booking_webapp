@@ -67,4 +67,25 @@ class PublicVenueControllerTest {
                 .andExpect(jsonPath("$.message", is("Venue not found")))
                 .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
     }
+
+    @Test
+    void getVenueImagesReturnsGalleryWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/venues/{id}/images", 1))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].imageUrl").isNotEmpty())
+                .andExpect(jsonPath("$.data[0].isPrimary", is(true)))
+                .andExpect(jsonPath("$.data[0].sortOrder", is(0)));
+    }
+
+    @Test
+    void getVenueImagesReturnsNotFoundWhenVenueDoesNotExist() throws Exception {
+        mockMvc.perform(get("/api/venues/{id}/images", 9999))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Venue not found")))
+                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+    }
 }

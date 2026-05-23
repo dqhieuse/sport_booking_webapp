@@ -3,6 +3,7 @@ package com.sportbooking.module.court.service;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.module.court.dto.CourtDetailResponse;
+import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.CourtListResponse;
 import com.sportbooking.module.court.dto.CourtSportResponse;
 import com.sportbooking.module.court.dto.CourtVenueDetailResponse;
@@ -54,6 +55,18 @@ public class PublicCourtService {
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
 
         return toDetailResponse(court);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CourtImageResponse> getActiveCourtImages(Long courtId) {
+        if (!courtRepository.existsByIdAndStatus(courtId, CourtStatus.ACTIVE)) {
+            throw new ResourceNotFoundException("Court not found");
+        }
+
+        return courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId)
+                .stream()
+                .map(CourtImageResponse::from)
+                .toList();
     }
 
     private CourtListResponse toListResponse(Court court) {
