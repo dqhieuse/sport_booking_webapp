@@ -39,6 +39,12 @@ This means:
 
 ## 3. Color System
 
+The frontend must support both light and dark themes from the beginning.
+
+- Store the selected theme in browser local storage.
+- Apply the theme at the root HTML level so all pages inherit the same CSS variables.
+- New pages and components must use theme tokens such as `background`, `foreground`, `card`, `secondary`, `muted`, `border`, `primary`, and `accent` instead of hard-coded light or dark colors.
+
 ### Primary Palette
 
 Use these colors as the product baseline:
@@ -109,10 +115,10 @@ Rules:
 
 ## 6. Typography
 
-Use the SportZone font pairing from the reference guideline.
+Use an Apple-style system font stack for a cleaner booking interface and better numeric readability.
 
-- Display font: `Syne` for page titles, card titles, and strong metric values.
-- Body font: `DM Sans` for navigation, descriptions, buttons, forms, and metadata.
+- Display font: `SF Pro Display`, then `SF Pro Text`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Arial`, `sans-serif`.
+- Body font: `SF Pro Text`, then `SF Pro Display`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Arial`, `sans-serif`.
 
 Guidelines:
 
