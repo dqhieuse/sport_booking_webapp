@@ -407,12 +407,6 @@ GET /sports
 
 Auth: Not required
 
-Query params:
-
-```text
-status=ACTIVE
-```
-
 Response:
 
 ```json

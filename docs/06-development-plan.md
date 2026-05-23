@@ -167,6 +167,9 @@ Frontend:
 - Store access token and refresh token consistently.
 - Add Axios interceptor for attaching access token and refreshing expired access token.
 - Build simple but complete user, vendor, and admin flows.
+- Follow the frontend visual direction in `docs/07-frontend-design-guideline.md`.
+- Public browsing screens should be image-forward, minimal, modern, and easy to scan.
+- Use the SportZone Dark + Electric Orange style from `docs/07-frontend-design-guideline.md` instead of a blue, green, or corporate dashboard look.
 
 Database:
 

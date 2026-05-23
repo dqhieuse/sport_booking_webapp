@@ -19,3 +19,11 @@ export type ApiErrorPayload = {
   errors: string[];
   status?: number;
 };
+
+export type PageResponse<T> = {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+};
