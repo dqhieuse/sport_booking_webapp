@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { MainLayout } from '../layouts/MainLayout';
+import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
@@ -23,7 +24,7 @@ export function AppRouter() {
           />
           <Route
             path={routePaths.courts}
-            element={<RoutePlaceholderPage title="Courts" description="Search and compare available courts." />}
+            element={<CourtsPage />}
           />
           <Route
             path={routePaths.courtDetail}
