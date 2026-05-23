@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { MainLayout } from '../layouts/MainLayout';
+import { CourtDetailPage } from '../pages/CourtDetailPage';
 import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -28,7 +29,7 @@ export function AppRouter() {
           />
           <Route
             path={routePaths.courtDetail}
-            element={<RoutePlaceholderPage title="Court details" description="View court images, price, venue, and availability." />}
+            element={<CourtDetailPage />}
           />
           <Route
             path={routePaths.login}
