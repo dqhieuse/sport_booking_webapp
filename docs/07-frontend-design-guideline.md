@@ -21,7 +21,7 @@ The product should not look like a corporate dashboard. The visual identity shou
 Recommended direction:
 
 ```text
-Dark + Electric Orange
+SportZone Dark + Electric Orange
 ```
 
 This means:
@@ -45,26 +45,31 @@ Use these colors as the product baseline:
 
 | Token | Purpose | Suggested color |
 | --- | --- | --- |
-| Deep Base | Main app background and default page base | `#0F0F0F` |
-| Dark Surface | Cards, filter bands, secondary sections, muted blocks | `#1A1A1A` |
-| Electric Orange | Primary buttons, active navigation, main brand color | `#FF5722` |
-| Soft Orange | Hover states, selected filters, small high-intent highlights | `#FF865C` |
-| Warm Text | Main text, headings, strong UI anchors | `#F5F5F0` |
-| Muted Text | Secondary text, metadata, placeholders | `#AAA8A2` |
-| Line Charcoal | Borders, inputs, separators | `#383838` |
-| Warning Amber | Price emphasis, pending states, booking notes | `#F59E0B` |
-| Info Cyan | Available or informational status only | `#0E7490` |
-| Danger Red | Destructive actions and error states | `#B91C1C` |
+| Deep Base | Main app background and default page base | `#0A0A0A` |
+| Surface 1 | Cards and primary panels | `#111111` |
+| Surface 2 | Filter bars, muted blocks, skeletons | `#181818` |
+| Surface 3 | Hover surfaces and elevated controls | `#1E1E1E` |
+| Line Charcoal | Borders, inputs, separators | `#2A2A2A` |
+| Electric Orange | Primary buttons, active navigation, main brand color | `#FF5A1F` |
+| Hover Orange | Primary hover color | `#E64E18` |
+| Soft Orange | Hover states, selected filters, small high-intent highlights | `#FF8C5A` |
+| Warm Text | Main text, headings, strong UI anchors | `#F0F0F0` |
+| Muted Text | Secondary text, metadata, placeholders | `#A0A0A0` |
+| Disabled Text | Disabled or low-priority helper text | `#555555` |
+| Success | Positive semantic states only | `#1D9E75` |
+| Warning | Price emphasis, pending states, booking notes | `#EF9F27` |
+| Info | Informational status only | `#378ADD` |
+| Danger | Destructive actions and error states | `#E24B4A` |
 
 ### Usage Rules
 
 - Primary actions should use Electric Orange.
 - Hover states, selected filters, and small high-intent emphasis should use Soft Orange.
-- Price emphasis and pending states can use Warning Amber only when orange would not be clear enough.
-- Info Cyan is allowed only for semantic states such as available, paid, or informational. It should not become the brand color.
+- Price emphasis and pending states can use Warning only when orange would not be clear enough.
+- Info is allowed only for semantic informational states. It should not become the brand color.
 - Do not use green as a core brand, navigation, CTA, or page background color.
 - Avoid large blue surfaces as the main identity.
-- Avoid a one-color UI made only from orange shades. Use Deep Base, Dark Surface, Line Charcoal, Warm Text, and restrained semantic colors to keep the interface balanced.
+- Avoid a one-color UI made only from orange shades. Use Deep Base, layered dark surfaces, Line Charcoal, Warm Text, and restrained semantic colors to keep the interface balanced.
 - Text must remain high contrast on all backgrounds.
 
 ## 4. Layout Principles
@@ -85,8 +90,8 @@ Recommended layout:
 - Use card grids for venue and court browsing.
 - Use compact but image-forward cards.
 - Use list/detail pages as actual app screens, not marketing landing pages.
-- Use consistent spacing: 16px mobile, 24px desktop, 32px for major section gaps.
-- Keep card radius at 8px or less.
+- Use consistent spacing based on 4px steps: 16px mobile, 24px desktop, 32px for major section gaps.
+- Use softer rounded UI: 10px controls, 14px cards, 20px panels, and full pill badges/buttons when appropriate.
 - Avoid cards inside cards.
 - Avoid large empty hero blocks unless they directly support discovery.
 
@@ -104,7 +109,10 @@ Rules:
 
 ## 6. Typography
 
-Use a clean sans-serif style. The current frontend uses Inter and should continue using it.
+Use the SportZone font pairing from the reference guideline.
+
+- Display font: `Syne` for page titles, card titles, and strong metric values.
+- Body font: `DM Sans` for navigation, descriptions, buttons, forms, and metadata.
 
 Guidelines:
 
@@ -112,15 +120,15 @@ Guidelines:
 - Card titles: compact, readable, and limited to 1-2 lines.
 - Prices: visually clear, but not loud.
 - Supporting text: muted, short, and scannable.
-- Avoid negative letter spacing.
-- Do not scale font size directly with viewport width.
+- Keep letter spacing at normal browser spacing unless a specific component requires uppercase metadata.
+- Do not scale normal UI text directly with viewport width.
 
 ## 7. Components
 
 ### Buttons
 
 - Primary buttons: Electric Orange background.
-- Booking or high-intent CTA should usually use Electric Orange. Use Warning Amber only for price or pending-state emphasis.
+- Booking or high-intent CTA should usually use Electric Orange. Use Warning only for price or pending-state emphasis.
 - Secondary actions should be outline or ghost buttons.
 - Icon buttons should use recognizable icons when available.
 
