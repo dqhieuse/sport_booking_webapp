@@ -1,10 +1,11 @@
-import { AlertCircle, ChevronLeft, ChevronRight, SlidersHorizontal, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { getPublicCourts } from '@/features/courts/api/courtsApi';
 import { CourtListCard } from '@/features/courts/components/CourtListCard';
 import type { Court } from '@/features/courts/types';
@@ -100,7 +101,7 @@ export function CourtsPage() {
         setSports(sportsResponse.data);
         setVenues(venuesResponse.data.items);
         setFilterState('success');
-      } catch (error) {
+      } catch {
         if (controller.signal.aborted) {
           return;
         }
@@ -305,20 +306,11 @@ export function CourtsPage() {
       )}
 
       {isError && (
-        <section className="rounded-lg border border-destructive/40 bg-destructive/10 p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-4">
-              <AlertCircle className="mt-1 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-              <div>
-                <h2 className="font-display text-lg font-bold text-foreground">Unable to load courts</h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{errorMessage}</p>
-              </div>
-            </div>
-            <Button type="button" onClick={() => setReloadKey((current) => current + 1)} className="rounded-full">
-              Retry
-            </Button>
-          </div>
-        </section>
+        <ApiErrorMessage
+          title="Unable to load courts"
+          message={errorMessage}
+          onRetry={() => setReloadKey((current) => current + 1)}
+        />
       )}
 
       {isEmpty && (

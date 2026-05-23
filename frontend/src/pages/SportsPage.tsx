@@ -1,8 +1,8 @@
-import { AlertCircle, Dumbbell, RefreshCw } from 'lucide-react';
+import { Dumbbell } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { getPublicSports } from '@/features/sports/api/sportsApi';
 import { SportCard } from '@/features/sports/components/SportCard';
 import type { Sport } from '@/features/sports/types';
@@ -128,21 +128,11 @@ export function SportsPage() {
       )}
 
       {isError && (
-        <section className="rounded-lg border border-destructive/40 bg-destructive/10 p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-4">
-              <AlertCircle className="mt-1 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-              <div>
-                <h2 className="font-display text-lg font-bold text-foreground">Unable to load sports</h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{errorMessage}</p>
-              </div>
-            </div>
-            <Button type="button" onClick={() => setReloadKey((current) => current + 1)} className="rounded-full">
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              Retry
-            </Button>
-          </div>
-        </section>
+        <ApiErrorMessage
+          title="Unable to load sports"
+          message={errorMessage}
+          onRetry={() => setReloadKey((current) => current + 1)}
+        />
       )}
 
       {isEmpty && (

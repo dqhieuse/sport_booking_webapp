@@ -1,9 +1,10 @@
-import { ArrowRight, CalendarDays, MapPin, Search, Trophy } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { getPublicCourts } from '@/features/courts/api/courtsApi';
 import { CourtSuggestionCard } from '@/features/courts/components/CourtSuggestionCard';
 import type { Court } from '@/features/courts/types';
@@ -162,17 +163,11 @@ export function HomePage() {
       </section>
 
       {isError && (
-        <section className="rounded-lg border border-destructive/40 bg-destructive/10 p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-display text-lg font-bold text-foreground">Unable to load discovery data</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{errorMessage}</p>
-            </div>
-            <Button type="button" onClick={() => setReloadKey((current) => current + 1)} className="rounded-full">
-              Retry
-            </Button>
-          </div>
-        </section>
+        <ApiErrorMessage
+          title="Unable to load discovery data"
+          message={errorMessage}
+          onRetry={() => setReloadKey((current) => current + 1)}
+        />
       )}
 
       {isLoading && (

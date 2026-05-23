@@ -1,18 +1,17 @@
 import {
-  AlertCircle,
   ArrowLeft,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock,
   MapPin,
-  RefreshCw,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { getPublicCourtById, getPublicCourtImages } from '@/features/courts/api/courtsApi';
 import type { CourtDetail, CourtImage } from '@/features/courts/types';
 import { routePaths } from '@/routes/routePaths';
@@ -77,7 +76,7 @@ function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: 
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-[16/7] w-full overflow-hidden rounded-xl bg-muted">
+      <div className="relative aspect-[16/7] w-full overflow-hidden rounded-3xl bg-muted">
         <img
           key={current.imageUrl}
           src={current.imageUrl}
@@ -226,27 +225,11 @@ export function CourtDetailPage() {
       {isLoading && <CourtDetailSkeleton />}
 
       {isError && (
-        <section className="rounded-lg border border-destructive/40 bg-destructive/10 p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-4">
-              <AlertCircle className="mt-1 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-              <div>
-                <h1 className="font-display text-lg font-bold text-foreground">
-                  Unable to load court
-                </h1>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{errorMessage}</p>
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={() => setReloadKey((k) => k + 1)}
-              className="rounded-full"
-            >
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              Retry
-            </Button>
-          </div>
-        </section>
+        <ApiErrorMessage
+          title="Unable to load court"
+          message={errorMessage}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
       )}
 
       {hasData && court && (
@@ -281,7 +264,7 @@ export function CourtDetailPage() {
 
               <section className="space-y-4">
                 <h2 className="font-display text-xl font-bold text-foreground">Venue details</h2>
-                <div className="sportzone-panel rounded-xl p-5 space-y-4">
+                <div className="sportzone-panel rounded-2xl p-5 space-y-4">
                   <div className="flex items-start gap-3">
                     <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
                     <div>
@@ -307,10 +290,10 @@ export function CourtDetailPage() {
 
             {/* Right: Booking panel */}
             <aside>
-              <div className="sportzone-panel sticky top-6 rounded-xl p-6 space-y-5">
+              <div className="sportzone-panel sticky top-6 rounded-2xl p-6 space-y-5">
                 <div>
                   <p className="text-sm text-muted-foreground">Price</p>
-                  <p className="font-display text-4xl font-extrabold text-primary">
+                  <p className="font-display text-4xl font-bold text-primary">
                     {currencyFormatter.format(court.pricePerHour)}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">per hour</p>
@@ -341,7 +324,7 @@ export function CourtDetailPage() {
 
                 <Button
                   size="lg"
-                  className="w-full rounded-xl"
+                  className="w-full rounded-2xl"
                   disabled={court.status !== 'ACTIVE'}
                 >
                   <CalendarDays className="h-5 w-5" aria-hidden="true" />
