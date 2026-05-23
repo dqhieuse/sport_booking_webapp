@@ -20,16 +20,24 @@ public interface VenueRepository extends JpaRepository<Venue, Long> {
             SELECT venue
             FROM Venue venue
             WHERE venue.status = :status
-                AND (
-                    :keyword IS NULL
-                    OR LOWER(venue.name) LIKE CONCAT('%', :keyword, '%')
-                    OR LOWER(venue.address) LIKE CONCAT('%', :keyword, '%')
-                )
-            ORDER BY venue.name ASC
             """)
     Page<Venue> findPublicVenues(
             @Param("status") VenueStatus status,
-            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT venue
+            FROM Venue venue
+            WHERE venue.status = :status
+                AND (
+                    LOWER(venue.name) LIKE :keywordPattern
+                    OR LOWER(venue.address) LIKE :keywordPattern
+                )
+            """)
+    Page<Venue> searchPublicVenues(
+            @Param("status") VenueStatus status,
+            @Param("keywordPattern") String keywordPattern,
             Pageable pageable
     );
 

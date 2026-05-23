@@ -31,13 +31,16 @@ public class PublicCourtService {
             String keyword,
             Pageable pageable
     ) {
-        var courtPage = courtRepository.findPublicCourts(
-                CourtStatus.ACTIVE,
-                sportId,
-                venueId,
-                normalizeKeyword(keyword),
-                pageable
-        );
+        String normalizedKeyword = normalizeKeyword(keyword);
+        var courtPage = normalizedKeyword == null
+                ? courtRepository.findPublicCourts(CourtStatus.ACTIVE, sportId, venueId, pageable)
+                : courtRepository.searchPublicCourts(
+                        CourtStatus.ACTIVE,
+                        sportId,
+                        venueId,
+                        toLikePattern(normalizedKeyword),
+                        pageable
+                );
         List<CourtListResponse> items = courtPage.stream()
                 .map(this::toListResponse)
                 .toList();
@@ -96,5 +99,9 @@ public class PublicCourtService {
         }
 
         return keyword.trim().toLowerCase();
+    }
+
+    private String toLikePattern(String keyword) {
+        return "%" + keyword + "%";
     }
 }

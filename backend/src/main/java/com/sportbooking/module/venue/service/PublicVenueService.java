@@ -24,7 +24,10 @@ public class PublicVenueService {
 
     @Transactional(readOnly = true)
     public PageResponse<VenueListResponse> getActiveVenues(String keyword, Pageable pageable) {
-        var venuePage = venueRepository.findPublicVenues(VenueStatus.ACTIVE, normalizeKeyword(keyword), pageable);
+        String normalizedKeyword = normalizeKeyword(keyword);
+        var venuePage = normalizedKeyword == null
+                ? venueRepository.findPublicVenues(VenueStatus.ACTIVE, pageable)
+                : venueRepository.searchPublicVenues(VenueStatus.ACTIVE, toLikePattern(normalizedKeyword), pageable);
         List<VenueListResponse> items = venuePage.stream()
                 .map(this::toListResponse)
                 .toList();
@@ -80,5 +83,9 @@ public class PublicVenueService {
         }
 
         return keyword.trim().toLowerCase();
+    }
+
+    private String toLikePattern(String keyword) {
+        return "%" + keyword + "%";
     }
 }

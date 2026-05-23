@@ -22,19 +22,31 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
             WHERE court.status = :status
                 AND (:sportId IS NULL OR court.sport.id = :sportId)
                 AND (:venueId IS NULL OR court.venue.id = :venueId)
-                AND (
-                    :keyword IS NULL
-                    OR LOWER(court.name) LIKE CONCAT('%', :keyword, '%')
-                    OR LOWER(court.venue.name) LIKE CONCAT('%', :keyword, '%')
-                    OR LOWER(court.sport.name) LIKE CONCAT('%', :keyword, '%')
-                )
-            ORDER BY court.name ASC
             """)
     Page<Court> findPublicCourts(
             @Param("status") CourtStatus status,
             @Param("sportId") Long sportId,
             @Param("venueId") Long venueId,
-            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT court
+            FROM Court court
+            WHERE court.status = :status
+                AND (:sportId IS NULL OR court.sport.id = :sportId)
+                AND (:venueId IS NULL OR court.venue.id = :venueId)
+                AND (
+                    LOWER(court.name) LIKE :keywordPattern
+                    OR LOWER(court.venue.name) LIKE :keywordPattern
+                    OR LOWER(court.sport.name) LIKE :keywordPattern
+                )
+            """)
+    Page<Court> searchPublicCourts(
+            @Param("status") CourtStatus status,
+            @Param("sportId") Long sportId,
+            @Param("venueId") Long venueId,
+            @Param("keywordPattern") String keywordPattern,
             Pageable pageable
     );
 
