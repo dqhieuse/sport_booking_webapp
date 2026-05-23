@@ -7,6 +7,21 @@
     <title>Sport Booking WebApp</title>
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('sport-booking-theme');
+          var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+          var resolvedTheme = theme === 'light' || theme === 'dark' ? theme : prefersLight ? 'light' : 'dark';
+
+          document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
+          document.documentElement.dataset.theme = resolvedTheme;
+        } catch (_) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

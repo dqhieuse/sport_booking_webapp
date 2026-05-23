@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { routePaths } from '@/routes/routePaths';
 
@@ -38,6 +39,7 @@ export function MainLayout() {
                 Sport<span className="text-primary">Zone</span>
               </NavLink>
               <div className="flex items-center gap-2 lg:hidden">
+                <ThemeToggle />
                 <Button asChild variant="ghost" size="sm">
                   <NavLink to={routePaths.login}>Login</NavLink>
                 </Button>
@@ -56,6 +58,7 @@ export function MainLayout() {
             </nav>
 
             <div className="hidden items-center gap-2 lg:flex">
+              <ThemeToggle />
               <Button asChild variant="ghost">
                 <NavLink to={routePaths.login}>Login</NavLink>
               </Button>

@@ -1,30 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&family=Syne:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    color-scheme: dark;
-    --background: 0 0% 4%;
-    --foreground: 0 0% 94%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 94%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 94%;
+    color-scheme: light;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
     --primary: 15 100% 56%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 94%;
-    --muted: 0 0% 9%;
-    --muted-foreground: 0 0% 63%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 38%;
     --accent: 18 100% 68%;
-    --accent-foreground: 0 0% 4%;
+    --accent-foreground: 0 0% 8%;
     --destructive: 0 72% 59%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 16%;
-    --input: 0 0% 16%;
+    --border: 0 0% 84%;
+    --input: 0 0% 84%;
     --ring: 15 100% 56%;
     --radius: 1.25rem;
   }
@@ -78,7 +76,7 @@
   input,
   select,
   textarea {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-ring focus-visible:ring-offset-background;
   }
 }
 
@@ -92,11 +90,11 @@
   }
 
   .sportzone-panel {
-    @apply border border-border bg-card shadow-[0_4px_16px_rgba(0,0,0,0.6)] transition-[border-color,transform,box-shadow] duration-300 ease-out;
+    @apply border border-border bg-card shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-[border-color,transform,box-shadow] duration-300 ease-out dark:shadow-[0_4px_16px_rgba(0,0,0,0.6)];
   }
 
   .sportzone-panel:hover {
-    @apply -translate-y-0.5 border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.7)];
+    @apply -translate-y-0.5 border-black/15 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:border-white/15 dark:shadow-[0_8px_32px_rgba(0,0,0,0.7)];
   }
 
   .sportzone-glow {

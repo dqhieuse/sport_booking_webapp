@@ -1,7 +1,6 @@
 import { ArrowRight, Dumbbell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { routePaths } from '@/routes/routePaths';
@@ -22,10 +21,6 @@ export function SportCard({ sport }: SportCardProps) {
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary transition-transform duration-300 group-hover:scale-110">
             <Dumbbell className="h-6 w-6" aria-hidden="true" />
           </div>
-          <Badge className="gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
-            {sport.status}
-          </Badge>
         </div>
 
         <div className="space-y-2">
@@ -35,8 +30,7 @@ export function SportCard({ sport }: SportCardProps) {
           </p>
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 pt-4">
-          <span className="text-xs font-medium uppercase text-muted-foreground">Sport category</span>
+        <div className="mt-auto flex items-center justify-end gap-3 border-t border-border/70 pt-4">
           <Button asChild size="sm" className="rounded-full px-4">
             <Link to={courtsPath}>
               Courts

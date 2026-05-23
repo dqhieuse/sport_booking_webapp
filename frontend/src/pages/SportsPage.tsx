@@ -19,7 +19,7 @@ function getErrorMessage(error: unknown) {
 
 function SportCardSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card p-5 shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+    <div className="rounded-lg border border-border bg-card p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
       <div className="flex items-start justify-between">
         <div className="h-12 w-12 rounded-md bg-muted" />
         <div className="h-6 w-16 rounded-full bg-muted" />
