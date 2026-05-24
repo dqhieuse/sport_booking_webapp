@@ -4,9 +4,12 @@ import { MainLayout } from '../layouts/MainLayout';
 import { CourtDetailPage } from '../pages/CourtDetailPage';
 import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
+import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
 import { SportsPage } from '../pages/SportsPage';
+import { VerifyEmailPage } from '../pages/VerifyEmailPage';
 import { routePaths } from './routePaths';
 
 export function AppRouter() {
@@ -33,11 +36,15 @@ export function AppRouter() {
           />
           <Route
             path={routePaths.login}
-            element={<RoutePlaceholderPage title="Log in" description="Authenticate users, vendors, and admins." />}
+            element={<LoginPage />}
           />
           <Route
             path={routePaths.register}
-            element={<RoutePlaceholderPage title="Register" description="Create a user account and start email verification." />}
+            element={<RegisterPage />}
+          />
+          <Route
+            path={routePaths.verifyEmail}
+            element={<VerifyEmailPage />}
           />
           <Route
             path={routePaths.profile}

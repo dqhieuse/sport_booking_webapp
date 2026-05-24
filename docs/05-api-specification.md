@@ -128,6 +128,23 @@ Request body:
 }
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "If this email is registered and pending verification, a verification email has been sent.",
+  "data": null,
+  "errors": []
+}
+```
+
+Notes:
+
+- This endpoint intentionally does not return account data to avoid exposing whether an email is registered.
+- If the account exists, is not verified, and is still in `PENDING_VERIFICATION`, the system sends a new verification email.
+- When a new verification email is sent, previous unused tokens for that account are removed before creating the new token.
+
 ### 4.4. Login
 
 ```text
@@ -149,6 +166,7 @@ Note:
 
 - `identifier` can be either email or phone number.
 - Backend should detect the identifier type and find the user by email or phone.
+- Login is allowed only for local accounts that are `ACTIVE` and have verified email.
 
 Response:
 
@@ -172,7 +190,102 @@ Response:
 }
 ```
 
-### 4.5. Google Login
+Error cases:
+
+| Case | HTTP status | Message |
+| --- | --- | --- |
+| Email/phone or password is wrong | `401` | `Invalid email/phone or password` |
+| Email is not verified | `403` | `Please verify your email before logging in` |
+| Account is inactive | `403` | `Account is inactive` |
+| Request body is invalid | `400` | `Validation failed` |
+
+### 4.5. Refresh Token
+
+```text
+POST /auth/refresh
+```
+
+Auth: Not required
+
+Request body:
+
+```json
+{
+  "refreshToken": "refresh-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new-access-token",
+    "refreshToken": "new-refresh-token",
+    "expiresIn": 900,
+    "user": {
+      "id": 1,
+      "fullName": "Nguyen Van A",
+      "email": "user@example.com",
+      "avatarUrl": "https://cdn.example.com/avatars/user-1.jpg",
+      "role": "USER",
+      "emailVerified": true
+    }
+  }
+}
+```
+
+Notes:
+
+- Refresh tokens are rotated. A successful refresh revokes the old refresh token and returns a new one.
+- If an old revoked refresh token is reused, active refresh tokens for that user are revoked.
+- Refresh token values are stored as hashes, not raw tokens.
+
+Error cases:
+
+| Case | HTTP status | Message |
+| --- | --- | --- |
+| Refresh token is missing, unknown, expired, or reused | `401` | `Refresh token is invalid or expired` |
+| Account is inactive | `403` | `Account is inactive` |
+| Account is no longer verified | `403` | `Please verify your email before continuing` |
+| Request body is invalid | `400` | `Validation failed` |
+
+### 4.6. Logout
+
+```text
+POST /auth/logout
+```
+
+Auth: Not required
+
+Request body:
+
+```json
+{
+  "refreshToken": "refresh-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Logged out successfully",
+  "data": null,
+  "errors": []
+}
+```
+
+Notes:
+
+- Logout revokes only the submitted refresh token, so other devices remain logged in.
+- Logout is idempotent. Unknown or already revoked refresh tokens still return success to avoid exposing token state.
+- Request body validation still returns `400` when `refreshToken` is missing or blank.
+
+### 4.7. Google Login
 
 ```text
 POST /auth/google

@@ -61,9 +61,32 @@ DB_USERNAME=sport_booking
 DB_PASSWORD=sport_booking
 
 APP_CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+JWT_SECRET=change-this-local-secret-at-least-32-bytes
+JWT_ACCESS_TOKEN_TTL=15m
+JWT_ISSUER=sport-booking-backend
+
+APP_MAIL_PROVIDER=log
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_AUTH=true
+SMTP_STARTTLS_ENABLE=true
+MAIL_FROM_EMAIL=
+MAIL_FROM_NAME=SportZone
+FRONTEND_BASE_URL=http://localhost:5173
+EMAIL_VERIFY_PATH=/verify-email
+EMAIL_VERIFICATION_TOKEN_TTL=15m
 ```
 
 Do not commit `.env`.
+
+If a value contains spaces, wrap it in quotes. Gmail app passwords commonly have spaces:
+
+```text
+SMTP_PASSWORD="xxxx xxxx xxxx xxxx"
+```
 
 ## Run Locally
 
@@ -76,6 +99,9 @@ docker compose up -d postgres
 Run the backend:
 
 ```bash
+set -a
+source .env
+set +a
 ./mvnw spring-boot:run
 ```
 

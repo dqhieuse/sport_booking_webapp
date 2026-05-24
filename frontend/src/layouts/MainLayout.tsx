@@ -1,7 +1,17 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { ChevronDown, LogOut, UserCircle } from 'lucide-react';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/features/auth/useAuth';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { routePaths } from '@/routes/routePaths';
@@ -40,12 +50,7 @@ export function MainLayout() {
               </NavLink>
               <div className="flex items-center gap-2 lg:hidden">
                 <ThemeToggle />
-                <Button asChild variant="ghost" size="sm">
-                  <NavLink to={routePaths.login}>Login</NavLink>
-                </Button>
-                <Button asChild size="sm">
-                  <NavLink to={routePaths.register}>Register</NavLink>
-                </Button>
+                <AuthActions compact />
               </div>
             </div>
 
@@ -59,12 +64,7 @@ export function MainLayout() {
 
             <div className="hidden items-center gap-2 lg:flex">
               <ThemeToggle />
-              <Button asChild variant="ghost">
-                <NavLink to={routePaths.login}>Login</NavLink>
-              </Button>
-              <Button asChild>
-                <NavLink to={routePaths.register}>Register</NavLink>
-              </Button>
+              <AuthActions />
             </div>
           </div>
 
@@ -84,5 +84,101 @@ export function MainLayout() {
         <Outlet />
       </main>
     </div>
+  );
+}
+
+function AuthActions({ compact = false }: { compact?: boolean }) {
+  const { isAuthenticated, session, logout } = useAuth();
+
+  if (!isAuthenticated || !session) {
+    return (
+      <>
+        <Button asChild variant="ghost" size={compact ? 'sm' : 'default'}>
+          <NavLink to={routePaths.login}>Login</NavLink>
+        </Button>
+        <Button asChild size={compact ? 'sm' : 'default'}>
+          <NavLink to={routePaths.register}>Register</NavLink>
+        </Button>
+      </>
+    );
+  }
+
+  const initials = session.user.fullName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+
+  async function handleLogout() {
+    await logout();
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-secondary px-2.5 text-sm font-medium text-foreground transition hover:border-primary/30 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+            {session.user.avatarUrl ? (
+              <img
+                src={session.user.avatarUrl}
+                alt=""
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              initials || <UserCircle className="h-4 w-4" aria-hidden="true" />
+            )}
+          </span>
+          {!compact && <span className="max-w-32 truncate">{session.user.fullName}</span>}
+          <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel asChild>
+          <div className="px-3 py-3">
+            <p className="truncate text-base font-semibold text-foreground">{session.user.fullName}</p>
+            <p className="mt-1 truncate text-xs font-medium text-muted-foreground">{session.user.email}</p>
+            <p className="mt-2 w-fit rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+              {session.user.role}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <MenuLink to={routePaths.profile} label="Profile" />
+        <MenuLink to={routePaths.bookingHistory} label="My bookings" />
+        {session.user.role === 'VENDOR' && (
+          <MenuLink to={routePaths.vendorDashboard} label="Vendor dashboard" />
+        )}
+        {session.user.role === 'ADMIN' && (
+          <MenuLink to={routePaths.adminDashboard} label="Admin dashboard" />
+        )}
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onSelect={handleLogout}
+          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function MenuLink({ to, label }: { to: string; label: string }) {
+  return (
+    <DropdownMenuItem asChild>
+      <Link to={to} className="no-underline">
+        {label}
+      </Link>
+    </DropdownMenuItem>
   );
 }
