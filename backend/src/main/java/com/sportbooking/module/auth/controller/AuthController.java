@@ -4,6 +4,7 @@ import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.module.auth.dto.AuthUserResponse;
 import com.sportbooking.module.auth.dto.EmailVerificationResponse;
 import com.sportbooking.module.auth.dto.RegisterRequest;
+import com.sportbooking.module.auth.dto.ResendVerificationRequest;
 import com.sportbooking.module.auth.service.AuthRegistrationService;
 import com.sportbooking.module.auth.service.EmailVerificationService;
 import jakarta.validation.Valid;
@@ -36,5 +37,14 @@ public class AuthController {
     public ApiResponse<EmailVerificationResponse> verifyEmail(@RequestParam(required = false) String token) {
         EmailVerificationResponse response = emailVerificationService.verifyEmail(token);
         return ApiResponse.success("Email verified successfully", response);
+    }
+
+    @PostMapping("/resend-verification")
+    public ApiResponse<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        emailVerificationService.resendVerificationEmail(request);
+        return ApiResponse.success(
+                "If this email is registered and pending verification, a verification email has been sent.",
+                null
+        );
     }
 }

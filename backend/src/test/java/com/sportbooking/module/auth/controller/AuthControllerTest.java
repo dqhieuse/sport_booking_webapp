@@ -3,6 +3,7 @@ package com.sportbooking.module.auth.controller;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -201,6 +202,97 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Verification token has expired")));
+    }
+
+    @Test
+    void resendVerificationCreatesNewTokenAndRemovesPreviousOpenToken() throws Exception {
+        String email = "resend-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerUser(email, "0900000104");
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        String oldToken = emailVerificationTokenRepository.findByUserAndUsedAtIsNullAndExpiresAtAfter(
+                        savedUser,
+                        LocalDateTime.now()
+                )
+                .getFirst()
+                .getToken();
+
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s"
+                                }
+                                """.formatted(email.toUpperCase())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("If this email is registered and pending verification, a verification email has been sent.")))
+                .andExpect(jsonPath("$.data", nullValue()));
+
+        var activeTokens = emailVerificationTokenRepository.findByUserAndUsedAtIsNullAndExpiresAtAfter(
+                savedUser,
+                LocalDateTime.now()
+        );
+
+        org.assertj.core.api.Assertions.assertThat(activeTokens).hasSize(1);
+        org.assertj.core.api.Assertions.assertThat(activeTokens.getFirst().getToken()).isNotEqualTo(oldToken);
+        org.assertj.core.api.Assertions.assertThat(emailVerificationTokenRepository.findByToken(oldToken)).isEmpty();
+    }
+
+    @Test
+    void resendVerificationReturnsNeutralSuccessWhenEmailAlreadyVerified() throws Exception {
+        String email = "verified-resend-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerUser(email, "0900000105");
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        String token = emailVerificationTokenRepository.findByUserAndUsedAtIsNullAndExpiresAtAfter(
+                        savedUser,
+                        LocalDateTime.now()
+                )
+                .getFirst()
+                .getToken();
+        mockMvc.perform(get("/api/auth/verify-email").param("token", token))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("If this email is registered and pending verification, a verification email has been sent.")))
+                .andExpect(jsonPath("$.data", nullValue()));
+    }
+
+    @Test
+    void resendVerificationReturnsNeutralSuccessWhenAccountDoesNotExist() throws Exception {
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "missing-%s@sportbooking.local"
+                                }
+                                """.formatted(UUID.randomUUID())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("If this email is registered and pending verification, a verification email has been sent.")))
+                .andExpect(jsonPath("$.data", nullValue()));
+    }
+
+    @Test
+    void resendVerificationReturnsBadRequestWhenInputIsInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "invalid-email"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Validation failed")))
+                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
     }
 
     private void registerUser(String email, String phone) throws Exception {
