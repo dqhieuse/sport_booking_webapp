@@ -252,7 +252,40 @@ Error cases:
 | Account is no longer verified | `403` | `Please verify your email before continuing` |
 | Request body is invalid | `400` | `Validation failed` |
 
-### 4.6. Google Login
+### 4.6. Logout
+
+```text
+POST /auth/logout
+```
+
+Auth: Not required
+
+Request body:
+
+```json
+{
+  "refreshToken": "refresh-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Logged out successfully",
+  "data": null,
+  "errors": []
+}
+```
+
+Notes:
+
+- Logout revokes only the submitted refresh token, so other devices remain logged in.
+- Logout is idempotent. Unknown or already revoked refresh tokens still return success to avoid exposing token state.
+- Request body validation still returns `400` when `refreshToken` is missing or blank.
+
+### 4.7. Google Login
 
 ```text
 POST /auth/google
