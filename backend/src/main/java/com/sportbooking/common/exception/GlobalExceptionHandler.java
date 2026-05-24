@@ -26,6 +26,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.failure(exception.getMessage(), List.of(exception.getMessage())));
     }
 
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(InvalidRequestException exception) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.failure(exception.getMessage(), List.of(exception.getMessage())));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationError(MethodArgumentNotValidException exception) {
         List<String> errors = exception.getBindingResult()
