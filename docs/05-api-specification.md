@@ -128,6 +128,23 @@ Request body:
 }
 ```
 
+Response:
+
+```json
+{
+  "success": true,
+  "message": "If this email is registered and pending verification, a verification email has been sent.",
+  "data": null,
+  "errors": []
+}
+```
+
+Notes:
+
+- This endpoint intentionally does not return account data to avoid exposing whether an email is registered.
+- If the account exists, is not verified, and is still in `PENDING_VERIFICATION`, the system sends a new verification email.
+- When a new verification email is sent, previous unused tokens for that account are removed before creating the new token.
+
 ### 4.4. Login
 
 ```text
