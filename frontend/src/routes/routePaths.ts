@@ -6,6 +6,7 @@ export const routePaths = {
   courtDetail: '/courts/:courtId',
   login: '/login',
   register: '/register',
+  verifyEmail: '/verify-email',
   profile: '/profile',
   bookingHistory: '/bookings',
   vendorDashboard: '/vendor',

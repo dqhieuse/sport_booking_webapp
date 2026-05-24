@@ -8,6 +8,7 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
 import { SportsPage } from '../pages/SportsPage';
+import { VerifyEmailPage } from '../pages/VerifyEmailPage';
 import { routePaths } from './routePaths';
 
 export function AppRouter() {
@@ -39,6 +40,10 @@ export function AppRouter() {
           <Route
             path={routePaths.register}
             element={<RegisterPage />}
+          />
+          <Route
+            path={routePaths.verifyEmail}
+            element={<VerifyEmailPage />}
           />
           <Route
             path={routePaths.profile}

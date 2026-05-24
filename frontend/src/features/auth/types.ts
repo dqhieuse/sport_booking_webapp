@@ -16,3 +16,12 @@ export type AuthUserResponse = {
   status: UserStatus;
   emailVerified: boolean;
 };
+
+export type EmailVerificationResponse = {
+  emailVerified: boolean;
+  status: UserStatus;
+};
+
+export type ResendVerificationRequest = {
+  email: string;
+};
