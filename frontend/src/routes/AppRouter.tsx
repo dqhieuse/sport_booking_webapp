@@ -5,6 +5,7 @@ import { CourtDetailPage } from '../pages/CourtDetailPage';
 import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
 import { SportsPage } from '../pages/SportsPage';
 import { routePaths } from './routePaths';
@@ -37,7 +38,7 @@ export function AppRouter() {
           />
           <Route
             path={routePaths.register}
-            element={<RoutePlaceholderPage title="Register" description="Create a user account and start email verification." />}
+            element={<RegisterPage />}
           />
           <Route
             path={routePaths.profile}
