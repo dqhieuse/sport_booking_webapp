@@ -60,6 +60,13 @@ public class RefreshTokenService {
         );
     }
 
+    @Transactional
+    public void logout(RefreshTokenRequest request) {
+        String tokenHash = hashToken(request.refreshToken().trim());
+        refreshTokenRepository.findByTokenHash(tokenHash)
+                .ifPresent(refreshToken -> revokeToken(refreshToken, LocalDateTime.now()));
+    }
+
     public String issueRefreshToken(User user) {
         String token = generateSecureToken();
 

@@ -52,6 +52,12 @@ public class AuthController {
         return ApiResponse.success("Token refreshed successfully", response);
     }
 
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        refreshTokenService.logout(request);
+        return ApiResponse.success("Logged out successfully", null);
+    }
+
     @GetMapping("/verify-email")
     public ApiResponse<EmailVerificationResponse> verifyEmail(@RequestParam(required = false) String token) {
         EmailVerificationResponse response = emailVerificationService.verifyEmail(token);

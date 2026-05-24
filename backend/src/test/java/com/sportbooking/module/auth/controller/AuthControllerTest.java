@@ -383,6 +383,83 @@ class AuthControllerTest {
     }
 
     @Test
+    void logoutRevokesCurrentRefreshTokenOnly() throws Exception {
+        String email = "logout-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000113");
+        String firstRefreshToken = loginAndReturnRefreshToken(email);
+        String secondRefreshToken = loginAndReturnRefreshToken(email);
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(firstRefreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Logged out successfully")))
+                .andExpect(jsonPath("$.data", nullValue()));
+
+        entityManager.clear();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .hasSize(1);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(secondRefreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Token refreshed successfully")));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(firstRefreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
+    }
+
+    @Test
+    void logoutReturnsSuccessWhenRefreshTokenIsUnknown() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "unknown-refresh-token"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Logged out successfully")))
+                .andExpect(jsonPath("$.data", nullValue()));
+    }
+
+    @Test
+    void logoutReturnsBadRequestWhenInputIsInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Validation failed")))
+                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+    @Test
     void verifyEmailActivatesAccountWhenTokenIsValid() throws Exception {
         String email = "verify-user-" + UUID.randomUUID() + "@sportbooking.local";
         registerUser(email, "0900000101");
