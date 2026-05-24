@@ -3,8 +3,11 @@ package com.sportbooking.module.auth.controller;
 import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.module.auth.dto.AuthUserResponse;
 import com.sportbooking.module.auth.dto.EmailVerificationResponse;
+import com.sportbooking.module.auth.dto.LoginRequest;
+import com.sportbooking.module.auth.dto.LoginResponse;
 import com.sportbooking.module.auth.dto.RegisterRequest;
 import com.sportbooking.module.auth.dto.ResendVerificationRequest;
+import com.sportbooking.module.auth.service.AuthLoginService;
 import com.sportbooking.module.auth.service.AuthRegistrationService;
 import com.sportbooking.module.auth.service.EmailVerificationService;
 import jakarta.validation.Valid;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
+    private final AuthLoginService authLoginService;
     private final AuthRegistrationService authRegistrationService;
     private final EmailVerificationService emailVerificationService;
 
@@ -31,6 +35,12 @@ public class AuthController {
     public ApiResponse<AuthUserResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthUserResponse response = authRegistrationService.register(request);
         return ApiResponse.success("Register successfully. Please verify your email.", response);
+    }
+
+    @PostMapping("/login")
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse response = authLoginService.login(request);
+        return ApiResponse.success("Login successfully", response);
     }
 
     @GetMapping("/verify-email")

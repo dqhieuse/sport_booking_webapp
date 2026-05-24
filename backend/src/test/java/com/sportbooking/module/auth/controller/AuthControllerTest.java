@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.sportbooking.module.auth.entity.EmailVerificationToken;
 import com.sportbooking.module.auth.repository.EmailVerificationTokenRepository;
+import com.sportbooking.module.auth.repository.RefreshTokenRepository;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
 import java.time.LocalDateTime;
@@ -36,6 +37,9 @@ class AuthControllerTest {
 
     @Autowired
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     void registerCreatesPendingLocalAccountAndVerificationToken() throws Exception {
@@ -121,6 +125,130 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Validation failed")))
                 .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(3))));
+    }
+
+    @Test
+    void loginReturnsTokensWhenEmailAndPasswordAreValid() throws Exception {
+        String email = "login-email-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000106");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(email.toUpperCase())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Login successfully")))
+                .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.expiresIn", is(900)))
+                .andExpect(jsonPath("$.data.user.email", is(email)))
+                .andExpect(jsonPath("$.data.user.role", is("USER")))
+                .andExpect(jsonPath("$.data.user.emailVerified", is(true)));
+
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        var refreshTokens = refreshTokenRepository.findByUserAndRevokedAtIsNullAndExpiresAtAfter(
+                savedUser,
+                LocalDateTime.now()
+        );
+
+        org.assertj.core.api.Assertions.assertThat(refreshTokens).hasSize(1);
+    }
+
+    @Test
+    void loginReturnsTokensWhenPhoneAndPasswordAreValid() throws Exception {
+        String email = "login-phone-user-" + UUID.randomUUID() + "@sportbooking.local";
+        String phone = "0900000107";
+        registerAndVerifyUser(email, phone);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(phone)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Login successfully")))
+                .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.user.email", is(email)));
+    }
+
+    @Test
+    void loginReturnsUnauthorizedWhenCredentialsAreInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "missing-login-user@sportbooking.local",
+                                  "password": "WrongPassword@123"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Invalid email/phone or password")));
+    }
+
+    @Test
+    void loginReturnsForbiddenWhenEmailIsNotVerified() throws Exception {
+        String email = "pending-login-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerUser(email, "0900000108");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Please verify your email before logging in")));
+    }
+
+    @Test
+    void loginReturnsForbiddenWhenAccountIsInactive() throws Exception {
+        String email = "inactive-login-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000109");
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        savedUser.setStatus(UserStatus.INACTIVE);
+        userRepository.save(savedUser);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Account is inactive")));
+    }
+
+    @Test
+    void loginReturnsBadRequestWhenInputIsInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "",
+                                  "password": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Validation failed")))
+                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(2))));
     }
 
     @Test
@@ -307,5 +435,19 @@ class AuthControllerTest {
                                 }
                                 """.formatted(email, phone)))
                 .andExpect(status().isCreated());
+    }
+
+    private void registerAndVerifyUser(String email, String phone) throws Exception {
+        registerUser(email, phone);
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        String token = emailVerificationTokenRepository.findByUserAndUsedAtIsNullAndExpiresAtAfter(
+                        savedUser,
+                        LocalDateTime.now()
+                )
+                .getFirst()
+                .getToken();
+
+        mockMvc.perform(get("/api/auth/verify-email").param("token", token))
+                .andExpect(status().isOk());
     }
 }
