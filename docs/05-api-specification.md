@@ -166,6 +166,7 @@ Note:
 
 - `identifier` can be either email or phone number.
 - Backend should detect the identifier type and find the user by email or phone.
+- Login is allowed only for local accounts that are `ACTIVE` and have verified email.
 
 Response:
 
@@ -188,6 +189,15 @@ Response:
   }
 }
 ```
+
+Error cases:
+
+| Case | HTTP status | Message |
+| --- | --- | --- |
+| Email/phone or password is wrong | `401` | `Invalid email/phone or password` |
+| Email is not verified | `403` | `Please verify your email before logging in` |
+| Account is inactive | `403` | `Account is inactive` |
+| Request body is invalid | `400` | `Validation failed` |
 
 ### 4.5. Google Login
 
