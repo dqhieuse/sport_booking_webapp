@@ -199,7 +199,60 @@ Error cases:
 | Account is inactive | `403` | `Account is inactive` |
 | Request body is invalid | `400` | `Validation failed` |
 
-### 4.5. Google Login
+### 4.5. Refresh Token
+
+```text
+POST /auth/refresh
+```
+
+Auth: Not required
+
+Request body:
+
+```json
+{
+  "refreshToken": "refresh-token"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new-access-token",
+    "refreshToken": "new-refresh-token",
+    "expiresIn": 900,
+    "user": {
+      "id": 1,
+      "fullName": "Nguyen Van A",
+      "email": "user@example.com",
+      "avatarUrl": "https://cdn.example.com/avatars/user-1.jpg",
+      "role": "USER",
+      "emailVerified": true
+    }
+  }
+}
+```
+
+Notes:
+
+- Refresh tokens are rotated. A successful refresh revokes the old refresh token and returns a new one.
+- If an old revoked refresh token is reused, active refresh tokens for that user are revoked.
+- Refresh token values are stored as hashes, not raw tokens.
+
+Error cases:
+
+| Case | HTTP status | Message |
+| --- | --- | --- |
+| Refresh token is missing, unknown, expired, or reused | `401` | `Refresh token is invalid or expired` |
+| Account is inactive | `403` | `Account is inactive` |
+| Account is no longer verified | `403` | `Please verify your email before continuing` |
+| Request body is invalid | `400` | `Validation failed` |
+
+### 4.6. Google Login
 
 ```text
 POST /auth/google
