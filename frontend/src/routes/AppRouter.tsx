@@ -4,6 +4,7 @@ import { MainLayout } from '../layouts/MainLayout';
 import { CourtDetailPage } from '../pages/CourtDetailPage';
 import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
+import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
@@ -35,7 +36,7 @@ export function AppRouter() {
           />
           <Route
             path={routePaths.login}
-            element={<RoutePlaceholderPage title="Log in" description="Authenticate users, vendors, and admins." />}
+            element={<LoginPage />}
           />
           <Route
             path={routePaths.register}

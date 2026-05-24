@@ -4,6 +4,8 @@ import type { ApiSuccessResponse } from '@/types/api';
 import type {
   AuthUserResponse,
   EmailVerificationResponse,
+  LoginRequest,
+  LoginResponse,
   RegisterRequest,
   ResendVerificationRequest,
 } from '../types';
@@ -30,4 +32,11 @@ export async function resendVerificationEmail(
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<void>> {
   return apiClient.post<void, ResendVerificationRequest>('/auth/resend-verification', request, { signal });
+}
+
+export async function loginLocalAccount(
+  request: LoginRequest,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<LoginResponse>> {
+  return apiClient.post<LoginResponse, LoginRequest>('/auth/login', request, { signal });
 }
