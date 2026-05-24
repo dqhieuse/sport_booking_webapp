@@ -14,6 +14,7 @@ import com.sportbooking.module.auth.repository.EmailVerificationTokenRepository;
 import com.sportbooking.module.auth.repository.RefreshTokenRepository;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,9 @@ class AuthControllerTest {
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void registerCreatesPendingLocalAccountAndVerificationToken() throws Exception {
@@ -252,6 +256,133 @@ class AuthControllerTest {
     }
 
     @Test
+    void refreshRotatesRefreshTokenAndRejectsReuseOfOldToken() throws Exception {
+        String email = "refresh-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000110");
+        String oldRefreshToken = loginAndReturnRefreshToken(email);
+
+        String newRefreshToken = mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(oldRefreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Token refreshed successfully")))
+                .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.expiresIn", is(900)))
+                .andExpect(jsonPath("$.data.user.email", is(email)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        newRefreshToken = com.jayway.jsonpath.JsonPath.read(newRefreshToken, "$.data.refreshToken");
+
+        org.assertj.core.api.Assertions.assertThat(newRefreshToken).isNotEqualTo(oldRefreshToken);
+
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .hasSize(1);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(oldRefreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
+
+        entityManager.clear();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .isEmpty();
+    }
+
+    @Test
+    void refreshReturnsUnauthorizedWhenTokenIsUnknown() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "unknown-refresh-token"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
+    }
+
+    @Test
+    void refreshReturnsUnauthorizedWhenTokenIsExpired() throws Exception {
+        String email = "expired-refresh-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000111");
+        String refreshToken = loginAndReturnRefreshToken(email);
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        var storedToken = refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser).getFirst();
+        storedToken.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        refreshTokenRepository.save(storedToken);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(refreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
+
+        entityManager.clear();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .isEmpty();
+    }
+
+    @Test
+    void refreshReturnsForbiddenAndRevokesTokensWhenAccountIsInactive() throws Exception {
+        String email = "inactive-refresh-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000112");
+        String refreshToken = loginAndReturnRefreshToken(email);
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+        savedUser.setStatus(UserStatus.INACTIVE);
+        userRepository.save(savedUser);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "%s"
+                                }
+                                """.formatted(refreshToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Account is inactive")));
+
+        entityManager.clear();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .isEmpty();
+    }
+
+    @Test
+    void refreshReturnsBadRequestWhenInputIsInvalid() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Validation failed")))
+                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+    @Test
     void verifyEmailActivatesAccountWhenTokenIsValid() throws Exception {
         String email = "verify-user-" + UUID.randomUUID() + "@sportbooking.local";
         registerUser(email, "0900000101");
@@ -449,5 +580,22 @@ class AuthControllerTest {
 
         mockMvc.perform(get("/api/auth/verify-email").param("token", token))
                 .andExpect(status().isOk());
+    }
+
+    private String loginAndReturnRefreshToken(String identifier) throws Exception {
+        String response = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(identifier)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return com.jayway.jsonpath.JsonPath.read(response, "$.data.refreshToken");
     }
 }

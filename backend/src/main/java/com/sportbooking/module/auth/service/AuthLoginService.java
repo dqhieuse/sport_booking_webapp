@@ -6,18 +6,10 @@ import com.sportbooking.config.AuthProperties;
 import com.sportbooking.module.auth.dto.LoginRequest;
 import com.sportbooking.module.auth.dto.LoginResponse;
 import com.sportbooking.module.auth.dto.LoginUserResponse;
-import com.sportbooking.module.auth.entity.RefreshToken;
-import com.sportbooking.module.auth.repository.RefreshTokenRepository;
 import com.sportbooking.module.user.entity.AuthProvider;
 import com.sportbooking.module.user.entity.User;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,11 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthLoginService {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final JwtAccessTokenService jwtAccessTokenService;
+    private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final AuthProperties authProperties;
 
@@ -60,8 +50,7 @@ public class AuthLoginService {
         }
 
         String accessToken = jwtAccessTokenService.generateToken(user);
-        String refreshToken = generateSecureToken();
-        saveRefreshToken(user, refreshToken);
+        String refreshToken = refreshTokenService.issueRefreshToken(user);
 
         return new LoginResponse(
                 accessToken,
@@ -69,29 +58,5 @@ public class AuthLoginService {
                 authProperties.getAccessTokenTtl().toSeconds(),
                 LoginUserResponse.from(user)
         );
-    }
-
-    private void saveRefreshToken(User user, String token) {
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
-        refreshToken.setTokenHash(hashToken(token));
-        refreshToken.setExpiresAt(LocalDateTime.now().plus(authProperties.getRefreshTokenTtl()));
-        refreshTokenRepository.save(refreshToken);
-    }
-
-    private String generateSecureToken() {
-        byte[] tokenBytes = new byte[32];
-        SECURE_RANDOM.nextBytes(tokenBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
-    }
-
-    private String hashToken(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
-        }
     }
 }

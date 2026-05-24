@@ -5,11 +5,13 @@ import com.sportbooking.module.auth.dto.AuthUserResponse;
 import com.sportbooking.module.auth.dto.EmailVerificationResponse;
 import com.sportbooking.module.auth.dto.LoginRequest;
 import com.sportbooking.module.auth.dto.LoginResponse;
+import com.sportbooking.module.auth.dto.RefreshTokenRequest;
 import com.sportbooking.module.auth.dto.RegisterRequest;
 import com.sportbooking.module.auth.dto.ResendVerificationRequest;
 import com.sportbooking.module.auth.service.AuthLoginService;
 import com.sportbooking.module.auth.service.AuthRegistrationService;
 import com.sportbooking.module.auth.service.EmailVerificationService;
+import com.sportbooking.module.auth.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,7 @@ public class AuthController {
     private final AuthLoginService authLoginService;
     private final AuthRegistrationService authRegistrationService;
     private final EmailVerificationService emailVerificationService;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -41,6 +44,12 @@ public class AuthController {
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authLoginService.login(request);
         return ApiResponse.success("Login successfully", response);
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        LoginResponse response = refreshTokenService.refresh(request);
+        return ApiResponse.success("Token refreshed successfully", response);
     }
 
     @GetMapping("/verify-email")
