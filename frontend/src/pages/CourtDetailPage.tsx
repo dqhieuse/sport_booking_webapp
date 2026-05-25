@@ -35,27 +35,27 @@ function CourtDetailSkeleton() {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <div className="h-4 w-24 rounded-full bg-muted" />
-        <div className="h-10 w-2/3 rounded-lg bg-muted" />
-        <div className="h-5 w-40 rounded-full bg-muted" />
+        <div className="h-4 w-24 rounded-full bg-muted animate-soft-pulse" />
+        <div className="h-10 w-2/3 rounded-lg bg-muted animate-soft-pulse" />
+        <div className="h-5 w-40 rounded-full bg-muted animate-soft-pulse" />
       </div>
 
-      <div className="aspect-[16/7] w-full rounded-xl bg-muted" />
+      <div className="aspect-[16/7] w-full rounded-[1.75rem] bg-muted animate-soft-pulse" />
 
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <div className="space-y-3">
-            <div className="h-5 w-1/3 rounded-full bg-muted" />
-            <div className="h-4 w-full rounded-full bg-muted" />
-            <div className="h-4 w-4/5 rounded-full bg-muted" />
+            <div className="h-5 w-1/3 rounded-full bg-muted animate-soft-pulse" />
+            <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
+            <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
           </div>
           <div className="space-y-3">
-            <div className="h-5 w-1/4 rounded-full bg-muted" />
-            <div className="h-4 w-2/3 rounded-full bg-muted" />
-            <div className="h-4 w-1/2 rounded-full bg-muted" />
+            <div className="h-5 w-1/4 rounded-full bg-muted animate-soft-pulse" />
+            <div className="h-4 w-2/3 rounded-full bg-muted animate-soft-pulse" />
+            <div className="h-4 w-1/2 rounded-full bg-muted animate-soft-pulse" />
           </div>
         </div>
-        <div className="h-56 rounded-xl bg-muted" />
+        <div className="h-56 rounded-2xl bg-muted animate-soft-pulse" />
       </div>
     </div>
   );
@@ -66,7 +66,7 @@ function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: 
 
   if (images.length === 0) {
     return (
-      <div className="flex aspect-[16/7] w-full items-center justify-center rounded-xl bg-secondary text-muted-foreground">
+      <div className="flex aspect-[16/7] w-full items-center justify-center rounded-[1.75rem] bg-secondary/80 text-muted-foreground">
         No images available
       </div>
     );
@@ -76,12 +76,12 @@ function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: 
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-[16/7] w-full overflow-hidden rounded-3xl bg-muted">
+      <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[1.75rem] bg-muted shadow-[0_18px_60px_rgba(0,0,0,0.16)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
         <img
           key={current.imageUrl}
           src={current.imageUrl}
           alt={`${courtName} — image ${currentIndex + 1}`}
-          className="h-full w-full object-cover transition-opacity duration-300"
+          className="h-full w-full object-cover transition-[opacity,transform] duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
 
@@ -91,7 +91,7 @@ function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: 
               type="button"
               onClick={() => setCurrentIndex((i) => (i - 1 + images.length) % images.length)}
               aria-label="Previous image"
-              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow backdrop-blur-sm transition hover:bg-background"
+              className="soft-icon-button absolute left-3 top-1/2 h-10 w-10 -translate-y-1/2"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -99,7 +99,7 @@ function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: 
               type="button"
               onClick={() => setCurrentIndex((i) => (i + 1) % images.length)}
               aria-label="Next image"
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow backdrop-blur-sm transition hover:bg-background"
+              className="soft-icon-button absolute right-3 top-1/2 h-10 w-10 -translate-y-1/2"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -118,8 +118,8 @@ function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: 
               type="button"
               onClick={() => setCurrentIndex(index)}
               aria-label={`View image ${index + 1}`}
-              className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition ${
-                index === currentIndex ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'
+              className={`h-16 w-24 shrink-0 overflow-hidden rounded-xl border transition-[border-color,opacity,transform] duration-200 hover:-translate-y-0.5 ${
+                index === currentIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
               }`}
             >
               <img
@@ -211,11 +211,11 @@ export function CourtDetailPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="page-shell">
       <nav aria-label="Breadcrumb">
         <Link
           to={routePaths.courts}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to courts
@@ -235,16 +235,16 @@ export function CourtDetailPage() {
       {hasData && court && (
         <>
           {/* Header */}
-          <header className="space-y-3 border-b border-border pb-6">
+          <header className="page-hero space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{court.sport.name}</Badge>
             </div>
-            <h1 className="font-display text-4xl font-extrabold leading-tight text-foreground sm:text-5xl">
+            <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
               {court.name}
             </h1>
             <p className="flex items-center gap-1.5 text-base text-muted-foreground">
               <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-              {court.venue.name} — {court.venue.address}
+              {court.venue.name} - {court.venue.address}
             </p>
           </header>
 
@@ -257,13 +257,13 @@ export function CourtDetailPage() {
             <div className="space-y-8">
               {court.description && (
                 <section className="space-y-3">
-                  <h2 className="font-display text-xl font-bold text-foreground">About this court</h2>
+                  <h2 className="font-display text-xl font-semibold text-foreground">About this court</h2>
                   <p className="text-base leading-7 text-muted-foreground">{court.description}</p>
                 </section>
               )}
 
               <section className="space-y-4">
-                <h2 className="font-display text-xl font-bold text-foreground">Venue details</h2>
+                <h2 className="font-display text-xl font-semibold text-foreground">Venue details</h2>
                 <div className="sportzone-panel rounded-2xl p-5 space-y-4">
                   <div className="flex items-start gap-3">
                     <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
@@ -279,7 +279,7 @@ export function CourtDetailPage() {
                       <div>
                         <p className="font-medium text-foreground">Opening hours</p>
                         <p className="mt-0.5 text-sm text-muted-foreground">
-                          {court.venue.openingTime ?? '?'} — {court.venue.closingTime ?? '?'}
+                          {court.venue.openingTime ?? '?'} - {court.venue.closingTime ?? '?'}
                         </p>
                       </div>
                     </div>
@@ -290,10 +290,10 @@ export function CourtDetailPage() {
 
             {/* Right: Booking panel */}
             <aside>
-              <div className="sportzone-panel sticky top-6 rounded-2xl p-6 space-y-5">
+              <div className="sportzone-panel sticky top-24 rounded-2xl p-6 space-y-5">
                 <div>
                   <p className="text-sm text-muted-foreground">Price</p>
-                  <p className="font-display text-4xl font-bold text-primary">
+                  <p className="font-display text-4xl font-semibold text-primary">
                     {currencyFormatter.format(court.pricePerHour)}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">per hour</p>
@@ -316,7 +316,7 @@ export function CourtDetailPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Hours</span>
                       <span className="font-medium text-foreground">
-                        {court.venue.openingTime} – {court.venue.closingTime}
+                        {court.venue.openingTime} - {court.venue.closingTime}
                       </span>
                     </div>
                   )}
@@ -324,7 +324,7 @@ export function CourtDetailPage() {
 
                 <Button
                   size="lg"
-                  className="w-full rounded-2xl"
+                  className="w-full"
                   disabled={court.status !== 'ACTIVE'}
                 >
                   <CalendarDays className="h-5 w-5" aria-hidden="true" />

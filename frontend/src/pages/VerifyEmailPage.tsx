@@ -138,14 +138,14 @@ export function VerifyEmailPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-        <div className="space-y-6 border-b border-border pb-8 lg:border-b-0 lg:pb-0 lg:pr-8">
+        <div className="page-hero space-y-6 lg:sticky lg:top-24">
           <Badge className="w-fit gap-2 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
             Email verification
           </Badge>
 
           <div className="space-y-4">
-            <h1 className="font-display text-4xl font-extrabold leading-tight text-foreground sm:text-5xl">
+            <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
               Verify your SportZone account.
             </h1>
             <p className="max-w-xl text-base leading-7 text-muted-foreground">
@@ -169,7 +169,7 @@ export function VerifyEmailPage() {
         </div>
 
         <div className="space-y-5">
-          <Card className="sportzone-panel rounded-xl">
+          <Card className="sportzone-panel">
             <CardHeader>
               <CardTitle>Verify email</CardTitle>
               <p className="text-sm leading-6 text-muted-foreground">
@@ -200,8 +200,8 @@ export function VerifyEmailPage() {
                       aria-invalid={Boolean(verificationError)}
                       aria-describedby={verificationError ? 'verification-token-error' : undefined}
                       className={cn(
-                        'h-12 w-full rounded-xl border bg-secondary px-4 text-sm text-foreground transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                        verificationError ? 'border-destructive/70' : 'border-border focus:border-primary',
+                        'soft-input h-12 w-full rounded-full px-4 text-sm',
+                        verificationError && 'border-destructive/70',
                       )}
                     />
                     {verificationError && (
@@ -212,7 +212,7 @@ export function VerifyEmailPage() {
                     )}
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full rounded-xl" disabled={status === 'verifying'}>
+                  <Button type="submit" size="lg" className="w-full" disabled={status === 'verifying'}>
                     {status === 'verifying' ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -231,7 +231,7 @@ export function VerifyEmailPage() {
           </Card>
 
           {status !== 'success' && (
-            <Card className="sportzone-panel rounded-xl">
+            <Card className="sportzone-panel">
               <CardHeader>
                 <CardTitle>Need a new link?</CardTitle>
                 <p className="text-sm leading-6 text-muted-foreground">
@@ -241,7 +241,7 @@ export function VerifyEmailPage() {
               <CardContent>
                 <form onSubmit={handleResendSubmit} noValidate className="space-y-4">
                   {resendMessage && (
-                    <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm leading-6 text-foreground">
+                    <div className="rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm leading-6 text-foreground">
                       {resendMessage}
                     </div>
                   )}
@@ -264,8 +264,8 @@ export function VerifyEmailPage() {
                       aria-invalid={Boolean(resendError)}
                       aria-describedby={resendError ? 'resend-email-error' : undefined}
                       className={cn(
-                        'h-12 w-full rounded-xl border bg-secondary px-4 text-sm text-foreground transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                        resendError ? 'border-destructive/70' : 'border-border focus:border-primary',
+                        'soft-input h-12 w-full rounded-full px-4 text-sm',
+                        resendError && 'border-destructive/70',
                       )}
                     />
                     {resendError && (
@@ -276,7 +276,7 @@ export function VerifyEmailPage() {
                     )}
                   </div>
 
-                  <Button type="submit" variant="secondary" className="w-full rounded-xl" disabled={isResending}>
+                  <Button type="submit" variant="secondary" className="w-full" disabled={isResending}>
                     {isResending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -312,7 +312,7 @@ function VerificationState({
 }) {
   if (status === 'verifying') {
     return (
-      <div className="flex gap-3 rounded-xl border border-border bg-secondary p-4 text-sm text-foreground">
+      <div className="flex gap-3 rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm text-foreground">
         <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
         <p className="leading-6">Verifying your email token...</p>
       </div>
@@ -322,11 +322,11 @@ function VerificationState({
   if (status === 'success' && result) {
     return (
       <div className="space-y-5">
-        <div className="rounded-xl border border-green-500 bg-green-50 p-5">
+        <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
           <div className="flex gap-4">
-            <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-green-500" aria-hidden="true" />
+            <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
             <div>
-              <h2 className="font-display text-2xl font-bold text-foreground">Email verified</h2>
+              <h2 className="font-display text-2xl font-semibold text-foreground">Email verified</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {message || 'Your email has been verified successfully.'}
               </p>
@@ -334,12 +334,12 @@ function VerificationState({
           </div>
         </div>
 
-        <dl className="grid gap-3 rounded-xl border border-border bg-secondary p-4 text-sm sm:grid-cols-2">
+        <dl className="grid gap-3 rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm sm:grid-cols-2">
           <AccountDetail label="Status" value={result.status.replace(/_/g, ' ')} />
           <AccountDetail label="Email verified" value={result.emailVerified ? 'Yes' : 'No'} />
         </dl>
 
-        <Button asChild size="lg" className="w-full rounded-xl">
+        <Button asChild size="lg" className="w-full">
           <Link to={routePaths.login}>Go to login</Link>
         </Button>
       </div>
@@ -348,7 +348,7 @@ function VerificationState({
 
   if (status === 'error') {
     return (
-      <div className="flex gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground">
+      <div className="flex gap-3 rounded-2xl border border-destructive/35 bg-destructive/10 p-4 text-sm text-foreground">
         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
         <div>
           <h2 className="font-semibold text-foreground">Verification failed</h2>
@@ -361,7 +361,7 @@ function VerificationState({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-secondary p-4 text-sm leading-6 text-muted-foreground">
+    <div className="rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm leading-6 text-muted-foreground">
       Paste the token from your verification email to activate your account.
     </div>
   );
@@ -369,8 +369,8 @@ function VerificationState({
 
 function InfoRow({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="flex gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+    <div className="flex gap-3 rounded-2xl border border-border/80 bg-card/80 p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
         {icon}
       </div>
       <div>

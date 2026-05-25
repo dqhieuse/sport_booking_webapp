@@ -51,15 +51,15 @@ function getPageParam(searchParams: URLSearchParams) {
 
 function CourtCardSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.08)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
-      <div className="aspect-[16/10] rounded-t-lg bg-muted" />
+    <div className="rounded-2xl border border-border/80 bg-card/80 shadow-sm">
+      <div className="aspect-[16/10] rounded-t-2xl bg-muted animate-soft-pulse" />
       <div className="space-y-4 p-5">
-        <div className="h-6 w-2/3 rounded-full bg-muted" />
-        <div className="h-4 w-full rounded-full bg-muted" />
-        <div className="h-4 w-4/5 rounded-full bg-muted" />
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          <div className="h-8 w-28 rounded-full bg-muted" />
-          <div className="h-8 w-20 rounded-full bg-muted" />
+        <div className="h-6 w-2/3 rounded-full bg-muted animate-soft-pulse" />
+        <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
+        <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
+        <div className="flex items-center justify-between border-t border-border/70 pt-4">
+          <div className="h-8 w-28 rounded-full bg-muted animate-soft-pulse" />
+          <div className="h-8 w-20 rounded-full bg-muted animate-soft-pulse" />
         </div>
       </div>
     </div>
@@ -208,19 +208,19 @@ export function CourtsPage() {
   }, [courtsPage, isLoading]);
 
   return (
-    <div className="space-y-8">
-      <section className="border-b border-border pb-8">
+    <div className="page-shell">
+      <section className="page-hero">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="space-y-5">
             <Badge className="w-fit gap-2 px-4 py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
               Public Courts
             </Badge>
             <div className="max-w-3xl space-y-4">
-              <h1 className="font-display text-4xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-6xl">
+              <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
                 Search and compare courts by sport, venue, and price.
               </h1>
-              <p className="text-base leading-7 text-muted-foreground sm:text-lg">
+              <p className="text-base leading-7 text-muted-foreground">
                 Public list only shows active courts, so guests can browse available booking options quickly.
               </p>
             </div>
@@ -228,9 +228,9 @@ export function CourtsPage() {
         </div>
       </section>
 
-      <section className="sportzone-panel rounded-xl p-4">
+      <section className="sportzone-panel rounded-[1.35rem] p-3 sm:p-4">
         <form onSubmit={handleSearchSubmit} className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto_auto]">
-          <label className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-4 py-3">
+          <label className="soft-input flex h-12 items-center gap-3 rounded-full px-4 py-3">
             <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
             <span className="sr-only">Search courts</span>
             <input
@@ -281,10 +281,10 @@ export function CourtsPage() {
             </SelectContent>
           </Select>
 
-          <Button type="submit" className="rounded-lg my-auto">
+          <Button type="submit" className="my-auto">
             Search
           </Button>
-          <Button type="button" variant="ghost" onClick={handleClearFilters} className="rounded-lg my-auto" disabled={!hasActiveFilters}>
+          <Button type="button" variant="ghost" onClick={handleClearFilters} className="my-auto" disabled={!hasActiveFilters}>
             <X className="h-4 w-4" aria-hidden="true" />
             Clear
           </Button>
@@ -314,8 +314,8 @@ export function CourtsPage() {
       )}
 
       {isEmpty && (
-        <section className="sportzone-panel rounded-lg p-8 text-center">
-          <h2 className="font-display text-xl font-bold text-foreground">No courts match your search</h2>
+        <section className="sportzone-panel rounded-2xl p-8 text-center">
+          <h2 className="font-display text-xl font-semibold text-foreground">No courts match your search</h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
             Try a different keyword, sport, or venue filter to discover more active courts.
           </p>
@@ -326,7 +326,7 @@ export function CourtsPage() {
         <>
           <div>
             <p className="text-sm text-muted-foreground">Search results</p>
-            <p className="font-display text-2xl font-bold text-foreground">{resultSummary}</p>
+            <p className="font-display text-2xl font-semibold text-foreground">{resultSummary}</p>
           </div>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {courts.map((court) => (
@@ -334,7 +334,7 @@ export function CourtsPage() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <section className="flex flex-col gap-3 border-t border-border/70 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Page {courtsPage.page + 1} of {Math.max(courtsPage.totalPages, 1)}
             </p>
@@ -342,7 +342,6 @@ export function CourtsPage() {
               <Button
                 type="button"
                 variant="secondary"
-                className="rounded-full"
                 disabled={courtsPage.page <= 0}
                 onClick={() => handlePageChange(courtsPage.page - 1)}
               >
@@ -352,7 +351,6 @@ export function CourtsPage() {
               <Button
                 type="button"
                 variant="secondary"
-                className="rounded-full"
                 disabled={courtsPage.page + 1 >= courtsPage.totalPages}
                 onClick={() => handlePageChange(courtsPage.page + 1)}
               >

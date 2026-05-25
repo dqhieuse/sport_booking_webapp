@@ -31,21 +31,21 @@ const workspaceNavigation = [
 
 function navLinkClassName({ isActive }: { isActive: boolean }) {
   return cn(
-    'rounded-full border px-3 py-2 text-sm font-medium no-underline transition-colors',
+    'rounded-full border px-3 py-2 text-sm font-medium no-underline transition-[background,border-color,color,transform] duration-200 hover:-translate-y-0.5 active:translate-y-0',
     isActive
-      ? 'border-primary/30 bg-primary/15 text-accent'
-      : 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground',
+      ? 'border-primary/25 bg-primary/10 text-primary shadow-sm'
+      : 'border-transparent text-muted-foreground hover:border-border/80 hover:bg-secondary/80 hover:text-foreground',
   );
 }
 
 export function MainLayout() {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="app-container py-4">
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-2xl">
+        <div className="app-container py-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center justify-between gap-4">
-              <NavLink to={routePaths.home} className="font-display text-lg font-extrabold text-foreground no-underline">
+              <NavLink to={routePaths.home} className="font-display text-lg font-semibold text-foreground no-underline">
                 Sport<span className="text-primary">Zone</span>
               </NavLink>
               <div className="flex items-center gap-2 lg:hidden">
@@ -68,7 +68,7 @@ export function MainLayout() {
             </div>
           </div>
 
-          <Separator className="my-4" />
+          <Separator className="my-3 bg-border/70" />
 
           <nav aria-label="Workspace navigation" className="flex flex-wrap gap-2">
             {workspaceNavigation.map((item) => (
@@ -80,7 +80,7 @@ export function MainLayout() {
         </div>
       </header>
 
-      <main className="app-container py-8">
+      <main className="app-container py-6 sm:py-8">
         <Outlet />
       </main>
     </div>
@@ -123,7 +123,7 @@ function AuthActions({ compact = false }: { compact?: boolean }) {
           type="button"
           className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-secondary px-2.5 text-sm font-medium text-foreground transition hover:border-primary/30 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
             {session.user.avatarUrl ? (
               <img
                 src={session.user.avatarUrl}
@@ -144,7 +144,7 @@ function AuthActions({ compact = false }: { compact?: boolean }) {
           <div className="px-3 py-3">
             <p className="truncate text-base font-semibold text-foreground">{session.user.fullName}</p>
             <p className="mt-1 truncate text-xs font-medium text-muted-foreground">{session.user.email}</p>
-            <p className="mt-2 w-fit rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+            <p className="mt-2 w-fit rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
               {session.user.role}
             </p>
           </div>
