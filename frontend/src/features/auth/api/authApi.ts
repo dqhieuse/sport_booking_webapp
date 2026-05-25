@@ -40,3 +40,15 @@ export async function loginLocalAccount(
 ): Promise<ApiSuccessResponse<LoginResponse>> {
   return apiClient.post<LoginResponse, LoginRequest>('/auth/login', request, { signal });
 }
+
+export async function restoreAuthSession(signal?: AbortSignal): Promise<ApiSuccessResponse<LoginResponse>> {
+  return apiClient.post<LoginResponse>('/auth/session', undefined, { signal });
+}
+
+export async function refreshAuthSession(signal?: AbortSignal): Promise<ApiSuccessResponse<LoginResponse>> {
+  return apiClient.post<LoginResponse>('/auth/refresh', undefined, { signal });
+}
+
+export async function logoutAccount(signal?: AbortSignal): Promise<ApiSuccessResponse<void>> {
+  return apiClient.post<void>('/auth/logout', undefined, { signal });
+}

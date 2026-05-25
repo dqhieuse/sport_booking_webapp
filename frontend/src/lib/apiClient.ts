@@ -7,6 +7,7 @@ import type { ApiResponse, ApiSuccessResponse } from '@/types/api';
 
 const axiosClient = axios.create({
   baseURL: appEnv.apiBaseUrl,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

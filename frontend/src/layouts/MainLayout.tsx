@@ -1,5 +1,5 @@
 import { ChevronDown, LogOut, UserCircle } from 'lucide-react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -88,6 +88,7 @@ export function MainLayout() {
 }
 
 function AuthActions({ compact = false }: { compact?: boolean }) {
+  const navigate = useNavigate();
   const { isAuthenticated, session, logout } = useAuth();
 
   if (!isAuthenticated || !session) {
@@ -112,6 +113,7 @@ function AuthActions({ compact = false }: { compact?: boolean }) {
 
   async function handleLogout() {
     await logout();
+    navigate(routePaths.home);
   }
 
   return (
@@ -162,7 +164,9 @@ function AuthActions({ compact = false }: { compact?: boolean }) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onSelect={handleLogout}
+          onSelect={() => {
+            void handleLogout();
+          }}
           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />

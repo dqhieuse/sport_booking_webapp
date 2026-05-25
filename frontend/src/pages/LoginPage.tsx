@@ -142,7 +142,7 @@ export function LoginPage() {
             <InfoRow
               icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
               title="Secure session"
-              description="SportZone stores your session locally and attaches the access token to later API calls."
+              description="SportZone keeps the access token in memory and restores the session with a secure refresh cookie."
             />
             <InfoRow
               icon={<MailWarning className="h-5 w-5" aria-hidden="true" />}

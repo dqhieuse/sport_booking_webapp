@@ -42,7 +42,6 @@ export type LoginUserResponse = {
 
 export type LoginResponse = {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
   user: LoginUserResponse;
 };

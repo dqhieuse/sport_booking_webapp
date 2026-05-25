@@ -1,32 +1,74 @@
-import { ReactNode, useCallback, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { authTokenStore } from '@/lib/authTokenStore';
+
+import { logoutAccount, restoreAuthSession } from './api/authApi';
 import { AuthContext, type AuthContextValue } from './authContextValue';
-import {
-  readStoredAuthSession,
-  writeStoredAuthSession,
-} from './authSessionStorage';
 import type { AuthSession, LoginResponse } from './types';
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AuthSession | null>(() => readStoredAuthSession());
+let restoreSessionPromise: Promise<LoginResponse> | null = null;
 
-  const login = useCallback((response: LoginResponse) => {
-    const nextSession: AuthSession = {
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  function createSession(response: LoginResponse): AuthSession {
+    return {
       ...response,
       expiresAt: Date.now() + response.expiresIn * 1000,
     };
+  }
 
-    writeStoredAuthSession(nextSession);
+  useEffect(() => {
+    async function restoreSession() {
+      try {
+        if (!restoreSessionPromise) {
+          restoreSessionPromise = restoreAuthSession().then((response) => response.data);
+        }
+
+        const response = await restoreSessionPromise;
+        const restoredSession = createSession(response);
+        authTokenStore.setAccessToken(restoredSession.accessToken);
+        setSession(restoredSession);
+      } catch {
+        authTokenStore.clear();
+        setSession(null);
+      } finally {
+        setIsInitializing(false);
+      }
+    }
+
+    void restoreSession();
+  }, []);
+
+  const login = useCallback((response: LoginResponse) => {
+    const nextSession = createSession(response);
+
+    authTokenStore.setAccessToken(nextSession.accessToken);
     setSession(nextSession);
+  }, []);
+
+  const logout = useCallback(async () => {
+    restoreSessionPromise = null;
+    authTokenStore.clear();
+    setSession(null);
+
+    try {
+      await logoutAccount();
+    } catch {
+      // The browser session must be cleared even if the server-side cookie was already invalid.
+    }
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       isAuthenticated: Boolean(session),
+      isInitializing,
       login,
+      logout,
     }),
-    [login, session],
+    [isInitializing, login, logout, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
