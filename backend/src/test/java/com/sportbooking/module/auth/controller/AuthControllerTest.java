@@ -15,6 +15,7 @@ import com.sportbooking.module.auth.repository.RefreshTokenRepository;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.servlet.http.Cookie;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AuthControllerTest {
+
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "sportzone_refresh_token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -148,7 +151,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Login successfully")))
                 .andExpect(jsonPath("$.data.accessToken").exists())
-                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.data.expiresIn", is(900)))
                 .andExpect(jsonPath("$.data.user.email", is(email)))
                 .andExpect(jsonPath("$.data.user.role", is("USER")))
@@ -181,7 +184,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Login successfully")))
                 .andExpect(jsonPath("$.data.accessToken").exists())
-                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.data.user.email", is(email)));
     }
 
@@ -261,24 +264,17 @@ class AuthControllerTest {
         registerAndVerifyUser(email, "0900000110");
         String oldRefreshToken = loginAndReturnRefreshToken(email);
 
-        String newRefreshToken = mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(oldRefreshToken)))
+        var refreshResult = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, oldRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Token refreshed successfully")))
                 .andExpect(jsonPath("$.data.accessToken").exists())
-                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.data.expiresIn", is(900)))
                 .andExpect(jsonPath("$.data.user.email", is(email)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        newRefreshToken = com.jayway.jsonpath.JsonPath.read(newRefreshToken, "$.data.refreshToken");
+                .andReturn();
+        String newRefreshToken = refreshResult.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME).getValue();
 
         org.assertj.core.api.Assertions.assertThat(newRefreshToken).isNotEqualTo(oldRefreshToken);
 
@@ -287,12 +283,7 @@ class AuthControllerTest {
                 .hasSize(1);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(oldRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, oldRefreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -303,14 +294,33 @@ class AuthControllerTest {
     }
 
     @Test
+    void restoreSessionReturnsAccessTokenWithoutRotatingRefreshToken() throws Exception {
+        String email = "restore-session-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000114");
+        String refreshToken = loginAndReturnRefreshToken(email);
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+
+        mockMvc.perform(post("/api/auth/session")
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Session restored successfully")))
+                .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
+                .andExpect(jsonPath("$.data.user.email", is(email)))
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(
+                        result.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME)
+                ).isNull());
+
+        entityManager.clear();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .hasSize(1);
+    }
+
+    @Test
     void refreshReturnsUnauthorizedWhenTokenIsUnknown() throws Exception {
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "unknown-refresh-token"
-                                }
-                                """))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, "unknown-refresh-token")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -327,12 +337,7 @@ class AuthControllerTest {
         refreshTokenRepository.save(storedToken);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(refreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -352,12 +357,7 @@ class AuthControllerTest {
         userRepository.save(savedUser);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(refreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Account is inactive")));
@@ -368,18 +368,11 @@ class AuthControllerTest {
     }
 
     @Test
-    void refreshReturnsBadRequestWhenInputIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": ""
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
+    void refreshReturnsUnauthorizedWhenCookieIsMissing() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh"))
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("Validation failed")))
-                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+                .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
     }
 
     @Test
@@ -391,12 +384,7 @@ class AuthControllerTest {
         var savedUser = userRepository.findByEmail(email).orElseThrow();
 
         mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(firstRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, firstRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Logged out successfully")))
@@ -407,23 +395,13 @@ class AuthControllerTest {
                 .hasSize(1);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(secondRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, secondRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Token refreshed successfully")));
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(firstRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, firstRefreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -432,12 +410,7 @@ class AuthControllerTest {
     @Test
     void logoutReturnsSuccessWhenRefreshTokenIsUnknown() throws Exception {
         mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "unknown-refresh-token"
-                                }
-                                """))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, "unknown-refresh-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Logged out successfully")))
@@ -445,18 +418,12 @@ class AuthControllerTest {
     }
 
     @Test
-    void logoutReturnsBadRequestWhenInputIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": ""
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("Validation failed")))
-                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+    void logoutReturnsSuccessWhenRefreshCookieIsMissing() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Logged out successfully")))
+                .andExpect(jsonPath("$.data", nullValue()));
     }
 
     @Test
@@ -660,7 +627,7 @@ class AuthControllerTest {
     }
 
     private String loginAndReturnRefreshToken(String identifier) throws Exception {
-        String response = mockMvc.perform(post("/api/auth/login")
+        var loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -669,10 +636,8 @@ class AuthControllerTest {
                                 }
                                 """.formatted(identifier)))
                 .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andReturn();
 
-        return com.jayway.jsonpath.JsonPath.read(response, "$.data.refreshToken");
+        return loginResult.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME).getValue();
     }
 }

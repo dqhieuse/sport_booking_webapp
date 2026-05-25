@@ -41,6 +41,10 @@ app:
         refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:7d}
         email-verification-token-ttl: ${EMAIL_VERIFICATION_TOKEN_TTL:15m}
         issuer: ${JWT_ISSUER:sport-booking-backend}
+        refresh-token-cookie-name: ${REFRESH_TOKEN_COOKIE_NAME:sportzone_refresh_token}
+        refresh-token-cookie-path: ${REFRESH_TOKEN_COOKIE_PATH:/api/auth}
+        refresh-token-cookie-secure: ${REFRESH_TOKEN_COOKIE_SECURE:false}
+        refresh-token-cookie-same-site: ${REFRESH_TOKEN_COOKIE_SAME_SITE:Lax}
     mail:
         provider: ${APP_MAIL_PROVIDER:log}
         from-email: ${MAIL_FROM_EMAIL:dqhflearn@gmail.com}

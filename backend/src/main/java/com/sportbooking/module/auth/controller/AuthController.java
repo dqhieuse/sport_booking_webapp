@@ -1,11 +1,12 @@
 package com.sportbooking.module.auth.controller;
 
 import com.sportbooking.common.api.ApiResponse;
+import com.sportbooking.config.AuthProperties;
+import com.sportbooking.module.auth.dto.AuthenticationResult;
 import com.sportbooking.module.auth.dto.AuthUserResponse;
 import com.sportbooking.module.auth.dto.EmailVerificationResponse;
 import com.sportbooking.module.auth.dto.LoginRequest;
 import com.sportbooking.module.auth.dto.LoginResponse;
-import com.sportbooking.module.auth.dto.RefreshTokenRequest;
 import com.sportbooking.module.auth.dto.RegisterRequest;
 import com.sportbooking.module.auth.dto.ResendVerificationRequest;
 import com.sportbooking.module.auth.service.AuthLoginService;
@@ -14,7 +15,11 @@ import com.sportbooking.module.auth.service.EmailVerificationService;
 import com.sportbooking.module.auth.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,6 +37,7 @@ public class AuthController {
     private final AuthRegistrationService authRegistrationService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
+    private final AuthProperties authProperties;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -41,21 +47,35 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authLoginService.login(request);
-        return ApiResponse.success("Login successfully", response);
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        AuthenticationResult result = authLoginService.login(request);
+        return authenticationResponse("Login successfully", result);
+    }
+
+    @PostMapping("/session")
+    public ApiResponse<LoginResponse> restoreSession(
+            @CookieValue(name = "${app.auth.refresh-token-cookie-name}", required = false) String refreshToken
+    ) {
+        LoginResponse response = refreshTokenService.restoreSession(refreshToken);
+        return ApiResponse.success("Session restored successfully", response);
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        LoginResponse response = refreshTokenService.refresh(request);
-        return ApiResponse.success("Token refreshed successfully", response);
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(
+            @CookieValue(name = "${app.auth.refresh-token-cookie-name}", required = false) String refreshToken
+    ) {
+        AuthenticationResult result = refreshTokenService.refresh(refreshToken);
+        return authenticationResponse("Token refreshed successfully", result);
     }
 
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        refreshTokenService.logout(request);
-        return ApiResponse.success("Logged out successfully", null);
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(name = "${app.auth.refresh-token-cookie-name}", required = false) String refreshToken
+    ) {
+        refreshTokenService.logout(refreshToken);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, expiredRefreshTokenCookie().toString())
+                .body(ApiResponse.success("Logged out successfully", null));
     }
 
     @GetMapping("/verify-email")
@@ -71,5 +91,31 @@ public class AuthController {
                 "If this email is registered and pending verification, a verification email has been sent.",
                 null
         );
+    }
+
+    private ResponseEntity<ApiResponse<LoginResponse>> authenticationResponse(String message, AuthenticationResult result) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(result.refreshToken()).toString())
+                .body(ApiResponse.success(message, result.toResponse()));
+    }
+
+    private ResponseCookie refreshTokenCookie(String refreshToken) {
+        return ResponseCookie.from(authProperties.getRefreshTokenCookieName(), refreshToken)
+                .httpOnly(true)
+                .secure(authProperties.isRefreshTokenCookieSecure())
+                .sameSite(authProperties.getRefreshTokenCookieSameSite())
+                .path(authProperties.getRefreshTokenCookiePath())
+                .maxAge(authProperties.getRefreshTokenTtl())
+                .build();
+    }
+
+    private ResponseCookie expiredRefreshTokenCookie() {
+        return ResponseCookie.from(authProperties.getRefreshTokenCookieName(), "")
+                .httpOnly(true)
+                .secure(authProperties.isRefreshTokenCookieSecure())
+                .sameSite(authProperties.getRefreshTokenCookieSameSite())
+                .path(authProperties.getRefreshTokenCookiePath())
+                .maxAge(0)
+                .build();
     }
 }
