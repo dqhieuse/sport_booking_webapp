@@ -3,6 +3,7 @@ import type { ApiSuccessResponse } from '@/types/api';
 
 import type {
   AuthUserResponse,
+  CurrentUserResponse,
   EmailVerificationResponse,
   LoginRequest,
   LoginResponse,
@@ -51,4 +52,8 @@ export async function refreshAuthSession(signal?: AbortSignal): Promise<ApiSucce
 
 export async function logoutAccount(signal?: AbortSignal): Promise<ApiSuccessResponse<void>> {
   return apiClient.post<void>('/auth/logout', undefined, { signal });
+}
+
+export async function getCurrentUser(signal?: AbortSignal): Promise<ApiSuccessResponse<CurrentUserResponse>> {
+  return apiClient.get<CurrentUserResponse>('/auth/me', { signal });
 }

@@ -6,6 +6,7 @@ import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
 import { SportsPage } from '../pages/SportsPage';
@@ -52,7 +53,7 @@ export function AppRouter() {
           <Route element={<ProtectedRoute />}>
             <Route
               path={routePaths.profile}
-              element={<RoutePlaceholderPage title="Profile" description="Manage the logged-in user's profile." />}
+              element={<ProfilePage />}
             />
             <Route
               path={routePaths.bookingHistory}

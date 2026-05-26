@@ -20,8 +20,8 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 
 export function CourtListCard({ court }: CourtListCardProps) {
   return (
-    <Card className="sportzone-panel group overflow-hidden">
-      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+    <Card className="sportzone-panel group flex h-full flex-col overflow-hidden">
+      <div className="relative aspect-[16/10] shrink-0 overflow-hidden bg-muted">
         {court.primaryImageUrl ? (
           <img
             src={court.primaryImageUrl}
@@ -34,12 +34,14 @@ export function CourtListCard({ court }: CourtListCardProps) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/10 to-transparent" />
-        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-          <Badge>{court.sport.name}</Badge>
+        <div className="absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
+          <Badge className="max-w-full gap-2 rounded-full border-white/60 bg-white/90 px-3 py-1.5 text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md dark:border-white/20 dark:bg-black/65 dark:text-white">
+            <span className="min-w-0 truncate">{court.sport.name}</span>
+          </Badge>
         </div>
       </div>
 
-      <CardContent className="flex h-full flex-col gap-5 p-5">
+      <CardContent className="flex flex-1 flex-col gap-5 p-5">
         <div className="space-y-2">
           <h2 className="line-clamp-1 font-display text-xl font-semibold text-foreground">{court.name}</h2>
           <p className="line-clamp-1 text-sm font-medium text-foreground/80">{court.venue.name}</p>
@@ -49,7 +51,7 @@ export function CourtListCard({ court }: CourtListCardProps) {
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 pt-4">
           <div>
             <p className="font-display text-xl font-semibold text-primary">
               {currencyFormatter.format(court.pricePerHour)}
