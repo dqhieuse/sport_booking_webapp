@@ -1,5 +1,4 @@
-import { Dumbbell } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
@@ -72,14 +71,6 @@ export function SportsPage() {
       controller.abort();
     };
   }, [reloadKey]);
-
-  const sportCountLabel = useMemo(() => {
-    if (loadState === 'loading') {
-      return 'Loading';
-    }
-
-    return `${sports.length} active`;
-  }, [loadState, sports.length]);
 
   const isLoading = loadState === 'loading' || loadState === 'idle';
   const hasSports = loadState === 'success' && sports.length > 0;

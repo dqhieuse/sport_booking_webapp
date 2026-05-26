@@ -1,6 +1,6 @@
 import { AlertCircle, Eye, EyeOff, Loader2, LogIn, MailWarning, ShieldCheck } from 'lucide-react';
 import { ChangeEvent, FormEvent, ReactNode, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import type { LoginRequest } from '@/features/auth/types';
 import { ApiError } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
+import { getRedirectPath } from '@/routes/routeRedirect';
 import { routePaths } from '@/routes/routePaths';
 
 type LoginFormValues = LoginRequest;
@@ -63,7 +64,9 @@ function mapApiErrors(errors: string[]): FieldErrors {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const redirectTo = getRedirectPath(location.state);
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [apiMessage, setApiMessage] = useState<string | null>(null);
@@ -104,7 +107,7 @@ export function LoginPage() {
     try {
       const response = await loginLocalAccount(request);
       login(response.data);
-      navigate(routePaths.home, { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         const mappedErrors = mapApiErrors(error.errors);
