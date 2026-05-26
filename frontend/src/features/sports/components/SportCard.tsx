@@ -18,20 +18,20 @@ export function SportCard({ sport }: SportCardProps) {
     <Card className="sportzone-panel group overflow-hidden">
       <CardContent className="flex h-full flex-col gap-5 p-5">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary transition-transform duration-300 group-hover:scale-110">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform duration-300 group-hover:-translate-y-0.5">
             <Dumbbell className="h-6 w-6" aria-hidden="true" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <h2 className="line-clamp-2 font-display text-xl font-bold leading-tight text-foreground">{sport.name}</h2>
+          <h2 className="line-clamp-2 font-display text-xl font-semibold leading-tight text-foreground">{sport.name}</h2>
           <p className="line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-muted-foreground">
             {sport.description || 'Courts and venues for this sport are ready to explore.'}
           </p>
         </div>
 
         <div className="mt-auto flex items-center justify-end gap-3 border-t border-border/70 pt-4">
-          <Button asChild size="sm" className="rounded-full px-4">
+          <Button asChild size="sm" className="px-4">
             <Link to={courtsPath}>
               Courts
               <ArrowRight className="h-4 w-4" aria-hidden="true" />

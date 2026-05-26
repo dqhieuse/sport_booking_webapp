@@ -6,10 +6,12 @@ import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
 import { SportsPage } from '../pages/SportsPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';
+import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute';
 import { routePaths } from './routePaths';
 
 export function AppRouter() {
@@ -34,66 +36,74 @@ export function AppRouter() {
             path={routePaths.courtDetail}
             element={<CourtDetailPage />}
           />
-          <Route
-            path={routePaths.login}
-            element={<LoginPage />}
-          />
-          <Route
-            path={routePaths.register}
-            element={<RegisterPage />}
-          />
+          <Route element={<PublicOnlyRoute />}>
+            <Route
+              path={routePaths.login}
+              element={<LoginPage />}
+            />
+            <Route
+              path={routePaths.register}
+              element={<RegisterPage />}
+            />
+          </Route>
           <Route
             path={routePaths.verifyEmail}
             element={<VerifyEmailPage />}
           />
-          <Route
-            path={routePaths.profile}
-            element={<RoutePlaceholderPage title="Profile" description="Manage the logged-in user's profile." />}
-          />
-          <Route
-            path={routePaths.bookingHistory}
-            element={<RoutePlaceholderPage title="Booking history" description="Review bookings and cancellation status." />}
-          />
-          <Route
-            path={routePaths.vendorDashboard}
-            element={<RoutePlaceholderPage title="Vendor dashboard" description="Overview of vendor venues, courts, and bookings." />}
-          />
-          <Route
-            path={routePaths.vendorVenues}
-            element={<RoutePlaceholderPage title="Vendor venues" description="Manage venues owned by the current vendor." />}
-          />
-          <Route
-            path={routePaths.vendorCourts}
-            element={<RoutePlaceholderPage title="Vendor courts" description="Manage courts, prices, images, and time slots." />}
-          />
-          <Route
-            path={routePaths.vendorBookings}
-            element={<RoutePlaceholderPage title="Vendor bookings" description="Confirm, cancel, and manage venue bookings." />}
-          />
-          <Route
-            path={routePaths.adminDashboard}
-            element={<RoutePlaceholderPage title="Admin dashboard" description="Platform overview for administrators." />}
-          />
-          <Route
-            path={routePaths.adminSports}
-            element={<RoutePlaceholderPage title="Admin sports" description="Manage sport categories." />}
-          />
-          <Route
-            path={routePaths.adminUsers}
-            element={<RoutePlaceholderPage title="Admin users" description="Manage users, vendors, and account status." />}
-          />
-          <Route
-            path={routePaths.adminVenues}
-            element={<RoutePlaceholderPage title="Admin venues" description="Moderate venue information." />}
-          />
-          <Route
-            path={routePaths.adminCourts}
-            element={<RoutePlaceholderPage title="Admin courts" description="Moderate court information." />}
-          />
-          <Route
-            path={routePaths.adminBookings}
-            element={<RoutePlaceholderPage title="Admin bookings" description="Review platform bookings." />}
-          />
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path={routePaths.profile}
+              element={<ProfilePage />}
+            />
+            <Route
+              path={routePaths.bookingHistory}
+              element={<RoutePlaceholderPage title="Booking history" description="Review bookings and cancellation status." />}
+            />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['VENDOR']} />}>
+            <Route
+              path={routePaths.vendorDashboard}
+              element={<RoutePlaceholderPage title="Vendor dashboard" description="Overview of vendor venues, courts, and bookings." />}
+            />
+            <Route
+              path={routePaths.vendorVenues}
+              element={<RoutePlaceholderPage title="Vendor venues" description="Manage venues owned by the current vendor." />}
+            />
+            <Route
+              path={routePaths.vendorCourts}
+              element={<RoutePlaceholderPage title="Vendor courts" description="Manage courts, prices, images, and time slots." />}
+            />
+            <Route
+              path={routePaths.vendorBookings}
+              element={<RoutePlaceholderPage title="Vendor bookings" description="Confirm, cancel, and manage venue bookings." />}
+            />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route
+              path={routePaths.adminDashboard}
+              element={<RoutePlaceholderPage title="Admin dashboard" description="Platform overview for administrators." />}
+            />
+            <Route
+              path={routePaths.adminSports}
+              element={<RoutePlaceholderPage title="Admin sports" description="Manage sport categories." />}
+            />
+            <Route
+              path={routePaths.adminUsers}
+              element={<RoutePlaceholderPage title="Admin users" description="Manage users, vendors, and account status." />}
+            />
+            <Route
+              path={routePaths.adminVenues}
+              element={<RoutePlaceholderPage title="Admin venues" description="Moderate venue information." />}
+            />
+            <Route
+              path={routePaths.adminCourts}
+              element={<RoutePlaceholderPage title="Admin courts" description="Moderate court information." />}
+            />
+            <Route
+              path={routePaths.adminBookings}
+              element={<RoutePlaceholderPage title="Admin bookings" description="Review platform bookings." />}
+            />
+          </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

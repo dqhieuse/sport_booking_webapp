@@ -40,9 +40,13 @@ export type LoginUserResponse = {
   emailVerified: boolean;
 };
 
+export type CurrentUserResponse = LoginUserResponse & {
+  phone: string;
+  status: UserStatus;
+};
+
 export type LoginResponse = {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
   user: LoginUserResponse;
 };

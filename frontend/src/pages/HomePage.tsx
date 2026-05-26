@@ -41,12 +41,12 @@ function DiscoverySkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="rounded-lg border border-border bg-card p-5">
-          <div className="h-32 rounded-md bg-muted" />
+        <div key={index} className="rounded-2xl border border-border/80 bg-card/80 p-4">
+          <div className="h-32 rounded-xl bg-muted animate-soft-pulse" />
           <div className="mt-5 space-y-3">
-            <div className="h-5 w-2/3 rounded-full bg-muted" />
-            <div className="h-4 w-full rounded-full bg-muted" />
-            <div className="h-4 w-4/5 rounded-full bg-muted" />
+            <div className="h-5 w-2/3 rounded-full bg-muted animate-soft-pulse" />
+            <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
+            <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
           </div>
         </div>
       ))}
@@ -118,32 +118,32 @@ export function HomePage() {
   const hasDiscoveryData = loadState === 'success' && totalDiscoveryItems > 0;
 
   return (
-    <div className="space-y-14">
-      <section className="border-b border-border pb-12">
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+    <div className="page-shell">
+      <section className="page-hero">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div className="space-y-7">
             <Badge className="w-fit gap-2 px-4 py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
               Book faster
             </Badge>
 
             <div className="max-w-4xl space-y-5">
-              <h1 className="font-display text-5xl font-extrabold leading-[1.05] text-foreground sm:text-6xl lg:text-7xl">
+              <h1 className="font-display text-4xl font-semibold leading-[1.06] text-foreground sm:text-5xl lg:text-6xl">
                 Find your next court without the phone calls.
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+              <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                 Explore sports, compare venues, and jump into available courts from one clean discovery screen.
               </p>
             </div>
 
             <form
               onSubmit={handleSearchSubmit}
-              className="flex flex-col items-center overflow-hidden rounded-2xl border border-border bg-secondary shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition focus-within:border-black/20 focus-within:shadow-[0_0_0_3px_rgba(255,90,31,0.08)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.6)] dark:focus-within:border-white/20 sm:flex-row"
+              className="flex flex-col items-stretch gap-2 rounded-[1.35rem] border border-border/80 bg-secondary/70 p-2 shadow-inner shadow-black/[0.03] transition focus-within:border-primary/35 focus-within:bg-card/90 focus-within:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)] sm:flex-row sm:items-center dark:shadow-black/20"
             >
               <label className="sr-only" htmlFor="court-search">
                 Search courts
               </label>
-              <div className="flex flex-1 items-center gap-3 px-5 py-4">
+              <div className="flex flex-1 items-center gap-3 px-4 py-3">
                 <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
                 <input
                   id="court-search"
@@ -153,11 +153,19 @@ export function HomePage() {
                   className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground"
                 />
               </div>
-              <Button type="submit" size="default" className="rounded-xl mr-1">
+              <Button type="submit" size="default" className="sm:mr-0">
                 Search courts
                 <ArrowRight className="h-5" aria-hidden="true" />
               </Button>
             </form>
+          </div>
+          <div className="hidden rounded-[1.5rem] border border-border/80 bg-secondary/60 p-5 lg:block">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Metric label="Sports" value={isLoading ? '...' : String(discovery.sports.length)} />
+              <Metric label="Venues" value={isLoading ? '...' : String(discovery.venues.length)} />
+              <Metric label="Courts" value={isLoading ? '...' : String(discovery.courts.length)} />
+              <Metric label="Flow" value="Fast" />
+            </div>
           </div>
         </div>
       </section>
@@ -183,7 +191,7 @@ export function HomePage() {
             <SectionHeader eyebrow="Sports" title="Start by category" to={routePaths.sports} />
             <div className="flex flex-wrap gap-3">
               {discovery.sports.map((sport) => (
-                <Button key={sport.id} asChild variant="secondary" className="rounded-full">
+                <Button key={sport.id} asChild variant="secondary">
                   <Link to={`${routePaths.courts}?sportId=${sport.id}`}>
                     {sport.name}
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -234,10 +242,10 @@ function SectionHeader({ eyebrow, title, to }: SectionHeaderProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p className="text-xs font-medium uppercase text-primary">{eyebrow}</p>
-        <h2 className="mt-1 font-display text-3xl font-extrabold text-foreground">{title}</h2>
+        <p className="eyebrow">{eyebrow}</p>
+        <h2 className="section-title mt-1">{title}</h2>
       </div>
-      <Button asChild variant="ghost" className="w-fit rounded-full">
+      <Button asChild variant="ghost" className="w-fit">
         <Link to={to}>
           View all
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -249,8 +257,17 @@ function SectionHeader({ eyebrow, title, to }: SectionHeaderProps) {
 
 function EmptyDiscoveryMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+    <div className="rounded-2xl border border-border/80 bg-card/80 p-6 text-sm text-muted-foreground">
       {message}
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card/80 p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }

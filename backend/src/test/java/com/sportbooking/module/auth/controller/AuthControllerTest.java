@@ -5,16 +5,23 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
+import com.sportbooking.config.StorageProperties;
 import com.sportbooking.module.auth.entity.EmailVerificationToken;
 import com.sportbooking.module.auth.repository.EmailVerificationTokenRepository;
 import com.sportbooking.module.auth.repository.RefreshTokenRepository;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.servlet.http.Cookie;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -22,13 +29,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AuthControllerTest {
+
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "sportzone_refresh_token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -44,6 +55,9 @@ class AuthControllerTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private StorageProperties storageProperties;
 
     @Test
     void registerCreatesPendingLocalAccountAndVerificationToken() throws Exception {
@@ -148,7 +162,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Login successfully")))
                 .andExpect(jsonPath("$.data.accessToken").exists())
-                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.data.expiresIn", is(900)))
                 .andExpect(jsonPath("$.data.user.email", is(email)))
                 .andExpect(jsonPath("$.data.user.role", is("USER")))
@@ -181,7 +195,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Login successfully")))
                 .andExpect(jsonPath("$.data.accessToken").exists())
-                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.data.user.email", is(email)));
     }
 
@@ -261,24 +275,17 @@ class AuthControllerTest {
         registerAndVerifyUser(email, "0900000110");
         String oldRefreshToken = loginAndReturnRefreshToken(email);
 
-        String newRefreshToken = mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(oldRefreshToken)))
+        var refreshResult = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, oldRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Token refreshed successfully")))
                 .andExpect(jsonPath("$.data.accessToken").exists())
-                .andExpect(jsonPath("$.data.refreshToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
                 .andExpect(jsonPath("$.data.expiresIn", is(900)))
                 .andExpect(jsonPath("$.data.user.email", is(email)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        newRefreshToken = com.jayway.jsonpath.JsonPath.read(newRefreshToken, "$.data.refreshToken");
+                .andReturn();
+        String newRefreshToken = refreshResult.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME).getValue();
 
         org.assertj.core.api.Assertions.assertThat(newRefreshToken).isNotEqualTo(oldRefreshToken);
 
@@ -287,12 +294,7 @@ class AuthControllerTest {
                 .hasSize(1);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(oldRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, oldRefreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -303,14 +305,33 @@ class AuthControllerTest {
     }
 
     @Test
+    void restoreSessionReturnsAccessTokenWithoutRotatingRefreshToken() throws Exception {
+        String email = "restore-session-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000114");
+        String refreshToken = loginAndReturnRefreshToken(email);
+        var savedUser = userRepository.findByEmail(email).orElseThrow();
+
+        mockMvc.perform(post("/api/auth/session")
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Session restored successfully")))
+                .andExpect(jsonPath("$.data.accessToken").exists())
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
+                .andExpect(jsonPath("$.data.user.email", is(email)))
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(
+                        result.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME)
+                ).isNull());
+
+        entityManager.clear();
+        org.assertj.core.api.Assertions.assertThat(refreshTokenRepository.findByUserAndRevokedAtIsNull(savedUser))
+                .hasSize(1);
+    }
+
+    @Test
     void refreshReturnsUnauthorizedWhenTokenIsUnknown() throws Exception {
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "unknown-refresh-token"
-                                }
-                                """))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, "unknown-refresh-token")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -327,12 +348,7 @@ class AuthControllerTest {
         refreshTokenRepository.save(storedToken);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(refreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -352,12 +368,7 @@ class AuthControllerTest {
         userRepository.save(savedUser);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(refreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Account is inactive")));
@@ -368,18 +379,11 @@ class AuthControllerTest {
     }
 
     @Test
-    void refreshReturnsBadRequestWhenInputIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": ""
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
+    void refreshReturnsUnauthorizedWhenCookieIsMissing() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh"))
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("Validation failed")))
-                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+                .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
     }
 
     @Test
@@ -391,12 +395,7 @@ class AuthControllerTest {
         var savedUser = userRepository.findByEmail(email).orElseThrow();
 
         mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(firstRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, firstRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Logged out successfully")))
@@ -407,23 +406,13 @@ class AuthControllerTest {
                 .hasSize(1);
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(secondRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, secondRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Token refreshed successfully")));
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "%s"
-                                }
-                                """.formatted(firstRefreshToken)))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, firstRefreshToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Refresh token is invalid or expired")));
@@ -432,12 +421,7 @@ class AuthControllerTest {
     @Test
     void logoutReturnsSuccessWhenRefreshTokenIsUnknown() throws Exception {
         mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": "unknown-refresh-token"
-                                }
-                                """))
+                        .cookie(new Cookie(REFRESH_TOKEN_COOKIE_NAME, "unknown-refresh-token")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Logged out successfully")))
@@ -445,18 +429,107 @@ class AuthControllerTest {
     }
 
     @Test
-    void logoutReturnsBadRequestWhenInputIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "refreshToken": ""
-                                }
-                                """))
+    void logoutReturnsSuccessWhenRefreshCookieIsMissing() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Logged out successfully")))
+                .andExpect(jsonPath("$.data", nullValue()));
+    }
+
+    @Test
+    void getCurrentUserReturnsProfileWhenAccessTokenIsValid() throws Exception {
+        String email = "profile-user-" + UUID.randomUUID() + "@sportbooking.local";
+        String phone = "0900000115";
+        registerAndVerifyUser(email, phone);
+        String accessToken = loginAndReturnAccessToken(email);
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data.fullName", is("Verify User")))
+                .andExpect(jsonPath("$.data.email", is(email)))
+                .andExpect(jsonPath("$.data.phone", is(phone)))
+                .andExpect(jsonPath("$.data.role", is("USER")))
+                .andExpect(jsonPath("$.data.status", is("ACTIVE")))
+                .andExpect(jsonPath("$.data.emailVerified", is(true)));
+    }
+
+    @Test
+    void getCurrentUserReturnsUnauthorizedWhenAccessTokenIsMissing() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Access token is required")));
+    }
+
+    @Test
+    void uploadCurrentUserAvatarStoresImageAndUpdatesProfile() throws Exception {
+        String email = "avatar-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000116");
+        String accessToken = loginAndReturnAccessToken(email);
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/auth/me/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Avatar uploaded successfully")))
+                .andExpect(jsonPath("$.data.email", is(email)))
+                .andExpect(jsonPath("$.data.avatarUrl").exists())
+                .andReturn();
+
+        String avatarUrl = JsonPath.read(result.getResponse().getContentAsString(), "$.data.avatarUrl");
+        org.assertj.core.api.Assertions.assertThat(Files.exists(localAvatarPath(avatarUrl))).isTrue();
+        mockMvc.perform(get(URI.create(avatarUrl).getPath()))
+                .andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(userRepository.findByEmail(email).orElseThrow().getAvatarUrl())
+                .isEqualTo(avatarUrl);
+    }
+
+    @Test
+    void uploadCurrentUserAvatarDeletesOldManagedAvatar() throws Exception {
+        String email = "avatar-cleanup-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000117");
+        String accessToken = loginAndReturnAccessToken(email);
+
+        String firstAvatarUrl = uploadAvatarAndReturnUrl(accessToken, "first.png");
+        Path firstAvatarPath = localAvatarPath(firstAvatarUrl);
+        org.assertj.core.api.Assertions.assertThat(Files.exists(firstAvatarPath)).isTrue();
+
+        String secondAvatarUrl = uploadAvatarAndReturnUrl(accessToken, "second.png");
+
+        org.assertj.core.api.Assertions.assertThat(secondAvatarUrl).isNotEqualTo(firstAvatarUrl);
+        org.assertj.core.api.Assertions.assertThat(Files.exists(firstAvatarPath)).isFalse();
+        org.assertj.core.api.Assertions.assertThat(Files.exists(localAvatarPath(secondAvatarUrl))).isTrue();
+    }
+
+    @Test
+    void uploadCurrentUserAvatarReturnsBadRequestWhenContentTypeIsInvalid() throws Exception {
+        String email = "invalid-avatar-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000118");
+        String accessToken = loginAndReturnAccessToken(email);
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                "avatar.txt",
+                "text/plain",
+                "not-an-image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/auth/me/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("Validation failed")))
-                .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+                .andExpect(jsonPath("$.message", is("Avatar image must be JPEG, PNG, or WebP")));
     }
 
     @Test
@@ -660,7 +733,7 @@ class AuthControllerTest {
     }
 
     private String loginAndReturnRefreshToken(String identifier) throws Exception {
-        String response = mockMvc.perform(post("/api/auth/login")
+        var loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -669,10 +742,51 @@ class AuthControllerTest {
                                 }
                                 """.formatted(identifier)))
                 .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andReturn();
 
-        return com.jayway.jsonpath.JsonPath.read(response, "$.data.refreshToken");
+        return loginResult.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME).getValue();
+    }
+
+    private String loginAndReturnAccessToken(String identifier) throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(identifier)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return JsonPath.read(loginResult.getResponse().getContentAsString(), "$.data.accessToken");
+    }
+
+    private String uploadAvatarAndReturnUrl(String accessToken, String filename) throws Exception {
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                filename,
+                "image/png",
+                ("fake-image-" + filename).getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/auth/me/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return JsonPath.read(result.getResponse().getContentAsString(), "$.data.avatarUrl");
+    }
+
+    private Path localAvatarPath(String avatarUrl) {
+        String filename = Path.of(URI.create(avatarUrl).getPath()).getFileName().toString();
+        return storageProperties.getLocal()
+                .uploadDirPath()
+                .toAbsolutePath()
+                .normalize()
+                .resolve("avatars")
+                .resolve(filename)
+                .normalize();
     }
 }

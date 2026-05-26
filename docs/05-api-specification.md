@@ -170,13 +170,18 @@ Note:
 
 Response:
 
+The server also sets the refresh token in an `HttpOnly` cookie:
+
+```text
+Set-Cookie: sportzone_refresh_token=<refresh-token>; HttpOnly; SameSite=Lax; Path=/api/auth
+```
+
 ```json
 {
   "success": true,
   "message": "Login successfully",
   "data": {
     "accessToken": "access-token",
-    "refreshToken": "refresh-token",
     "expiresIn": 1800,
     "user": {
       "id": 1,
@@ -199,31 +204,26 @@ Error cases:
 | Account is inactive | `403` | `Account is inactive` |
 | Request body is invalid | `400` | `Validation failed` |
 
-### 4.5. Refresh Token
+### 4.5. Restore Session
 
 ```text
-POST /auth/refresh
+POST /auth/session
 ```
 
 Auth: Not required
 
-Request body:
-
-```json
-{
-  "refreshToken": "refresh-token"
-}
-```
+Refresh token source: `sportzone_refresh_token` HttpOnly cookie.
 
 Response:
+
+This endpoint validates the refresh token and returns a new access token without rotating the refresh token cookie.
 
 ```json
 {
   "success": true,
-  "message": "Token refreshed successfully",
+  "message": "Session restored successfully",
   "data": {
-    "accessToken": "new-access-token",
-    "refreshToken": "new-refresh-token",
+    "accessToken": "access-token",
     "expiresIn": 900,
     "user": {
       "id": 1,
@@ -239,9 +239,57 @@ Response:
 
 Notes:
 
-- Refresh tokens are rotated. A successful refresh revokes the old refresh token and returns a new one.
+- Frontend should call this endpoint on app startup or page reload.
+- This endpoint does not revoke the current refresh token and does not insert a new refresh token.
+- The frontend must call this endpoint with credentials enabled so the browser can send the cookie.
+
+Error cases:
+
+| Case | HTTP status | Message |
+| --- | --- | --- |
+| Refresh token is missing, unknown, expired, or revoked | `401` | `Refresh token is invalid or expired` |
+| Account is inactive | `403` | `Account is inactive` |
+| Account is no longer verified | `403` | `Please verify your email before continuing` |
+
+### 4.6. Refresh Token
+
+```text
+POST /auth/refresh
+```
+
+Auth: Not required
+
+Refresh token source: `sportzone_refresh_token` HttpOnly cookie.
+
+Response:
+
+The server rotates the refresh token and sets the new value in the same HttpOnly cookie.
+
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "new-access-token",
+    "expiresIn": 900,
+    "user": {
+      "id": 1,
+      "fullName": "Nguyen Van A",
+      "email": "user@example.com",
+      "avatarUrl": "https://cdn.example.com/avatars/user-1.jpg",
+      "role": "USER",
+      "emailVerified": true
+    }
+  }
+}
+```
+
+Notes:
+
+- Refresh tokens are rotated. A successful refresh revokes the old refresh token and stores the new one in the HttpOnly cookie.
 - If an old revoked refresh token is reused, active refresh tokens for that user are revoked.
 - Refresh token values are stored as hashes, not raw tokens.
+- The frontend must call this endpoint with credentials enabled so the browser can send the cookie.
 
 Error cases:
 
@@ -250,9 +298,8 @@ Error cases:
 | Refresh token is missing, unknown, expired, or reused | `401` | `Refresh token is invalid or expired` |
 | Account is inactive | `403` | `Account is inactive` |
 | Account is no longer verified | `403` | `Please verify your email before continuing` |
-| Request body is invalid | `400` | `Validation failed` |
 
-### 4.6. Logout
+### 4.7. Logout
 
 ```text
 POST /auth/logout
@@ -260,13 +307,7 @@ POST /auth/logout
 
 Auth: Not required
 
-Request body:
-
-```json
-{
-  "refreshToken": "refresh-token"
-}
-```
+Refresh token source: `sportzone_refresh_token` HttpOnly cookie.
 
 Response:
 
@@ -281,11 +322,11 @@ Response:
 
 Notes:
 
-- Logout revokes only the submitted refresh token, so other devices remain logged in.
+- Logout revokes only the refresh token from the submitted cookie, so other devices remain logged in.
 - Logout is idempotent. Unknown or already revoked refresh tokens still return success to avoid exposing token state.
-- Request body validation still returns `400` when `refreshToken` is missing or blank.
+- The response clears the refresh token cookie.
 
-### 4.7. Google Login
+### 4.8. Google Login
 
 ```text
 POST /auth/google
@@ -303,13 +344,14 @@ Request body:
 
 Response:
 
+The server also sets the refresh token in the `sportzone_refresh_token` HttpOnly cookie.
+
 ```json
 {
   "success": true,
   "message": "Login successfully",
   "data": {
     "accessToken": "access-token",
-    "refreshToken": "refresh-token",
     "expiresIn": 1800,
     "user": {
       "id": 1,
@@ -324,74 +366,7 @@ Response:
 }
 ```
 
-### 4.6. Refresh Token
-
-```text
-POST /auth/refresh-token
-```
-
-Auth: Not required
-
-Request body:
-
-```json
-{
-  "refreshToken": "refresh-token"
-}
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Token refreshed successfully",
-  "data": {
-    "accessToken": "new-access-token",
-    "refreshToken": "new-refresh-token",
-    "expiresIn": 1800
-  }
-}
-```
-
-Note:
-
-- Backend should validate that the refresh token exists, is not expired, and is not revoked.
-- Refresh token rotation is recommended: when a new refresh token is issued, the old one should be revoked.
-- Store only refresh token hash in the database.
-
-### 4.7. Logout
-
-```text
-POST /auth/logout
-```
-
-Auth: USER, VENDOR, ADMIN
-
-Request body:
-
-```json
-{
-  "refreshToken": "refresh-token"
-}
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Logout successfully",
-  "data": null
-}
-```
-
-Note:
-
-- Backend revokes the refresh token.
-- Frontend should clear access token, refresh token, and user data.
-
-### 4.8. Get Current User
+### 4.9. Get Current User
 
 ```text
 GET /auth/me
@@ -417,7 +392,7 @@ Response:
 }
 ```
 
-### 4.9. Upload Current User Avatar
+### 4.10. Upload Current User Avatar
 
 ```text
 POST /auth/me/avatar
@@ -457,7 +432,7 @@ Note:
 - Storage can be local for development and object storage for production.
 - Avatar, venue image, and court image APIs should reuse the same internal image storage service.
 
-### 4.10. Admin Creates Vendor Account
+### 4.11. Admin Creates Vendor Account
 
 ```text
 POST /admin/vendors
@@ -493,7 +468,7 @@ Response:
 }
 ```
 
-### 4.11. Admin Updates User Status or Role
+### 4.12. Admin Updates User Status or Role
 
 ```text
 PUT /admin/users/{id}

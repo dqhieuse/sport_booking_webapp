@@ -3,9 +3,9 @@ package com.sportbooking.module.auth.service;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.config.AuthProperties;
+import com.sportbooking.module.auth.dto.AuthenticationResult;
 import com.sportbooking.module.auth.dto.LoginResponse;
 import com.sportbooking.module.auth.dto.LoginUserResponse;
-import com.sportbooking.module.auth.dto.RefreshTokenRequest;
 import com.sportbooking.module.auth.entity.RefreshToken;
 import com.sportbooking.module.auth.repository.RefreshTokenRepository;
 import com.sportbooking.module.user.entity.User;
@@ -31,9 +31,29 @@ public class RefreshTokenService {
     private final JwtAccessTokenService jwtAccessTokenService;
     private final AuthProperties authProperties;
 
+    @Transactional(readOnly = true)
+    public LoginResponse restoreSession(String rawRefreshToken) {
+        RefreshToken currentToken = findRefreshTokenWithoutLock(rawRefreshToken);
+        User user = currentToken.getUser();
+        LocalDateTime now = LocalDateTime.now();
+
+        if (currentToken.getRevokedAt() != null || !currentToken.getExpiresAt().isAfter(now)) {
+            throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
+        }
+
+        validateRefreshUser(user, now);
+
+        String accessToken = jwtAccessTokenService.generateToken(user);
+        return new LoginResponse(
+                accessToken,
+                authProperties.getAccessTokenTtl().toSeconds(),
+                LoginUserResponse.from(user)
+        );
+    }
+
     @Transactional(noRollbackFor = {UnauthorizedException.class, ForbiddenException.class})
-    public LoginResponse refresh(RefreshTokenRequest request) {
-        RefreshToken currentToken = findRefreshToken(request.refreshToken());
+    public AuthenticationResult refresh(String rawRefreshToken) {
+        RefreshToken currentToken = findRefreshToken(rawRefreshToken);
         User user = currentToken.getUser();
         LocalDateTime now = LocalDateTime.now();
 
@@ -52,7 +72,7 @@ public class RefreshTokenService {
         String accessToken = jwtAccessTokenService.generateToken(user);
         String refreshToken = issueRefreshToken(user);
 
-        return new LoginResponse(
+        return new AuthenticationResult(
                 accessToken,
                 refreshToken,
                 authProperties.getAccessTokenTtl().toSeconds(),
@@ -61,8 +81,12 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public void logout(RefreshTokenRequest request) {
-        String tokenHash = hashToken(request.refreshToken().trim());
+    public void logout(String rawRefreshToken) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            return;
+        }
+
+        String tokenHash = hashToken(rawRefreshToken.trim());
         refreshTokenRepository.findByTokenHash(tokenHash)
                 .ifPresent(refreshToken -> revokeToken(refreshToken, LocalDateTime.now()));
     }
@@ -80,8 +104,24 @@ public class RefreshTokenService {
     }
 
     private RefreshToken findRefreshToken(String rawToken) {
+        return findRefreshToken(rawToken, true);
+    }
+
+    private RefreshToken findRefreshTokenWithoutLock(String rawToken) {
+        return findRefreshToken(rawToken, false);
+    }
+
+    private RefreshToken findRefreshToken(String rawToken, boolean lockForUpdate) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE);
+        }
+
         String tokenHash = hashToken(rawToken.trim());
-        return refreshTokenRepository.findByTokenHash(tokenHash)
+        var refreshToken = lockForUpdate
+                ? refreshTokenRepository.findByTokenHash(tokenHash)
+                : refreshTokenRepository.findByTokenHashWithoutLock(tokenHash);
+
+        return refreshToken
                 .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_TOKEN_MESSAGE));
     }
 

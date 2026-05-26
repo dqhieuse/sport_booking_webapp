@@ -19,4 +19,12 @@ public class AuthProperties {
     private Duration emailVerificationTokenTtl = Duration.ofHours(24);
 
     private String issuer = "sport-booking-backend";
+
+    private String refreshTokenCookieName = "sportzone_refresh_token";
+
+    private String refreshTokenCookiePath = "/api/auth";
+
+    private boolean refreshTokenCookieSecure = false;
+
+    private String refreshTokenCookieSameSite = "Lax";
 }

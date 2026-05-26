@@ -3,8 +3,8 @@ package com.sportbooking.module.auth.service;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.config.AuthProperties;
+import com.sportbooking.module.auth.dto.AuthenticationResult;
 import com.sportbooking.module.auth.dto.LoginRequest;
-import com.sportbooking.module.auth.dto.LoginResponse;
 import com.sportbooking.module.auth.dto.LoginUserResponse;
 import com.sportbooking.module.user.entity.AuthProvider;
 import com.sportbooking.module.user.entity.User;
@@ -26,7 +26,7 @@ public class AuthLoginService {
     private final AuthProperties authProperties;
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
+    public AuthenticationResult login(LoginRequest request) {
         String identifier = request.identifier().trim();
         String normalizedEmail = identifier.toLowerCase();
 
@@ -52,7 +52,7 @@ public class AuthLoginService {
         String accessToken = jwtAccessTokenService.generateToken(user);
         String refreshToken = refreshTokenService.issueRefreshToken(user);
 
-        return new LoginResponse(
+        return new AuthenticationResult(
                 accessToken,
                 refreshToken,
                 authProperties.getAccessTokenTtl().toSeconds(),

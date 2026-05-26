@@ -1,6 +1,6 @@
 import { AlertCircle, Eye, EyeOff, Loader2, LogIn, MailWarning, ShieldCheck } from 'lucide-react';
 import { ChangeEvent, FormEvent, ReactNode, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import type { LoginRequest } from '@/features/auth/types';
 import { ApiError } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
+import { getRedirectPath } from '@/routes/routeRedirect';
 import { routePaths } from '@/routes/routePaths';
 
 type LoginFormValues = LoginRequest;
@@ -63,7 +64,9 @@ function mapApiErrors(errors: string[]): FieldErrors {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const redirectTo = getRedirectPath(location.state);
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [apiMessage, setApiMessage] = useState<string | null>(null);
@@ -104,7 +107,7 @@ export function LoginPage() {
     try {
       const response = await loginLocalAccount(request);
       login(response.data);
-      navigate(routePaths.home, { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         const mappedErrors = mapApiErrors(error.errors);
@@ -123,14 +126,14 @@ export function LoginPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-        <div className="space-y-6 border-b border-border pb-8 lg:border-b-0 lg:pb-0 lg:pr-8">
+        <div className="page-hero space-y-6 lg:sticky lg:top-24">
           <Badge className="w-fit gap-2 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
             Welcome back
           </Badge>
 
           <div className="space-y-4">
-            <h1 className="font-display text-4xl font-extrabold leading-tight text-foreground sm:text-5xl">
+            <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
               Log in to manage your bookings.
             </h1>
             <p className="max-w-xl text-base leading-7 text-muted-foreground">
@@ -142,7 +145,7 @@ export function LoginPage() {
             <InfoRow
               icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
               title="Secure session"
-              description="SportZone stores your session locally and attaches the access token to later API calls."
+              description="SportZone keeps the access token in memory and restores the session with a secure refresh cookie."
             />
             <InfoRow
               icon={<MailWarning className="h-5 w-5" aria-hidden="true" />}
@@ -152,7 +155,7 @@ export function LoginPage() {
           </div>
         </div>
 
-        <Card className="sportzone-panel rounded-xl">
+        <Card className="sportzone-panel">
           <CardHeader>
             <CardTitle>Log in</CardTitle>
             <p className="text-sm leading-6 text-muted-foreground">
@@ -193,7 +196,7 @@ export function LoginPage() {
                 onTogglePassword={() => setShowPassword((current) => !current)}
               />
 
-              <Button type="submit" size="lg" className="w-full rounded-xl" disabled={isSubmitting}>
+              <Button type="submit" size="lg" className="w-full rounded-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -240,8 +243,8 @@ function TextField({ id, label, value, onChange, error, autoComplete, placeholde
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
         className={cn(
-          'h-12 w-full rounded-xl border bg-secondary px-4 text-sm text-foreground transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-          error ? 'border-destructive/70' : 'border-border focus:border-primary',
+          'soft-input h-12 w-full rounded-full px-4 text-sm',
+          error && 'border-destructive/70',
         )}
       />
       {error && <FieldError id={`${id}-error`} message={error} />}
@@ -269,8 +272,8 @@ function PasswordField({
       </label>
       <div
         className={cn(
-          'flex h-12 items-center rounded-xl border bg-secondary transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
-          error ? 'border-destructive/70' : 'border-border focus-within:border-primary',
+          'soft-input flex h-12 items-center rounded-full',
+          error && 'border-destructive/70',
         )}
       >
         <input
@@ -287,7 +290,7 @@ function PasswordField({
         <button
           type="button"
           onClick={onTogglePassword}
-          className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="soft-icon-button mr-2 h-9 w-9"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
         >
           {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
@@ -309,7 +312,7 @@ function FieldError({ id, message }: { id: string; message: string }) {
 
 function InlineAlert({ message, action }: { message: string; action?: ReactNode }) {
   return (
-    <div className="flex gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-foreground">
+    <div className="flex gap-3 rounded-2xl border border-destructive/35 bg-destructive/10 p-4 text-sm text-foreground">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
       <div className="space-y-2">
         <p className="leading-6">{message}</p>
@@ -321,8 +324,8 @@ function InlineAlert({ message, action }: { message: string; action?: ReactNode 
 
 function InfoRow({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="flex gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+    <div className="flex gap-3 rounded-2xl border border-border/80 bg-card/80 p-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
         {icon}
       </div>
       <div>
