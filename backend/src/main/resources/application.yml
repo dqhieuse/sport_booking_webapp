@@ -51,6 +51,17 @@ app:
         from-name: ${MAIL_FROM_NAME:SportZone}
         frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
         email-verify-path: ${EMAIL_VERIFY_PATH:/verify-email}
+    storage:
+        provider: ${APP_STORAGE_PROVIDER:local}
+        public-base-url: ${APP_STORAGE_PUBLIC_BASE_URL:http://localhost:8080}
+        local:
+            upload-dir: ${APP_STORAGE_LOCAL_UPLOAD_DIR:../sport-booking-uploads}
+        avatar:
+            max-file-size: ${APP_AVATAR_MAX_FILE_SIZE:2MB}
+            allowed-content-types:
+                - image/jpeg
+                - image/png
+                - image/webp
 
 management:
     endpoints:

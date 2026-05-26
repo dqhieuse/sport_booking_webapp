@@ -28,6 +28,7 @@ public class SecurityConfig {
                                 "/api/courts",
                                 "/api/courts/**",
                                 "/api/auth/**",
+                                "/uploads/**",
                                 "/actuator/health"
                         ).permitAll()
                         .anyRequest().authenticated()
