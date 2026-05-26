@@ -5,11 +5,13 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.sportbooking.config.StorageProperties;
 import com.sportbooking.module.auth.entity.EmailVerificationToken;
 import com.sportbooking.module.auth.repository.EmailVerificationTokenRepository;
 import com.sportbooking.module.auth.repository.RefreshTokenRepository;
@@ -17,6 +19,9 @@ import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.Cookie;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -24,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,6 +55,9 @@ class AuthControllerTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private StorageProperties storageProperties;
 
     @Test
     void registerCreatesPendingLocalAccountAndVerificationToken() throws Exception {
@@ -457,6 +466,73 @@ class AuthControllerTest {
     }
 
     @Test
+    void uploadCurrentUserAvatarStoresImageAndUpdatesProfile() throws Exception {
+        String email = "avatar-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000116");
+        String accessToken = loginAndReturnAccessToken(email);
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/auth/me/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Avatar uploaded successfully")))
+                .andExpect(jsonPath("$.data.email", is(email)))
+                .andExpect(jsonPath("$.data.avatarUrl").exists())
+                .andReturn();
+
+        String avatarUrl = JsonPath.read(result.getResponse().getContentAsString(), "$.data.avatarUrl");
+        org.assertj.core.api.Assertions.assertThat(Files.exists(localAvatarPath(avatarUrl))).isTrue();
+        mockMvc.perform(get(URI.create(avatarUrl).getPath()))
+                .andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(userRepository.findByEmail(email).orElseThrow().getAvatarUrl())
+                .isEqualTo(avatarUrl);
+    }
+
+    @Test
+    void uploadCurrentUserAvatarDeletesOldManagedAvatar() throws Exception {
+        String email = "avatar-cleanup-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000117");
+        String accessToken = loginAndReturnAccessToken(email);
+
+        String firstAvatarUrl = uploadAvatarAndReturnUrl(accessToken, "first.png");
+        Path firstAvatarPath = localAvatarPath(firstAvatarUrl);
+        org.assertj.core.api.Assertions.assertThat(Files.exists(firstAvatarPath)).isTrue();
+
+        String secondAvatarUrl = uploadAvatarAndReturnUrl(accessToken, "second.png");
+
+        org.assertj.core.api.Assertions.assertThat(secondAvatarUrl).isNotEqualTo(firstAvatarUrl);
+        org.assertj.core.api.Assertions.assertThat(Files.exists(firstAvatarPath)).isFalse();
+        org.assertj.core.api.Assertions.assertThat(Files.exists(localAvatarPath(secondAvatarUrl))).isTrue();
+    }
+
+    @Test
+    void uploadCurrentUserAvatarReturnsBadRequestWhenContentTypeIsInvalid() throws Exception {
+        String email = "invalid-avatar-user-" + UUID.randomUUID() + "@sportbooking.local";
+        registerAndVerifyUser(email, "0900000118");
+        String accessToken = loginAndReturnAccessToken(email);
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                "avatar.txt",
+                "text/plain",
+                "not-an-image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/auth/me/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Avatar image must be JPEG, PNG, or WebP")));
+    }
+
+    @Test
     void verifyEmailActivatesAccountWhenTokenIsValid() throws Exception {
         String email = "verify-user-" + UUID.randomUUID() + "@sportbooking.local";
         registerUser(email, "0900000101");
@@ -684,5 +760,33 @@ class AuthControllerTest {
                 .andReturn();
 
         return JsonPath.read(loginResult.getResponse().getContentAsString(), "$.data.accessToken");
+    }
+
+    private String uploadAvatarAndReturnUrl(String accessToken, String filename) throws Exception {
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                filename,
+                "image/png",
+                ("fake-image-" + filename).getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/auth/me/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return JsonPath.read(result.getResponse().getContentAsString(), "$.data.avatarUrl");
+    }
+
+    private Path localAvatarPath(String avatarUrl) {
+        String filename = Path.of(URI.create(avatarUrl).getPath()).getFileName().toString();
+        return storageProperties.getLocal()
+                .uploadDirPath()
+                .toAbsolutePath()
+                .normalize()
+                .resolve("avatars")
+                .resolve(filename)
+                .normalize();
     }
 }
