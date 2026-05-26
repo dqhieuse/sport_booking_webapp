@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import com.sportbooking.module.auth.entity.EmailVerificationToken;
 import com.sportbooking.module.auth.repository.EmailVerificationTokenRepository;
 import com.sportbooking.module.auth.repository.RefreshTokenRepository;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -427,6 +429,34 @@ class AuthControllerTest {
     }
 
     @Test
+    void getCurrentUserReturnsProfileWhenAccessTokenIsValid() throws Exception {
+        String email = "profile-user-" + UUID.randomUUID() + "@sportbooking.local";
+        String phone = "0900000115";
+        registerAndVerifyUser(email, phone);
+        String accessToken = loginAndReturnAccessToken(email);
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data.fullName", is("Verify User")))
+                .andExpect(jsonPath("$.data.email", is(email)))
+                .andExpect(jsonPath("$.data.phone", is(phone)))
+                .andExpect(jsonPath("$.data.role", is("USER")))
+                .andExpect(jsonPath("$.data.status", is("ACTIVE")))
+                .andExpect(jsonPath("$.data.emailVerified", is(true)));
+    }
+
+    @Test
+    void getCurrentUserReturnsUnauthorizedWhenAccessTokenIsMissing() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Access token is required")));
+    }
+
+    @Test
     void verifyEmailActivatesAccountWhenTokenIsValid() throws Exception {
         String email = "verify-user-" + UUID.randomUUID() + "@sportbooking.local";
         registerUser(email, "0900000101");
@@ -639,5 +669,20 @@ class AuthControllerTest {
                 .andReturn();
 
         return loginResult.getResponse().getCookie(REFRESH_TOKEN_COOKIE_NAME).getValue();
+    }
+
+    private String loginAndReturnAccessToken(String identifier) throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "%s",
+                                  "password": "Password@123"
+                                }
+                                """.formatted(identifier)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return JsonPath.read(loginResult.getResponse().getContentAsString(), "$.data.accessToken");
     }
 }

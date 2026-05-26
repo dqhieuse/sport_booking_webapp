@@ -4,12 +4,14 @@ import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.config.AuthProperties;
 import com.sportbooking.module.auth.dto.AuthenticationResult;
 import com.sportbooking.module.auth.dto.AuthUserResponse;
+import com.sportbooking.module.auth.dto.CurrentUserResponse;
 import com.sportbooking.module.auth.dto.EmailVerificationResponse;
 import com.sportbooking.module.auth.dto.LoginRequest;
 import com.sportbooking.module.auth.dto.LoginResponse;
 import com.sportbooking.module.auth.dto.RegisterRequest;
 import com.sportbooking.module.auth.dto.ResendVerificationRequest;
 import com.sportbooking.module.auth.service.AuthLoginService;
+import com.sportbooking.module.auth.service.AuthProfileService;
 import com.sportbooking.module.auth.service.AuthRegistrationService;
 import com.sportbooking.module.auth.service.EmailVerificationService;
 import com.sportbooking.module.auth.service.RefreshTokenService;
@@ -21,6 +23,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthLoginService authLoginService;
+    private final AuthProfileService authProfileService;
     private final AuthRegistrationService authRegistrationService;
     private final EmailVerificationService emailVerificationService;
     private final RefreshTokenService refreshTokenService;
@@ -76,6 +80,14 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, expiredRefreshTokenCookie().toString())
                 .body(ApiResponse.success("Logged out successfully", null));
+    }
+
+    @GetMapping("/me")
+    public ApiResponse<CurrentUserResponse> getCurrentUser(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        CurrentUserResponse response = authProfileService.getCurrentUser(authorizationHeader);
+        return ApiResponse.success("Success", response);
     }
 
     @GetMapping("/verify-email")
