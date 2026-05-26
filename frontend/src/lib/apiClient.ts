@@ -49,6 +49,18 @@ export const apiClient = {
   post<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig) {
     return request<T>({ ...config, method: 'POST', url, data });
   },
+  postForm<T>(url: string, data: FormData, config?: AxiosRequestConfig) {
+    return request<T>({
+      ...config,
+      method: 'POST',
+      url,
+      data,
+      headers: {
+        ...config?.headers,
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
   put<T, B = unknown>(url: string, data?: B, config?: AxiosRequestConfig) {
     return request<T>({ ...config, method: 'PUT', url, data });
   },

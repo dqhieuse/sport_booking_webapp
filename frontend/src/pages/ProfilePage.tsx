@@ -1,6 +1,8 @@
 import {
   BadgeCheck,
   CalendarClock,
+  Camera,
+  Loader2,
   Mail,
   Phone,
   RefreshCw,
@@ -8,15 +10,15 @@ import {
   UserCircle,
   XCircle,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getCurrentUser } from '@/features/auth/api/authApi';
+import { getCurrentUser, uploadCurrentUserAvatar } from '@/features/auth/api/authApi';
 import type { CurrentUserResponse } from '@/features/auth/types';
 import type { RoleName, UserStatus } from '@/features/auth/userTypes';
 import { useAuth } from '@/features/auth/useAuth';
@@ -24,6 +26,7 @@ import { ApiError } from '@/lib/apiError';
 import { routePaths } from '@/routes/routePaths';
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error';
+type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 type DisplayProfile = {
   id: number;
   fullName: string;
@@ -46,6 +49,8 @@ const statusLabels: Record<UserStatus, string> = {
   INACTIVE: 'Inactive',
   PENDING_VERIFICATION: 'Pending verification',
 };
+const acceptedAvatarTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const maxAvatarSizeBytes = 2 * 1024 * 1024;
 
 function getInitials(fullName: string) {
   return fullName
@@ -56,12 +61,27 @@ function getInitials(fullName: string) {
     .join('');
 }
 
+function validateAvatarFile(file: File) {
+  if (!acceptedAvatarTypes.includes(file.type)) {
+    return 'Avatar image must be JPEG, PNG, or WebP.';
+  }
+
+  if (file.size > maxAvatarSizeBytes) {
+    return 'Avatar image must be at most 2MB.';
+  }
+
+  return null;
+}
+
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { logout, session } = useAuth();
+  const { logout, session, updateUser } = useAuth();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<CurrentUserResponse | null>(null);
   const [loadState, setLoadState] = useState<LoadState>('idle');
+  const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -135,6 +155,43 @@ export function ProfilePage() {
 
   const initials = getInitials(currentProfile.fullName);
   const status = currentProfile.status;
+  const isUploadingAvatar = uploadState === 'uploading';
+
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    const validationError = validateAvatarFile(file);
+    if (validationError) {
+      setUploadState('error');
+      setUploadMessage(validationError);
+      return;
+    }
+
+    setUploadState('uploading');
+    setUploadMessage(null);
+
+    try {
+      const response = await uploadCurrentUserAvatar(file);
+      setProfile(response.data);
+      updateUser(response.data);
+      setUploadState('success');
+      setUploadMessage('Avatar updated successfully.');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        await logout();
+        navigate(routePaths.login, { replace: true });
+        return;
+      }
+
+      setUploadState('error');
+      setUploadMessage(error instanceof Error ? error.message : 'Could not upload avatar.');
+    }
+  }
 
   return (
     <div className="page-shell">
@@ -170,11 +227,45 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <Button type="button" variant="outline" onClick={() => setReloadKey((current) => current + 1)}>
-            <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Refresh
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={handleAvatarChange}
+            />
+            <Button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+            >
+              {isUploadingAvatar ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Camera className="h-4 w-4" aria-hidden="true" />
+              )}
+              Upload avatar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setReloadKey((current) => current + 1)}
+              disabled={isUploadingAvatar}
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Refresh
+            </Button>
+          </div>
         </div>
+        {uploadMessage && (
+          <p
+            className={uploadState === 'error' ? 'mt-5 text-sm text-destructive' : 'mt-5 text-sm text-muted-foreground'}
+            role="status"
+          >
+            {uploadMessage}
+          </p>
+        )}
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">

@@ -4,7 +4,7 @@ import { authTokenStore } from '@/lib/authTokenStore';
 
 import { logoutAccount, restoreAuthSession } from './api/authApi';
 import { AuthContext, type AuthContextValue } from './authContextValue';
-import type { AuthSession, LoginResponse } from './types';
+import type { AuthSession, LoginResponse, LoginUserResponse } from './types';
 
 let restoreSessionPromise: Promise<LoginResponse> | null = null;
 
@@ -60,15 +60,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateUser = useCallback((user: LoginUserResponse) => {
+    setSession((currentSession) => {
+      if (!currentSession) {
+        return currentSession;
+      }
+
+      return {
+        ...currentSession,
+        user,
+      };
+    });
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       isAuthenticated: Boolean(session),
       isInitializing,
       login,
+      updateUser,
       logout,
     }),
-    [isInitializing, login, logout, session],
+    [isInitializing, login, logout, session, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

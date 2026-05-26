@@ -57,3 +57,13 @@ export async function logoutAccount(signal?: AbortSignal): Promise<ApiSuccessRes
 export async function getCurrentUser(signal?: AbortSignal): Promise<ApiSuccessResponse<CurrentUserResponse>> {
   return apiClient.get<CurrentUserResponse>('/auth/me', { signal });
 }
+
+export async function uploadCurrentUserAvatar(
+  file: File,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<CurrentUserResponse>> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return apiClient.postForm<CurrentUserResponse>('/auth/me/avatar', formData, { signal });
+}
