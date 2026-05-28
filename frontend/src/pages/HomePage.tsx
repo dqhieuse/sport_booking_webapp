@@ -119,7 +119,7 @@ export function HomePage() {
 
   return (
     <div className="page-shell">
-      <section className="page-hero">
+      <section>
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div className="space-y-7">
             <Badge className="w-fit gap-2 px-4 py-1.5">

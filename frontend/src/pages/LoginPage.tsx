@@ -126,7 +126,7 @@ export function LoginPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-        <div className="page-hero space-y-6 lg:sticky lg:top-24">
+        <div className="space-y-6 lg:sticky lg:top-24">
           <Badge className="w-fit gap-2 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
             Welcome back
@@ -185,7 +185,7 @@ export function LoginPage() {
                 onChange={handleFieldChange('identifier')}
                 error={fieldErrors.identifier}
                 autoComplete="username"
-                placeholder="you@example.com or 0900000000"
+                placeholder="Enter your email or phone number"
               />
 
               <PasswordField
@@ -194,6 +194,7 @@ export function LoginPage() {
                 error={fieldErrors.password}
                 showPassword={showPassword}
                 onTogglePassword={() => setShowPassword((current) => !current)}
+                placeholder="Enter your password"
               />
 
               <Button type="submit" size="lg" className="w-full rounded-full" disabled={isSubmitting}>
@@ -258,12 +259,14 @@ function PasswordField({
   error,
   showPassword,
   onTogglePassword,
+  placeholder,
 }: {
   value: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   error?: string;
   showPassword: boolean;
   onTogglePassword: () => void;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -282,6 +285,7 @@ function PasswordField({
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={onChange}
+          placeholder={placeholder}
           autoComplete="current-password"
           aria-invalid={Boolean(error)}
           aria-describedby={error ? 'password-error' : undefined}

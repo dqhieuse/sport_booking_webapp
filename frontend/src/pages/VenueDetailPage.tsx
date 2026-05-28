@@ -138,7 +138,7 @@ export function VenueDetailPage() {
 
   return (
     <div className="page-shell">
-      <nav aria-label="Breadcrumb">
+      <nav aria-label="Breadcrumb" className="border-b border-border/80 pb-4">
         <Link
           to={routePaths.venues}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -160,7 +160,7 @@ export function VenueDetailPage() {
 
       {hasData && venue && (
         <>
-          <header className="page-hero space-y-3">
+          <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>Venue</Badge>
               <Badge variant="secondary">{venue.status === 'ACTIVE' ? 'Active' : 'Inactive'}</Badge>

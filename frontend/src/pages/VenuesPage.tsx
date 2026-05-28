@@ -150,7 +150,7 @@ export function VenuesPage() {
 
   return (
     <div className="page-shell">
-      <section className="page-hero">
+      <section>
         <div className="space-y-5">
           <Badge className="w-fit gap-2 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
@@ -167,7 +167,7 @@ export function VenuesPage() {
         </div>
       </section>
 
-      <section className="sportzone-panel rounded-[1.35rem] p-3 sm:p-4">
+      <section className="sportzone-panel rounded-3xl p-3 sm:p-4">
         <form onSubmit={handleSearchSubmit} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
           <label className="soft-input flex h-12 items-center gap-3 rounded-full px-4 py-3">
             <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />

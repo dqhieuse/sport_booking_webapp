@@ -195,7 +195,7 @@ export function ProfilePage() {
 
   return (
     <div className="page-shell">
-      <section className="page-hero">
+      <section>
         <div className="grid gap-6 lg:grid-cols-[auto_1fr_auto] lg:items-center">
           <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-primary/25 bg-primary/10 text-2xl font-semibold text-primary">
             {currentProfile.avatarUrl ? (

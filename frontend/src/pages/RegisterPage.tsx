@@ -191,7 +191,7 @@ export function RegisterPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-        <div className="page-hero space-y-6 lg:sticky lg:top-24">
+        <div className="space-y-6 lg:sticky lg:top-24">
           <Badge className="w-fit gap-2 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
             Join SportZone
@@ -252,7 +252,7 @@ export function RegisterPage() {
                   onChange={handleFieldChange('fullName')}
                   error={fieldErrors.fullName}
                   autoComplete="name"
-                  placeholder="Duong Quoc Hieu"
+                  placeholder="Enter your full name"
                 />
 
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -273,7 +273,7 @@ export function RegisterPage() {
                     onChange={handleFieldChange('phone')}
                     error={fieldErrors.phone}
                     autoComplete="tel"
-                    placeholder="0900000000"
+                    placeholder="Enter your phone number"
                   />
                 </div>
 
@@ -287,6 +287,7 @@ export function RegisterPage() {
                   showPassword={showPassword}
                   onTogglePassword={() => setShowPassword((current) => !current)}
                   hint={passwordHint}
+                  placeholder="Create a password"
                 />
 
                 <PasswordField
@@ -298,6 +299,7 @@ export function RegisterPage() {
                   autoComplete="new-password"
                   showPassword={showConfirmPassword}
                   onTogglePassword={() => setShowConfirmPassword((current) => !current)}
+                  placeholder="Re-enter your password"
                 />
 
                 <Button type="submit" size="lg" className="w-full rounded-xl" disabled={isSubmitting}>
@@ -359,7 +361,7 @@ function TextField({ id, label, value, onChange, error, type = 'text', autoCompl
   );
 }
 
-type PasswordFieldProps = Omit<TextFieldProps, 'type' | 'placeholder'> & {
+type PasswordFieldProps = Omit<TextFieldProps, 'type'> & {
   showPassword: boolean;
   onTogglePassword: () => void;
   hint?: string;
@@ -375,6 +377,7 @@ function PasswordField({
   showPassword,
   onTogglePassword,
   hint,
+  placeholder,
 }: PasswordFieldProps) {
   return (
     <div className="space-y-2">
@@ -393,6 +396,7 @@ function PasswordField({
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={onChange}
+          placeholder={placeholder}
           autoComplete={autoComplete}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}

@@ -1,6 +1,6 @@
 import {
   ArrowLeft,
-  CalendarDays,
+  ChevronRight,
   Clock,
   MapPin,
 } from 'lucide-react';
@@ -137,7 +137,7 @@ export function CourtDetailPage() {
 
   return (
     <div className="page-shell">
-      <nav aria-label="Breadcrumb">
+      <nav aria-label="Breadcrumb" className="border-b border-border/80 pb-4 mb-8">
         <Link
           to={routePaths.courts}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -160,7 +160,7 @@ export function CourtDetailPage() {
       {hasData && court && (
         <>
           {/* Header */}
-          <header className="page-hero space-y-3">
+          <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{court.sport.name}</Badge>
             </div>
@@ -249,11 +249,11 @@ export function CourtDetailPage() {
 
                 <Button
                   size="lg"
-                  className="w-full"
+                  className="w-full rounded-2xl"
                   disabled={court.status !== 'ACTIVE'}
                 >
-                  <CalendarDays className="h-5 w-5" aria-hidden="true" />
                   Book this court
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
 
                 {court.status !== 'ACTIVE' && (

@@ -57,8 +57,8 @@ export function DetailImageCarousel({ images, itemName }: DetailImageCarouselPro
       <Carousel setApi={setApi} opts={{ loop: images.length > 1 }} className="w-full">
         <CarouselContent className="-ml-0">
           {images.map((image, index) => (
-            <CarouselItem key={image.id} className="pl-0">
-              <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[1.75rem] bg-muted shadow-[0_18px_60px_rgba(0,0,0,0.16)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
+            <CarouselItem key={image.id} className="pl-0 overflow-hidden rounded-[1.75rem]">
+              <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[1.75rem] shadow-[0_18px_60px_rgba(0,0,0,0.16)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
                 <img
                   src={image.imageUrl}
                   alt={`${itemName} image ${index + 1}`}
