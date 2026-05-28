@@ -55,4 +55,6 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
     List<Court> findBySportIdAndStatus(Long sportId, CourtStatus status);
 
     List<Court> findByVenueIdAndStatus(Long venueId, CourtStatus status);
+
+    long countByVenueId(Long venueId);
 }

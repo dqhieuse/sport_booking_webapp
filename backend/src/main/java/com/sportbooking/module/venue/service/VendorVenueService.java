@@ -1,22 +1,27 @@
 package com.sportbooking.module.venue.service;
 
+import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.user.entity.RoleName;
 import com.sportbooking.module.user.entity.User;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.dto.VendorVenueRequest;
+import com.sportbooking.module.venue.dto.VendorVenueListResponse;
 import com.sportbooking.module.venue.dto.VenueDetailResponse;
 import com.sportbooking.module.venue.dto.VenueVendorResponse;
 import com.sportbooking.module.venue.entity.Venue;
 import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueImageRepository;
 import com.sportbooking.module.venue.repository.VenueRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
@@ -30,8 +35,38 @@ public class VendorVenueService {
 
     private final VenueRepository venueRepository;
     private final VenueImageRepository venueImageRepository;
+    private final CourtRepository courtRepository;
     private final UserRepository userRepository;
     private final JwtAccessTokenService jwtAccessTokenService;
+
+    @Transactional(readOnly = true)
+    public PageResponse<VendorVenueListResponse> getOwnVenues(
+            String authorizationHeader,
+            VenueStatus status,
+            Pageable pageable
+    ) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        var venuePage = status == null
+                ? venueRepository.findByVendorId(vendor.getId(), pageable)
+                : venueRepository.findByVendorIdAndStatus(vendor.getId(), status, pageable);
+        List<VendorVenueListResponse> items = venuePage.stream()
+                .map(this::toListResponse)
+                .toList();
+
+        return PageResponse.from(venuePage, items);
+    }
+
+    @Transactional(readOnly = true)
+    public VenueDetailResponse getOwnVenueById(String authorizationHeader, Long venueId) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
+        if (!venue.getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You cannot view another vendor's venue");
+        }
+
+        return toDetailResponse(venue);
+    }
 
     @Transactional
     public VenueDetailResponse createVenue(String authorizationHeader, VendorVenueRequest request) {
@@ -91,6 +126,21 @@ public class VendorVenueService {
         venue.setPhone(request.phone().trim());
         venue.setOpeningTime(request.openingTime());
         venue.setClosingTime(request.closingTime());
+    }
+
+    private VendorVenueListResponse toListResponse(Venue venue) {
+        return new VendorVenueListResponse(
+                venue.getId(),
+                venue.getName(),
+                venue.getAddress(),
+                venue.getPhone(),
+                venue.getOpeningTime(),
+                venue.getClosingTime(),
+                venue.getStatus(),
+                getPrimaryImageUrl(venue.getId()),
+                courtRepository.countByVenueId(venue.getId()),
+                venue.getCreatedAt()
+        );
     }
 
     private VenueDetailResponse toDetailResponse(Venue venue) {

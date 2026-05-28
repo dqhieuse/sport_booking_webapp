@@ -3,6 +3,7 @@ package com.sportbooking.module.venue.controller;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,6 +17,7 @@ import com.sportbooking.module.user.entity.User;
 import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.RoleRepository;
 import com.sportbooking.module.user.repository.UserRepository;
+import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,82 @@ class VendorVenueControllerTest {
 
     @Autowired
     private JwtAccessTokenService jwtAccessTokenService;
+
+    @Test
+    void getOwnVenuesReturnsOnlyCurrentVendorVenues() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+
+        mockMvc.perform(get("/api/vendor/venues")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data.items", hasSize(2)))
+                .andExpect(jsonPath("$.data.items[0].id").exists())
+                .andExpect(jsonPath("$.data.items[0].status", is("ACTIVE")))
+                .andExpect(jsonPath("$.data.items[0].courtCount").isNumber())
+                .andExpect(jsonPath("$.data.items[0].createdAt").exists())
+                .andExpect(jsonPath("$.data.page", is(0)))
+                .andExpect(jsonPath("$.data.size", is(10)))
+                .andExpect(jsonPath("$.data.totalItems", is(2)));
+    }
+
+    @Test
+    void getOwnVenuesFiltersByStatus() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        var vendor = userRepository.findByEmail("vendor@sportbooking.local").orElseThrow();
+        var inactiveVenue = venueRepository.findByVendorId(vendor.getId()).getFirst();
+        inactiveVenue.setStatus(VenueStatus.INACTIVE);
+        venueRepository.saveAndFlush(inactiveVenue);
+
+        mockMvc.perform(get("/api/vendor/venues")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("status", "INACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.items", hasSize(1)))
+                .andExpect(jsonPath("$.data.items[0].id", is(inactiveVenue.getId().intValue())))
+                .andExpect(jsonPath("$.data.items[0].status", is("INACTIVE")));
+    }
+
+    @Test
+    void getOwnVenueByIdReturnsCurrentVendorVenueDetail() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = venueRepository.findByVendorId(
+                userRepository.findByEmail("vendor@sportbooking.local").orElseThrow().getId()
+        ).getFirst().getId();
+
+        mockMvc.perform(get("/api/vendor/venues/{id}", venueId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data.id", is(venueId.intValue())))
+                .andExpect(jsonPath("$.data.vendor.fullName", is("Demo Vendor")));
+    }
+
+    @Test
+    void getOwnVenueByIdReturnsForbiddenWhenVenueBelongsToAnotherVendor() throws Exception {
+        String otherVendorToken = createVendorAndReturnAccessToken();
+        Long existingVenueId = venueRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(get("/api/vendor/venues/{id}", existingVenueId)
+                        .header("Authorization", "Bearer " + otherVendorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("You cannot view another vendor's venue")));
+    }
+
+    @Test
+    void getOwnVenueByIdReturnsNotFoundWhenVenueDoesNotExist() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+
+        mockMvc.perform(get("/api/vendor/venues/{id}", 9999)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Venue not found")));
+    }
 
     @Test
     void createVenueCreatesActiveVenueForCurrentVendor() throws Exception {
