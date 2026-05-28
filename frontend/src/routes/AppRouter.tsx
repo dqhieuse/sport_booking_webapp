@@ -10,6 +10,8 @@ import { ProfilePage } from '../pages/ProfilePage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { RoutePlaceholderPage } from '../pages/RoutePlaceholderPage';
 import { SportsPage } from '../pages/SportsPage';
+import { VenueDetailPage } from '../pages/VenueDetailPage';
+import { VenuesPage } from '../pages/VenuesPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute';
 import { routePaths } from './routePaths';
@@ -26,7 +28,11 @@ export function AppRouter() {
           />
           <Route
             path={routePaths.venues}
-            element={<RoutePlaceholderPage title="Venues" description="Browse sport venues and locations." />}
+            element={<VenuesPage />}
+          />
+          <Route
+            path={routePaths.venueDetail}
+            element={<VenueDetailPage />}
           />
           <Route
             path={routePaths.courts}

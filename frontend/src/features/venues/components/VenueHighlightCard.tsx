@@ -11,9 +11,11 @@ type VenueHighlightCardProps = {
 };
 
 export function VenueHighlightCard({ venue }: VenueHighlightCardProps) {
+  const detailPath = routePaths.venueDetail.replace(':venueId', String(venue.id));
+
   return (
     <Card className="sportzone-panel group overflow-hidden">
-      <Link to={routePaths.venues} className="block h-full no-underline">
+      <Link to={detailPath} className="block h-full no-underline">
         <div className="relative h-36 overflow-hidden">
           {venue.primaryImageUrl ? (
             <img
