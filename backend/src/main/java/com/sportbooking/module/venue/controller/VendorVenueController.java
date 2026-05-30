@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,5 +76,14 @@ public class VendorVenueController {
     ) {
         VenueDetailResponse response = vendorVenueService.updateVenue(id, authorizationHeader, request);
         return ApiResponse.success("Venue updated successfully", response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<VenueDetailResponse> deactivateVenue(
+            @PathVariable Long id,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        VenueDetailResponse response = vendorVenueService.deactivateVenue(id, authorizationHeader);
+        return ApiResponse.success("Venue deactivated successfully", response);
     }
 }
