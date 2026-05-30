@@ -1,8 +1,10 @@
 package com.sportbooking.module.venue.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -11,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.court.entity.CourtStatus;
+import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.user.entity.AuthProvider;
 import com.sportbooking.module.user.entity.RoleName;
 import com.sportbooking.module.user.entity.User;
@@ -41,6 +45,9 @@ class VendorVenueControllerTest {
 
     @Autowired
     private VenueRepository venueRepository;
+
+    @Autowired
+    private CourtRepository courtRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -193,6 +200,49 @@ class VendorVenueControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("You cannot update another vendor's venue")));
+    }
+
+    @Test
+    void deactivateVenueSetsVenueAndOwnCourtsInactive() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = venueRepository.findByVendorId(
+                userRepository.findByEmail("vendor@sportbooking.local").orElseThrow().getId()
+        ).getFirst().getId();
+
+        mockMvc.perform(delete("/api/vendor/venues/{id}", venueId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Venue deactivated successfully")))
+                .andExpect(jsonPath("$.data.id", is(venueId.intValue())))
+                .andExpect(jsonPath("$.data.status", is("INACTIVE")));
+
+        var deactivatedVenue = venueRepository.findById(venueId).orElseThrow();
+        assertThat(deactivatedVenue.getStatus()).isEqualTo(VenueStatus.INACTIVE);
+        assertThat(courtRepository.findByVenueIdAndStatus(venueId, CourtStatus.ACTIVE)).isEmpty();
+    }
+
+    @Test
+    void deactivateVenueReturnsForbiddenWhenVenueBelongsToAnotherVendor() throws Exception {
+        String otherVendorToken = createVendorAndReturnAccessToken();
+        Long existingVenueId = venueRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(delete("/api/vendor/venues/{id}", existingVenueId)
+                        .header("Authorization", "Bearer " + otherVendorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("You cannot deactivate another vendor's venue")));
+    }
+
+    @Test
+    void deactivateVenueReturnsNotFoundWhenVenueDoesNotExist() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+
+        mockMvc.perform(delete("/api/vendor/venues/{id}", 9999)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Venue not found")));
     }
 
     @Test
