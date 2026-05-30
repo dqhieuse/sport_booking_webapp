@@ -2,6 +2,7 @@ export const routePaths = {
   home: '/',
   sports: '/sports',
   venues: '/venues',
+  venueDetail: '/venues/:venueId',
   courts: '/courts',
   courtDetail: '/courts/:courtId',
   login: '/login',

@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/apiClient';
 import type { ApiSuccessResponse, PageResponse } from '@/types/api';
 
-import type { Venue } from '../types';
+import type { Venue, VenueDetail, VenueImage } from '../types';
 
 export type PublicVenueListParams = {
   keyword?: string;
@@ -17,4 +17,18 @@ export async function getPublicVenues(
     params,
     signal,
   });
+}
+
+export async function getPublicVenueById(
+  id: number,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<VenueDetail>> {
+  return apiClient.get<VenueDetail>(`/venues/${id}`, { signal });
+}
+
+export async function getPublicVenueImages(
+  id: number,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<VenueImage[]>> {
+  return apiClient.get<VenueImage[]>(`/venues/${id}/images`, { signal });
 }

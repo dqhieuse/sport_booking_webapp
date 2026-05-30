@@ -10,3 +10,20 @@ export type Venue = {
   status: VenueStatus;
   primaryImageUrl: string | null;
 };
+
+export type VenueVendor = {
+  id: number;
+  fullName: string;
+};
+
+export type VenueDetail = Venue & {
+  description: string | null;
+  vendor: VenueVendor;
+};
+
+export type VenueImage = {
+  id: number;
+  imageUrl: string;
+  isPrimary: boolean;
+  sortOrder: number;
+};

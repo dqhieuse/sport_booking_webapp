@@ -46,4 +46,8 @@ public interface VenueRepository extends JpaRepository<Venue, Long> {
     List<Venue> findByVendorId(Long vendorId);
 
     List<Venue> findByVendorIdAndStatus(Long vendorId, VenueStatus status);
+
+    Page<Venue> findByVendorId(Long vendorId, Pageable pageable);
+
+    Page<Venue> findByVendorIdAndStatus(Long vendorId, VenueStatus status, Pageable pageable);
 }

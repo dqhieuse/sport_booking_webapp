@@ -79,7 +79,7 @@ export function SportsPage() {
 
   return (
     <div className="page-shell">
-      <section className="page-hero">
+      <section>
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
           <div className="space-y-5">
             <Badge className="w-fit gap-2 px-4 py-1.5">

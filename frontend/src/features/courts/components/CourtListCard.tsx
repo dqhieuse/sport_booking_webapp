@@ -21,7 +21,7 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 export function CourtListCard({ court }: CourtListCardProps) {
   return (
     <Card className="sportzone-panel group flex h-full flex-col overflow-hidden">
-      <div className="relative aspect-[16/10] shrink-0 overflow-hidden bg-muted">
+      <div className="relative aspect-[16/8] shrink-0 overflow-hidden bg-muted">
         {court.primaryImageUrl ? (
           <img
             src={court.primaryImageUrl}

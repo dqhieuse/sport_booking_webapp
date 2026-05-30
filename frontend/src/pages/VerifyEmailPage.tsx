@@ -138,7 +138,7 @@ export function VerifyEmailPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-        <div className="page-hero space-y-6 lg:sticky lg:top-24">
+        <div className="space-y-6 lg:sticky lg:top-24">
           <Badge className="w-fit gap-2 px-4 py-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
             Email verification

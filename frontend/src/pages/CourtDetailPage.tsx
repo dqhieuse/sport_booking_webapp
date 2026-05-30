@@ -1,7 +1,5 @@
 import {
   ArrowLeft,
-  CalendarDays,
-  ChevronLeft,
   ChevronRight,
   Clock,
   MapPin,
@@ -12,6 +10,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
+import { DetailImageCarousel } from '@/components/detail-image-carousel';
 import { getPublicCourtById, getPublicCourtImages } from '@/features/courts/api/courtsApi';
 import type { CourtDetail, CourtImage } from '@/features/courts/types';
 import { routePaths } from '@/routes/routePaths';
@@ -57,80 +56,6 @@ function CourtDetailSkeleton() {
         </div>
         <div className="h-56 rounded-2xl bg-muted animate-soft-pulse" />
       </div>
-    </div>
-  );
-}
-
-function ImageGallery({ images, courtName }: { images: CourtImage[]; courtName: string }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  if (images.length === 0) {
-    return (
-      <div className="flex aspect-[16/7] w-full items-center justify-center rounded-[1.75rem] bg-secondary/80 text-muted-foreground">
-        No images available
-      </div>
-    );
-  }
-
-  const current = images[currentIndex];
-
-  return (
-    <div className="space-y-3">
-      <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[1.75rem] bg-muted shadow-[0_18px_60px_rgba(0,0,0,0.16)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
-        <img
-          key={current.imageUrl}
-          src={current.imageUrl}
-          alt={`${courtName} — image ${currentIndex + 1}`}
-          className="h-full w-full object-cover transition-[opacity,transform] duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
-
-        {images.length > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setCurrentIndex((i) => (i - 1 + images.length) % images.length)}
-              aria-label="Previous image"
-              className="soft-icon-button absolute left-3 top-1/2 h-10 w-10 -translate-y-1/2"
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentIndex((i) => (i + 1) % images.length)}
-              aria-label="Next image"
-              className="soft-icon-button absolute right-3 top-1/2 h-10 w-10 -translate-y-1/2"
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <p className="absolute bottom-3 right-4 text-xs text-white/90">
-              {currentIndex + 1} / {images.length}
-            </p>
-          </>
-        )}
-      </div>
-
-      {images.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {images.map((image, index) => (
-            <button
-              key={image.id}
-              type="button"
-              onClick={() => setCurrentIndex(index)}
-              aria-label={`View image ${index + 1}`}
-              className={`h-16 w-24 shrink-0 overflow-hidden rounded-xl border transition-[border-color,opacity,transform] duration-200 hover:-translate-y-0.5 ${
-                index === currentIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
-              }`}
-            >
-              <img
-                src={image.imageUrl}
-                alt={`${courtName} thumbnail ${index + 1}`}
-                className="h-full w-full object-cover"
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -212,7 +137,7 @@ export function CourtDetailPage() {
 
   return (
     <div className="page-shell">
-      <nav aria-label="Breadcrumb">
+      <nav aria-label="Breadcrumb" className="border-b border-border/80 pb-4 mb-8">
         <Link
           to={routePaths.courts}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -235,7 +160,7 @@ export function CourtDetailPage() {
       {hasData && court && (
         <>
           {/* Header */}
-          <header className="page-hero space-y-3">
+          <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{court.sport.name}</Badge>
             </div>
@@ -249,7 +174,7 @@ export function CourtDetailPage() {
           </header>
 
           {/* Gallery */}
-          <ImageGallery images={images} courtName={court.name} />
+          <DetailImageCarousel images={images} itemName={court.name} />
 
           {/* Content grid */}
           <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
@@ -324,11 +249,11 @@ export function CourtDetailPage() {
 
                 <Button
                   size="lg"
-                  className="w-full"
+                  className="w-full rounded-2xl"
                   disabled={court.status !== 'ACTIVE'}
                 >
-                  <CalendarDays className="h-5 w-5" aria-hidden="true" />
                   Book this court
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
 
                 {court.status !== 'ACTIVE' && (
