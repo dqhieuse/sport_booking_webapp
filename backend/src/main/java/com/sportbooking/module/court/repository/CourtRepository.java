@@ -52,6 +52,22 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
             Pageable pageable
     );
 
+    @Query("""
+            SELECT court
+            FROM Court court
+            WHERE court.venue.vendor.id = :vendorId
+                AND (:venueId IS NULL OR court.venue.id = :venueId)
+                AND (:sportId IS NULL OR court.sport.id = :sportId)
+                AND (:status IS NULL OR court.status = :status)
+            """)
+    Page<Court> findVendorCourts(
+            @Param("vendorId") Long vendorId,
+            @Param("venueId") Long venueId,
+            @Param("sportId") Long sportId,
+            @Param("status") CourtStatus status,
+            Pageable pageable
+    );
+
     List<Court> findBySportIdAndStatus(Long sportId, CourtStatus status);
 
     List<Court> findByVenueIdAndStatus(Long venueId, CourtStatus status);

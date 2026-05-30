@@ -1,12 +1,12 @@
-package com.sportbooking.module.venue.controller;
+package com.sportbooking.module.court.controller;
 
 import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.common.api.PageResponse;
-import com.sportbooking.module.venue.dto.VendorVenueRequest;
-import com.sportbooking.module.venue.dto.VendorVenueListResponse;
-import com.sportbooking.module.venue.dto.VenueDetailResponse;
-import com.sportbooking.module.venue.entity.VenueStatus;
-import com.sportbooking.module.venue.service.VendorVenueService;
+import com.sportbooking.module.court.dto.VendorCourtDetailResponse;
+import com.sportbooking.module.court.dto.VendorCourtListResponse;
+import com.sportbooking.module.court.dto.VendorCourtRequest;
+import com.sportbooking.module.court.entity.CourtStatus;
+import com.sportbooking.module.court.service.VendorCourtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -27,22 +27,26 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/vendor/venues")
+@RequestMapping("/api/vendor/courts")
 @RequiredArgsConstructor
-public class VendorVenueController {
+public class VendorCourtController {
 
-    private final VendorVenueService vendorVenueService;
+    private final VendorCourtService vendorCourtService;
 
     @GetMapping
-    public ApiResponse<PageResponse<VendorVenueListResponse>> getOwnVenues(
+    public ApiResponse<PageResponse<VendorCourtListResponse>> getOwnCourts(
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
-            @RequestParam(required = false) VenueStatus status,
+            @RequestParam(required = false) Long venueId,
+            @RequestParam(required = false) Long sportId,
+            @RequestParam(required = false) CourtStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        PageResponse<VendorVenueListResponse> response = vendorVenueService.getOwnVenues(
+        PageResponse<VendorCourtListResponse> response = vendorCourtService.getOwnCourts(
                 authorizationHeader,
+                venueId,
+                sportId,
                 status,
                 pageable
         );
@@ -50,40 +54,40 @@ public class VendorVenueController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<VenueDetailResponse> getOwnVenueById(
+    public ApiResponse<VendorCourtDetailResponse> getOwnCourtById(
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
             @PathVariable Long id
     ) {
-        VenueDetailResponse response = vendorVenueService.getOwnVenueById(authorizationHeader, id);
+        VendorCourtDetailResponse response = vendorCourtService.getOwnCourtById(authorizationHeader, id);
         return ApiResponse.success("Success", response);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<VenueDetailResponse> createVenue(
+    public ApiResponse<VendorCourtDetailResponse> createCourt(
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
-            @Valid @RequestBody VendorVenueRequest request
+            @Valid @RequestBody VendorCourtRequest request
     ) {
-        VenueDetailResponse response = vendorVenueService.createVenue(authorizationHeader, request);
-        return ApiResponse.success("Venue created successfully", response);
+        VendorCourtDetailResponse response = vendorCourtService.createCourt(authorizationHeader, request);
+        return ApiResponse.success("Court created successfully", response);
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<VenueDetailResponse> updateVenue(
+    public ApiResponse<VendorCourtDetailResponse> updateCourt(
             @PathVariable Long id,
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
-            @Valid @RequestBody VendorVenueRequest request
+            @Valid @RequestBody VendorCourtRequest request
     ) {
-        VenueDetailResponse response = vendorVenueService.updateVenue(id, authorizationHeader, request);
-        return ApiResponse.success("Venue updated successfully", response);
+        VendorCourtDetailResponse response = vendorCourtService.updateCourt(id, authorizationHeader, request);
+        return ApiResponse.success("Court updated successfully", response);
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<VenueDetailResponse> deactivateVenue(
+    public ApiResponse<VendorCourtDetailResponse> deactivateCourt(
             @PathVariable Long id,
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
     ) {
-        VenueDetailResponse response = vendorVenueService.deactivateVenue(id, authorizationHeader);
-        return ApiResponse.success("Venue deactivated successfully", response);
+        VendorCourtDetailResponse response = vendorCourtService.deactivateCourt(id, authorizationHeader);
+        return ApiResponse.success("Court deactivated successfully", response);
     }
 }

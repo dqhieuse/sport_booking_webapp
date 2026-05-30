@@ -6,6 +6,7 @@ import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.user.entity.RoleName;
 import com.sportbooking.module.user.entity.User;
@@ -92,6 +93,22 @@ public class VendorVenueService {
             throw new ForbiddenException("You cannot update another vendor's venue");
         }
         applyRequest(venue, request);
+
+        return toDetailResponse(venueRepository.save(venue));
+    }
+
+    @Transactional
+    public VenueDetailResponse deactivateVenue(Long venueId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
+        if (!venue.getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You cannot deactivate another vendor's venue");
+        }
+
+        venue.setStatus(VenueStatus.INACTIVE);
+        courtRepository.findByVenueIdAndStatus(venueId, CourtStatus.ACTIVE)
+                .forEach(court -> court.setStatus(CourtStatus.INACTIVE));
 
         return toDetailResponse(venueRepository.save(venue));
     }
