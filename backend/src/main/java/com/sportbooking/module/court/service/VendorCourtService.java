@@ -124,6 +124,19 @@ public class VendorCourtService {
         return toVendorDetailResponse(courtRepository.save(court));
     }
 
+    @Transactional
+    public VendorCourtDetailResponse deactivateCourt(Long courtId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You cannot deactivate another vendor's court");
+        }
+
+        court.setStatus(CourtStatus.INACTIVE);
+        return toVendorDetailResponse(courtRepository.save(court));
+    }
+
     private void applyRequest(Court court, VendorCourtRequest request, Sport sport, Venue venue) {
         court.setName(request.name().trim());
         court.setSport(sport);
