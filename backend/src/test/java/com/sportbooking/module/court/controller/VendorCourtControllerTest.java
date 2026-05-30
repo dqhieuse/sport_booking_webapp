@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -65,6 +66,85 @@ class VendorCourtControllerTest {
 
     @Autowired
     private JwtAccessTokenService jwtAccessTokenService;
+
+    @Test
+    void getOwnCourtsReturnsOnlyCurrentVendorCourts() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+
+        mockMvc.perform(get("/api/vendor/courts")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data.items", hasSize(5)))
+                .andExpect(jsonPath("$.data.items[0].id").exists())
+                .andExpect(jsonPath("$.data.items[0].status", is("ACTIVE")))
+                .andExpect(jsonPath("$.data.items[0].sport.name").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].venue.name").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].primaryImageUrl").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].activeTimeSlotCount", is(8)))
+                .andExpect(jsonPath("$.data.items[0].createdAt").exists())
+                .andExpect(jsonPath("$.data.page", is(0)))
+                .andExpect(jsonPath("$.data.size", is(10)))
+                .andExpect(jsonPath("$.data.totalItems", is(5)));
+    }
+
+    @Test
+    void getOwnCourtsFiltersByVenueSportAndStatus() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        var inactiveCourt = courtRepository.findAll().getFirst();
+        inactiveCourt.setStatus(CourtStatus.INACTIVE);
+        courtRepository.saveAndFlush(inactiveCourt);
+
+        mockMvc.perform(get("/api/vendor/courts")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("venueId", inactiveCourt.getVenue().getId().toString())
+                        .param("sportId", inactiveCourt.getSport().getId().toString())
+                        .param("status", "INACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.items", hasSize(1)))
+                .andExpect(jsonPath("$.data.items[0].id", is(inactiveCourt.getId().intValue())))
+                .andExpect(jsonPath("$.data.items[0].status", is("INACTIVE")));
+    }
+
+    @Test
+    void getOwnCourtByIdReturnsCurrentVendorCourtDetail() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = courtRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(get("/api/vendor/courts/{id}", courtId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Success")))
+                .andExpect(jsonPath("$.data.id", is(courtId.intValue())))
+                .andExpect(jsonPath("$.data.sport.name").isNotEmpty())
+                .andExpect(jsonPath("$.data.venue.name").isNotEmpty());
+    }
+
+    @Test
+    void getOwnCourtByIdReturnsForbiddenWhenCourtBelongsToAnotherVendor() throws Exception {
+        String otherVendorToken = createVendorAndReturnAccessToken();
+        Long existingCourtId = courtRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(get("/api/vendor/courts/{id}", existingCourtId)
+                        .header("Authorization", "Bearer " + otherVendorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("You cannot view another vendor's court")));
+    }
+
+    @Test
+    void getOwnCourtByIdReturnsNotFoundWhenCourtDoesNotExist() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+
+        mockMvc.perform(get("/api/vendor/courts/{id}", 9999)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Court not found")));
+    }
 
     @Test
     void createCourtCreatesActiveCourtUnderCurrentVendorVenue() throws Exception {

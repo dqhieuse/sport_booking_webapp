@@ -12,6 +12,8 @@ public interface CourtTimeSlotRepository extends JpaRepository<CourtTimeSlot, Lo
 
     List<CourtTimeSlot> findByCourtIdAndStatus(Long courtId, TimeSlotStatus status);
 
+    long countByCourtIdAndStatus(Long courtId, TimeSlotStatus status);
+
     Optional<CourtTimeSlot> findByCourtIdAndTimeSlotId(Long courtId, Long timeSlotId);
 
     boolean existsByCourtIdAndTimeSlotId(Long courtId, Long timeSlotId);

@@ -1,14 +1,17 @@
 package com.sportbooking.module.court.service;
 
+import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
-import com.sportbooking.module.court.dto.CourtDetailResponse;
 import com.sportbooking.module.court.dto.CourtSportResponse;
-import com.sportbooking.module.court.dto.CourtVenueDetailResponse;
+import com.sportbooking.module.court.dto.VendorCourtDetailResponse;
+import com.sportbooking.module.court.dto.VendorCourtListResponse;
 import com.sportbooking.module.court.dto.VendorCourtRequest;
+import com.sportbooking.module.court.dto.VendorCourtTimeSlotResponse;
+import com.sportbooking.module.court.dto.VendorCourtVenueResponse;
 import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.entity.CourtTimeSlot;
@@ -33,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
@@ -53,8 +57,43 @@ public class VendorCourtService {
     private final UserRepository userRepository;
     private final JwtAccessTokenService jwtAccessTokenService;
 
+    @Transactional(readOnly = true)
+    public PageResponse<VendorCourtListResponse> getOwnCourts(
+            String authorizationHeader,
+            Long venueId,
+            Long sportId,
+            CourtStatus status,
+            Pageable pageable
+    ) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        var courtPage = courtRepository.findVendorCourts(
+                vendor.getId(),
+                venueId,
+                sportId,
+                status,
+                pageable
+        );
+        List<VendorCourtListResponse> items = courtPage.stream()
+                .map(this::toListResponse)
+                .toList();
+
+        return PageResponse.from(courtPage, items);
+    }
+
+    @Transactional(readOnly = true)
+    public VendorCourtDetailResponse getOwnCourtById(String authorizationHeader, Long courtId) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You cannot view another vendor's court");
+        }
+
+        return toVendorDetailResponse(court);
+    }
+
     @Transactional
-    public CourtDetailResponse createCourt(String authorizationHeader, VendorCourtRequest request) {
+    public VendorCourtDetailResponse createCourt(String authorizationHeader, VendorCourtRequest request) {
         User vendor = getCurrentVendor(authorizationHeader);
         Venue venue = getOwnedActiveVenue(request.venueId(), vendor);
         Sport sport = getActiveSport(request.sportId());
@@ -65,11 +104,11 @@ public class VendorCourtService {
         Court savedCourt = courtRepository.save(court);
         syncTimeSlots(savedCourt, request.timeSlotIds());
 
-        return toDetailResponse(savedCourt);
+        return toVendorDetailResponse(savedCourt);
     }
 
     @Transactional
-    public CourtDetailResponse updateCourt(Long courtId, String authorizationHeader, VendorCourtRequest request) {
+    public VendorCourtDetailResponse updateCourt(Long courtId, String authorizationHeader, VendorCourtRequest request) {
         User vendor = getCurrentVendor(authorizationHeader);
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
@@ -82,7 +121,7 @@ public class VendorCourtService {
         applyRequest(court, request, sport, venue);
         syncTimeSlots(court, request.timeSlotIds());
 
-        return toDetailResponse(courtRepository.save(court));
+        return toVendorDetailResponse(courtRepository.save(court));
     }
 
     private void applyRequest(Court court, VendorCourtRequest request, Sport sport, Venue venue) {
@@ -151,22 +190,42 @@ public class VendorCourtService {
         return courtTimeSlot;
     }
 
-    private CourtDetailResponse toDetailResponse(Court court) {
-        return new CourtDetailResponse(
+    private VendorCourtDetailResponse toVendorDetailResponse(Court court) {
+        List<VendorCourtTimeSlotResponse> activeTimeSlots = courtTimeSlotRepository.findByCourtId(court.getId()).stream()
+                .filter(cts -> cts.getStatus() == TimeSlotStatus.ACTIVE)
+                .map(cts -> new VendorCourtTimeSlotResponse(
+                        cts.getTimeSlot().getId(),
+                        cts.getTimeSlot().getStartTime(),
+                        cts.getTimeSlot().getEndTime()
+                ))
+                .toList();
+
+        return new VendorCourtDetailResponse(
                 court.getId(),
                 court.getName(),
                 court.getDescription(),
                 court.getPricePerHour(),
                 court.getStatus(),
                 new CourtSportResponse(court.getSport().getId(), court.getSport().getName()),
-                new CourtVenueDetailResponse(
-                        court.getVenue().getId(),
-                        court.getVenue().getName(),
-                        court.getVenue().getAddress(),
-                        court.getVenue().getOpeningTime(),
-                        court.getVenue().getClosingTime()
-                ),
-                getPrimaryImageUrl(court.getId())
+                new VendorCourtVenueResponse(court.getVenue().getId(), court.getVenue().getName()),
+                getPrimaryImageUrl(court.getId()),
+                activeTimeSlots,
+                court.getCreatedAt(),
+                court.getUpdatedAt()
+        );
+    }
+
+    private VendorCourtListResponse toListResponse(Court court) {
+        return new VendorCourtListResponse(
+                court.getId(),
+                court.getName(),
+                court.getPricePerHour(),
+                court.getStatus(),
+                new CourtSportResponse(court.getSport().getId(), court.getSport().getName()),
+                new VendorCourtVenueResponse(court.getVenue().getId(), court.getVenue().getName()),
+                getPrimaryImageUrl(court.getId()),
+                courtTimeSlotRepository.countByCourtIdAndStatus(court.getId(), TimeSlotStatus.ACTIVE),
+                court.getCreatedAt()
         );
     }
 
