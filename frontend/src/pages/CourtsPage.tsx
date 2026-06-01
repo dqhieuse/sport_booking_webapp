@@ -1,11 +1,16 @@
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Calendar, Search, X } from '@mynaui/icons-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/empty-state';
+import { PaginationControls } from '@/components/pagination-controls';
 import { getPublicCourts } from '@/features/courts/api/courtsApi';
 import { CourtListCard } from '@/features/courts/components/CourtListCard';
 import type { Court } from '@/features/courts/types';
@@ -51,15 +56,15 @@ function getPageParam(searchParams: URLSearchParams) {
 
 function CourtCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border/80 bg-card/80 shadow-sm">
-      <div className="aspect-[16/10] rounded-t-2xl bg-muted animate-soft-pulse" />
+    <div className="rounded-lg border bg-card shadow-sm">
+      <Skeleton className="aspect-[16/10] rounded-b-none" />
       <div className="space-y-4 p-5">
-        <div className="h-6 w-2/3 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
         <div className="flex items-center justify-between border-t border-border/70 pt-4">
-          <div className="h-8 w-28 rounded-full bg-muted animate-soft-pulse" />
-          <div className="h-8 w-20 rounded-full bg-muted animate-soft-pulse" />
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="h-8 w-20" />
         </div>
       </div>
     </div>
@@ -212,8 +217,8 @@ export function CourtsPage() {
       <section>
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="space-y-5">
-            <Badge className="w-fit gap-2 px-4 py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+            <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
+              <Calendar className="size-3.5" aria-hidden="true" />
               Public Courts
             </Badge>
             <div className="max-w-3xl space-y-4">
@@ -228,18 +233,19 @@ export function CourtsPage() {
         </div>
       </section>
 
-      <section className="sportzone-panel rounded-[1.35rem] p-3 sm:p-4">
-        <form onSubmit={handleSearchSubmit} className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto_auto]">
-          <label className="soft-input flex h-12 items-center gap-3 rounded-full px-4 py-3">
-            <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-            <span className="sr-only">Search courts</span>
-            <input
-              value={keywordInput}
-              onChange={(event) => setKeywordInput(event.target.value)}
-              placeholder="Court, venue, or sport"
-              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground"
-            />
-          </label>
+      <Card>
+        <CardContent className="p-3 sm:p-4">
+          <form onSubmit={handleSearchSubmit} className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto_auto]">
+            <label className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-3 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">Search courts</span>
+              <Input
+                value={keywordInput}
+                onChange={(event) => setKeywordInput(event.target.value)}
+                placeholder="Court, venue, or sport"
+                className="h-10 pl-10"
+              />
+            </label>
 
           <Select
             value={sportId ? String(sportId) : ALL_SPORTS_VALUE}
@@ -281,21 +287,22 @@ export function CourtsPage() {
             </SelectContent>
           </Select>
 
-          <Button type="submit" className="my-auto">
-            Search
-          </Button>
-          <Button type="button" variant="ghost" onClick={handleClearFilters} className="my-auto" disabled={!hasActiveFilters}>
-            <X className="h-4 w-4" aria-hidden="true" />
-            Clear
-          </Button>
-        </form>
+            <Button type="submit" className="my-auto">
+              Search
+            </Button>
+            <Button type="button" variant="ghost" onClick={handleClearFilters} className="my-auto" disabled={!hasActiveFilters}>
+              <X className="size-4" aria-hidden="true" />
+              Clear
+            </Button>
+          </form>
 
-        {filterState === 'error' && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Sport and venue filters could not be loaded. You can still search courts by keyword.
-          </p>
-        )}
-      </section>
+          {filterState === 'error' && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Sport and venue filters could not be loaded. You can still search courts by keyword.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {isLoading && (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -314,12 +321,12 @@ export function CourtsPage() {
       )}
 
       {isEmpty && (
-        <section className="sportzone-panel rounded-2xl p-8 text-center">
-          <h2 className="font-display text-xl font-semibold text-foreground">No courts match your search</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Try a different keyword, sport, or venue filter to discover more active courts.
-          </p>
-        </section>
+        <EmptyState
+          icon={<Calendar className="size-6" aria-hidden="true" />}
+          title="No courts match your search"
+          description="Try a different keyword, sport, or venue filter to discover more active courts."
+          className="max-w-none rounded-lg border bg-card"
+        />
       )}
 
       {hasCourts && courtsPage && (
@@ -334,31 +341,13 @@ export function CourtsPage() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-3 border-t border-border/70 pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              Page {courtsPage.page + 1} of {Math.max(courtsPage.totalPages, 1)}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={courtsPage.page <= 0}
-                onClick={() => handlePageChange(courtsPage.page - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                Previous
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={courtsPage.page + 1 >= courtsPage.totalPages}
-                onClick={() => handlePageChange(courtsPage.page + 1)}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </section>
+          <PaginationControls
+            page={courtsPage.page}
+            totalPages={courtsPage.totalPages}
+            totalItems={courtsPage.totalItems}
+            itemLabel="courts"
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </div>

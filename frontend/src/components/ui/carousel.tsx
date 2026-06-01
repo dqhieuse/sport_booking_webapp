@@ -3,7 +3,7 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from 'embla-carousel-react';
 import type { EmblaCarouselType, EmblaOptionsType } from 'embla-carousel';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@mynaui/icons-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -201,7 +201,7 @@ const CarouselPrevious = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        'absolute h-10 w-10 rounded-full bg-card/85 backdrop-blur',
+        'absolute h-10 w-10 rounded-md bg-card/85 backdrop-blur',
         orientation === 'horizontal'
           ? 'left-3 top-1/2 -translate-y-1/2'
           : '-top-12 left-1/2 -translate-x-1/2 rotate-90',
@@ -230,7 +230,7 @@ const CarouselNext = React.forwardRef<
       variant={variant}
       size={size}
       className={cn(
-        'absolute h-10 w-10 rounded-full bg-card/85 backdrop-blur',
+        'absolute h-10 w-10 rounded-md bg-card/85 backdrop-blur',
         orientation === 'horizontal'
           ? 'right-3 top-1/2 -translate-y-1/2'
           : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',

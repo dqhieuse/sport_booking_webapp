@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin } from 'lucide-react';
+import { ArrowRight, MapPin } from '@mynaui/icons-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 
 export function CourtListCard({ court }: CourtListCardProps) {
   return (
-    <Card className="sportzone-panel group flex h-full flex-col overflow-hidden">
+    <Card className="group flex h-full flex-col overflow-hidden">
       <div className="relative aspect-[16/8] shrink-0 overflow-hidden bg-muted">
         {court.primaryImageUrl ? (
           <img
@@ -33,9 +33,8 @@ export function CourtListCard({ court }: CourtListCardProps) {
             Court
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/10 to-transparent" />
         <div className="absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
-          <Badge className="max-w-full gap-2 rounded-full border-white/60 bg-white/90 px-3 py-1.5 text-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md dark:border-white/20 dark:bg-black/65 dark:text-white">
+          <Badge className="max-w-full gap-2 border bg-background text-foreground shadow-sm">
             <span className="min-w-0 truncate">{court.sport.name}</span>
           </Badge>
         </div>
@@ -46,7 +45,7 @@ export function CourtListCard({ court }: CourtListCardProps) {
           <h2 className="line-clamp-1 font-display text-xl font-semibold text-foreground">{court.name}</h2>
           <p className="line-clamp-1 text-sm font-medium text-foreground/80">{court.venue.name}</p>
           <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-            <MapPin className="mr-1 inline h-4 w-4 text-primary" aria-hidden="true" />
+            <MapPin className="mr-1 inline size-4 text-muted-foreground" aria-hidden="true" />
             {court.venue.address}
           </p>
         </div>
@@ -61,7 +60,7 @@ export function CourtListCard({ court }: CourtListCardProps) {
           <Button asChild size="sm">
             <Link to={routePaths.courtDetail.replace(':courtId', String(court.id))}>
               View
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </Button>
         </div>

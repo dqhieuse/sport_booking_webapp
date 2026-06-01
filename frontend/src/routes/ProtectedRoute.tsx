@@ -1,9 +1,10 @@
-import { Loader2, LockKeyhole, ShieldAlert } from 'lucide-react';
+import { DangerTriangle, LockKeyhole } from '@mynaui/icons-react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import type { RoleName } from '@/features/auth/userTypes';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -54,7 +55,7 @@ function AccessDeniedPage({ allowedRoles }: { allowedRoles: RoleName[] }) {
     <Card>
       <CardHeader>
         <Badge variant="destructive" className="w-fit gap-2">
-          <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+          <DangerTriangle className="size-3.5" aria-hidden="true" />
           Access denied
         </Badge>
         <CardTitle>You do not have permission to open this page.</CardTitle>
@@ -79,7 +80,7 @@ function AuthRouteState({ title, description }: { title: string; description: st
     <Card>
       <CardHeader>
         <Badge className="w-fit gap-2">
-          <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
+          <LockKeyhole className="size-3.5" aria-hidden="true" />
           Protected route
         </Badge>
         <CardTitle>{title}</CardTitle>
@@ -87,7 +88,7 @@ function AuthRouteState({ title, description }: { title: string; description: st
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          <Spinner className="size-4 animate-spin" aria-hidden="true" />
           Loading authentication state...
         </div>
       </CardContent>

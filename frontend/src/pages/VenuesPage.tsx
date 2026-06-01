@@ -1,10 +1,15 @@
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Building, Search, X } from '@mynaui/icons-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/empty-state';
+import { PaginationControls } from '@/components/pagination-controls';
 import { getPublicVenues } from '@/features/venues/api/venuesApi';
 import { VenueHighlightCard } from '@/features/venues/components/VenueHighlightCard';
 import type { Venue } from '@/features/venues/types';
@@ -34,13 +39,13 @@ function getPageParam(searchParams: URLSearchParams) {
 
 function VenueCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border/80 bg-card/80 shadow-sm">
-      <div className="h-36 rounded-t-2xl bg-muted animate-soft-pulse" />
+    <div className="rounded-lg border bg-card shadow-sm">
+      <Skeleton className="h-36 rounded-b-none" />
       <div className="space-y-4 p-5">
-        <div className="h-6 w-2/3 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-8 w-36 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-8 w-36" />
       </div>
     </div>
   );
@@ -152,8 +157,8 @@ export function VenuesPage() {
     <div className="page-shell">
       <section>
         <div className="space-y-5">
-          <Badge className="w-fit gap-2 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+          <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
+            <Building className="size-3.5" aria-hidden="true" />
             Public Venues
           </Badge>
           <div className="max-w-3xl space-y-4">
@@ -167,28 +172,30 @@ export function VenuesPage() {
         </div>
       </section>
 
-      <section className="sportzone-panel rounded-3xl p-3 sm:p-4">
-        <form onSubmit={handleSearchSubmit} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-          <label className="soft-input flex h-12 items-center gap-3 rounded-full px-4 py-3">
-            <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-            <span className="sr-only">Search venues</span>
-            <input
-              value={keywordInput}
-              onChange={(event) => setKeywordInput(event.target.value)}
-              placeholder="Venue name or address"
-              className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground"
-            />
-          </label>
+      <Card>
+        <CardContent className="p-3 sm:p-4">
+          <form onSubmit={handleSearchSubmit} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+            <label className="relative flex items-center">
+              <Search className="pointer-events-none absolute left-3 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">Search venues</span>
+              <Input
+                value={keywordInput}
+                onChange={(event) => setKeywordInput(event.target.value)}
+                placeholder="Venue name or address"
+                className="h-10 pl-10"
+              />
+            </label>
 
-          <Button type="submit" className="my-auto">
-            Search
-          </Button>
-          <Button type="button" variant="ghost" onClick={handleClearSearch} className="my-auto" disabled={!keyword}>
-            <X className="h-4 w-4" aria-hidden="true" />
-            Clear
-          </Button>
-        </form>
-      </section>
+            <Button type="submit" className="my-auto">
+              Search
+            </Button>
+            <Button type="button" variant="ghost" onClick={handleClearSearch} className="my-auto" disabled={!keyword}>
+              <X className="size-4" aria-hidden="true" />
+              Clear
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {isLoading && (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -207,12 +214,12 @@ export function VenuesPage() {
       )}
 
       {isEmpty && (
-        <section className="sportzone-panel rounded-2xl p-8 text-center">
-          <h2 className="font-display text-xl font-semibold text-foreground">No venues match your search</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Try another venue name or address to find more active places.
-          </p>
-        </section>
+        <EmptyState
+          icon={<Building className="size-6" aria-hidden="true" />}
+          title="No venues match your search"
+          description="Try another venue name or address to find more active places."
+          className="max-w-none rounded-lg border bg-card"
+        />
       )}
 
       {hasVenues && venuesPage && (
@@ -227,31 +234,13 @@ export function VenuesPage() {
             ))}
           </section>
 
-          <section className="flex flex-col gap-3 border-t border-border/70 pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              Page {venuesPage.page + 1} of {Math.max(venuesPage.totalPages, 1)}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={venuesPage.page <= 0}
-                onClick={() => handlePageChange(venuesPage.page - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                Previous
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={venuesPage.page + 1 >= venuesPage.totalPages}
-                onClick={() => handlePageChange(venuesPage.page + 1)}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </section>
+          <PaginationControls
+            page={venuesPage.page}
+            totalPages={venuesPage.totalPages}
+            totalItems={venuesPage.totalItems}
+            itemLabel="venues"
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </div>

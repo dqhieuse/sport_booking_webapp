@@ -1,4 +1,4 @@
-import { ArrowRight, Dumbbell } from 'lucide-react';
+import { Activity, ArrowRight } from '@mynaui/icons-react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,11 @@ export function SportCard({ sport }: SportCardProps) {
   const courtsPath = `${routePaths.courts}?sportId=${sport.id}`;
 
   return (
-    <Card className="sportzone-panel group overflow-hidden">
+    <Card className="group h-full overflow-hidden">
       <CardContent className="flex h-full flex-col gap-5 p-5">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform duration-300 group-hover:-translate-y-0.5">
-            <Dumbbell className="h-6 w-6" aria-hidden="true" />
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-md border bg-muted text-primary">
+            <Activity className="size-6" aria-hidden="true" />
           </div>
         </div>
 
@@ -31,10 +31,10 @@ export function SportCard({ sport }: SportCardProps) {
         </div>
 
         <div className="mt-auto flex items-center justify-end gap-3 border-t border-border/70 pt-4">
-          <Button asChild size="sm" className="px-4">
+          <Button asChild size="sm">
             <Link to={courtsPath}>
               Courts
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </Button>
         </div>

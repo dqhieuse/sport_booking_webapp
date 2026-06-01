@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Activity } from '@mynaui/icons-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
+import { EmptyState } from '@/components/empty-state';
 import { getPublicSports } from '@/features/sports/api/sportsApi';
 import { SportCard } from '@/features/sports/components/SportCard';
 import type { Sport } from '@/features/sports/types';
@@ -18,20 +21,20 @@ function getErrorMessage(error: unknown) {
 
 function SportCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm">
+    <div className="rounded-lg border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between">
-        <div className="h-12 w-12 rounded-2xl bg-muted animate-soft-pulse" />
-        <div className="h-6 w-16 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="size-12 rounded-md" />
+        <Skeleton className="h-6 w-16" />
       </div>
       <div className="mt-5 space-y-3">
-        <div className="h-6 w-2/3 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-4 w-1/2 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-1/2" />
       </div>
       <div className="mt-6 flex items-center justify-between border-t border-border/70 pt-4">
-        <div className="h-4 w-24 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-8 w-20 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-20" />
       </div>
     </div>
   );
@@ -82,8 +85,8 @@ export function SportsPage() {
       <section>
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
           <div className="space-y-5">
-            <Badge className="w-fit gap-2 px-4 py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+            <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
+              <Activity className="size-3.5" aria-hidden="true" />
               Public Sports
             </Badge>
             <div className="max-w-3xl space-y-4">
@@ -115,12 +118,12 @@ export function SportsPage() {
       )}
 
       {isEmpty && (
-        <section className="sportzone-panel rounded-2xl p-8 text-center">
-          <h2 className="font-display text-xl font-semibold text-foreground">No active sports yet</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Public sports are filtered by active status. Add active sports from the backend seed or admin flow to show them here.
-          </p>
-        </section>
+        <EmptyState
+          icon={<Activity className="size-6" aria-hidden="true" />}
+          title="No active sports yet"
+          description="Public sports are filtered by active status. Add active sports from the backend seed or admin flow to show them here."
+          className="max-w-none rounded-lg border bg-card"
+        />
       )}
 
       {hasSports && (
