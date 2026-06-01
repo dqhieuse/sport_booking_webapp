@@ -349,7 +349,7 @@ export function ProfilePage() {
 
         <Alert variant={currentProfile.emailVerified ? 'default' : 'destructive'}>
           {currentProfile.emailVerified ? (
-            <CheckCircle color={"green"} className="size-4" aria-hidden="true" />
+            <CheckCircle fill='green' color='background' className="size-6" aria-hidden="true" />
           ) : (
             <X className="size-4" aria-hidden="true" />
           )}

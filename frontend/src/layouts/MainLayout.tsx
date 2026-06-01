@@ -65,13 +65,13 @@ export function MainLayout() {
               ))}
             </nav>
 
-            <nav aria-label="Workspace navigation" className="flex flex-wrap items-center gap-1 lg:ml-auto">
+            {/* <nav aria-label="Workspace navigation" className="flex flex-wrap items-center gap-1 lg:ml-auto">
               {workspaceNavigation.map((item) => (
                 <NavLink key={item.to} to={item.to} className={navLinkClassName}>
                   {item.label}
                 </NavLink>
               ))}
-            </nav>
+            </nav> */}
 
             <div className="hidden items-center gap-3 lg:flex">
               <ThemeToggle />
@@ -158,10 +158,10 @@ function AuthActions({ compact = false }: { compact?: boolean }) {
     return (
       <>
         <Button asChild variant="ghost" size={"sm"}>
-          <NavLink to={routePaths.login}>Login</NavLink>
+          <NavLink to={routePaths.login}>Sign in</NavLink>
         </Button>
         <Button asChild size={"sm"}>
-          <NavLink to={routePaths.register}>Register</NavLink>
+          <NavLink to={routePaths.register}>Booking now</NavLink>
         </Button>
       </>
     );
