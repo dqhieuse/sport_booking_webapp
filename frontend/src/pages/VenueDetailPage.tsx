@@ -1,11 +1,11 @@
 import {
-  ArrowLeft,
   ArrowRight,
-  Clock,
+  Calendar,
+  ClockCircle,
   MapPin,
-  Phone,
-  UserRound,
-} from 'lucide-react';
+  Mobile,
+  User,
+} from '@mynaui/icons-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -13,6 +13,10 @@ import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DetailImageCarousel } from '@/components/detail-image-carousel';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/empty-state';
+import { BackBreadcrumb } from '@/components/back-breadcrumb';
+import { Card, CardContent } from '@/components/ui/card';
 import { getPublicCourts } from '@/features/courts/api/courtsApi';
 import { CourtSuggestionCard } from '@/features/courts/components/CourtSuggestionCard';
 import type { Court } from '@/features/courts/types';
@@ -34,18 +38,18 @@ function VenueDetailSkeleton() {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <div className="h-4 w-24 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-10 w-2/3 rounded-lg bg-muted animate-soft-pulse" />
-        <div className="h-5 w-56 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-5 w-56" />
       </div>
-      <div className="aspect-[16/7] w-full rounded-[1.75rem] bg-muted animate-soft-pulse" />
+      <Skeleton className="aspect-[16/7] w-full rounded-lg" />
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
-          <div className="h-5 w-1/3 rounded-full bg-muted animate-soft-pulse" />
-          <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
-          <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
         </div>
-        <div className="h-56 rounded-2xl bg-muted animate-soft-pulse" />
+        <Skeleton className="h-56 rounded-lg" />
       </div>
     </div>
   );
@@ -123,7 +127,6 @@ export function VenueDetailPage() {
           to={routePaths.venues}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to venues
         </Link>
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-6">
@@ -138,15 +141,7 @@ export function VenueDetailPage() {
 
   return (
     <div className="page-shell">
-      <nav aria-label="Breadcrumb" className="border-b border-border/80 pb-4">
-        <Link
-          to={routePaths.venues}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to venues
-        </Link>
-      </nav>
+      <BackBreadcrumb parentLabel="Venues" parentTo={routePaths.venues} currentLabel={venue?.name || 'Venue details'} />
 
       {isLoading && <VenueDetailSkeleton />}
 
@@ -169,7 +164,7 @@ export function VenueDetailPage() {
               {venue.name}
             </h1>
             <p className="flex items-center gap-1.5 text-base text-muted-foreground">
-              <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <MapPin className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               {venue.address}
             </p>
           </header>
@@ -194,7 +189,7 @@ export function VenueDetailPage() {
                   <Button asChild variant="ghost" className="w-fit">
                     <Link to={`${routePaths.courts}?venueId=${venue.id}`}>
                       View all courts
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      <ArrowRight className="size-4" aria-hidden="true" />
                     </Link>
                   </Button>
                 </div>
@@ -206,15 +201,19 @@ export function VenueDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="sportzone-panel rounded-2xl p-6 text-sm text-muted-foreground">
-                    No active courts are available for this venue yet.
-                  </div>
+                  <EmptyState
+                    icon={<Calendar className="size-6" aria-hidden="true" />}
+                    title="No active courts yet"
+                    description="No active courts are available for this venue yet."
+                    className="max-w-none rounded-lg border bg-card py-10"
+                  />
                 )}
               </section>
             </div>
 
             <aside>
-              <div className="sportzone-panel sticky top-24 space-y-5 rounded-2xl p-6">
+              <Card className="sticky top-24">
+                <CardContent className="space-y-5 p-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Venue information</p>
                   <p className="mt-1 font-display text-2xl font-semibold text-foreground">{venue.name}</p>
@@ -222,7 +221,7 @@ export function VenueDetailPage() {
 
                 <div className="space-y-4 border-t border-border pt-4">
                   <div className="flex items-start gap-3">
-                    <Clock className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                    <ClockCircle className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <div>
                       <p className="font-medium text-foreground">Opening hours</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">
@@ -233,7 +232,7 @@ export function VenueDetailPage() {
 
                   {venue.phone && (
                     <div className="flex items-start gap-3">
-                      <Phone className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                      <Mobile className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                       <div>
                         <p className="font-medium text-foreground">Phone</p>
                         <a href={`tel:${venue.phone}`} className="mt-0.5 block text-sm text-muted-foreground hover:text-foreground">
@@ -244,7 +243,7 @@ export function VenueDetailPage() {
                   )}
 
                   <div className="flex items-start gap-3">
-                    <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                    <User className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <div>
                       <p className="font-medium text-foreground">Vendor</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">{venue.vendor.fullName}</p>
@@ -255,10 +254,11 @@ export function VenueDetailPage() {
                 <Button asChild size="lg" className="w-full">
                   <Link to={`${routePaths.courts}?venueId=${venue.id}`}>
                     Browse courts
-                    <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                    <ArrowRight className="size-5" aria-hidden="true" />
                   </Link>
                 </Button>
-              </div>
+                </CardContent>
+              </Card>
             </aside>
           </div>
         </>

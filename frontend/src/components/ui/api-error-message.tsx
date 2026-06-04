@@ -1,5 +1,6 @@
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { DangerCircle, Refresh } from '@mynaui/icons-react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 type ApiErrorMessageProps = {
@@ -10,24 +11,22 @@ type ApiErrorMessageProps = {
 
 export function ApiErrorMessage({ title, message, onRetry }: ApiErrorMessageProps) {
   return (
-    <section className="rounded-2xl border border-destructive/35 bg-destructive/10 p-6 shadow-sm">
+    <Alert variant="destructive">
+      <DangerCircle className="size-4" aria-hidden="true" />
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-4">
-          <AlertCircle className="mt-1 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-          <div>
-            <h2 className="font-display text-lg font-semibold text-foreground">{title}</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              {message || 'An unexpected error occurred. Please try again.'}
-            </p>
-          </div>
+        <div>
+          <AlertTitle>{title}</AlertTitle>
+          <AlertDescription>
+            {message || 'An unexpected error occurred. Please try again.'}
+          </AlertDescription>
         </div>
         {onRetry && (
-          <Button type="button" onClick={onRetry} className="rounded-full">
-            <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+          <Button type="button" onClick={onRetry}>
+            <Refresh className="mr-2 size-4" aria-hidden="true" />
             Retry
           </Button>
         )}
       </div>
-    </section>
+    </Alert>
   );
 }

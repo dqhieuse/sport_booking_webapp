@@ -1,22 +1,23 @@
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function NotFoundPage() {
   return (
-    <Card>
-      <CardHeader>
-        <Badge variant="destructive" className="w-fit">404</Badge>
-        <CardTitle>Page not found</CardTitle>
-        <CardDescription>The page you requested does not exist.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button asChild>
+    <section className="mx-auto max-w-7xl space-y-6 px-4 py-32">
+      <div className="space-y-2 text-center">
+        <span className="font-semibold uppercase text-muted-foreground">404</span>
+        <h1 className="text-balance text-3xl font-bold tracking-tight">Page not found</h1>
+        <p className="text-balance text-muted-foreground">
+          We could not find what you were looking for. Please check and try again.
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center justify-center gap-2 md:flex-row">
+        <Button asChild size="sm">
           <Link to="/">Back to home</Link>
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
