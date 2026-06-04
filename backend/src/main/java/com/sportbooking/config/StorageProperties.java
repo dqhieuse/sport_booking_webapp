@@ -22,6 +22,8 @@ public class StorageProperties {
 
     private VenueImage venueImage = new VenueImage();
 
+    private CourtImage courtImage = new CourtImage();
+
     @Getter
     @Setter
     public static class Local {
@@ -43,6 +45,16 @@ public class StorageProperties {
     @Getter
     @Setter
     public static class VenueImage {
+        private DataSize maxFileSize = DataSize.ofMegabytes(5);
+
+        private int maxImages = 10;
+
+        private List<String> allowedContentTypes = List.of("image/jpeg", "image/png", "image/webp");
+    }
+
+    @Getter
+    @Setter
+    public static class CourtImage {
         private DataSize maxFileSize = DataSize.ofMegabytes(5);
 
         private int maxImages = 10;
