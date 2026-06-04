@@ -1,23 +1,30 @@
 import {
-  BadgeCheck,
-  CalendarClock,
+  Calendar,
   Camera,
-  Loader2,
+  CheckCircle,
+  Edit,
   Mail,
-  Phone,
-  RefreshCw,
+  Mobile,
+  Pencil,
+  Refresh,
   ShieldCheck,
   UserCircle,
-  XCircle,
-} from 'lucide-react';
+  X,
+} from '@mynaui/icons-react';
 import type { ChangeEvent, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { getCurrentUser, uploadCurrentUserAvatar } from '@/features/auth/api/authApi';
 import type { CurrentUserResponse } from '@/features/auth/types';
 import type { RoleName, UserStatus } from '@/features/auth/userTypes';
@@ -194,120 +201,130 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="page-shell">
-      <section>
-        <div className="grid gap-6 lg:grid-cols-[auto_1fr_auto] lg:items-center">
-          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-primary/25 bg-primary/10 text-2xl font-semibold text-primary">
-            {currentProfile.avatarUrl ? (
-              <img src={currentProfile.avatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              initials || <UserCircle className="h-10 w-10" aria-hidden="true" />
-            )}
-          </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <Card className={"border-none shadow-none"}>
+        <CardContent className="p-6">
+          <div className="grid gap-6 lg:grid-cols-[auto_1fr_auto] lg:items-center">
+            <div className={"relative"}>
+              <Avatar className="size-24 border">
+                <AvatarImage src={currentProfile.avatarUrl || undefined} alt="" />
+                <AvatarFallback className="bg-muted text-2xl font-semibold text-primary">
+                  {initials || <UserCircle className="size-10" aria-hidden="true" />}
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="absolute size-7 bottom-4 end-3 translate-y-1/2 translate-x-1/2 rounded-full border p-1 text-background bg-primary hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {isUploadingAvatar ? (
+                  <Spinner className="size-4" aria-hidden="true" />
+                ) : (
+                  <Edit className="size-4" aria-hidden="true" />
+                )}
+              </Button>
+            </div>
 
-          <div className="min-w-0 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="gap-2 px-3 py-1.5">
-                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                {roleLabels[currentProfile.role]}
-              </Badge>
-              {status && (
-                <Badge variant={status === 'ACTIVE' ? 'default' : 'secondary'} className="px-3 py-1.5">
-                  {statusLabels[status]}
+            <div className="min-w-0 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={"outline"} className="gap-1 px-3 py-1.5">
+                  <ShieldCheck className="size-3.5" aria-hidden="true" />
+                  {roleLabels[currentProfile.role]}
                 </Badge>
-              )}
+              </div>
+              <div>
+                <h1 className="break-words text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
+                  {currentProfile.fullName}
+                </h1>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  View your account information and session status.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="break-words font-display text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
-                {currentProfile.fullName}
-              </h1>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                View your account information and session status.
-              </p>
-            </div>
-          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              onChange={handleAvatarChange}
-            />
-            <Button
-              type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={isUploadingAvatar}
-            >
-              {isUploadingAvatar ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Camera className="h-4 w-4" aria-hidden="true" />
-              )}
-              Upload avatar
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setReloadKey((current) => current + 1)}
-              disabled={isUploadingAvatar}
-            >
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              Refresh
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={handleAvatarChange}
+              />
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      <section>
         {uploadMessage && (
-          <p
-            className={uploadState === 'error' ? 'mt-5 text-sm text-destructive' : 'mt-5 text-sm text-muted-foreground'}
-            role="status"
-          >
-            {uploadMessage}
-          </p>
+          <Alert variant={uploadState === 'error' ? 'destructive' : 'default'}>
+            {uploadState === 'error' ? (
+              <X className="size-4" aria-hidden="true" />
+            ) : (
+              <CheckCircle className="size-4 text-primary" aria-hidden="true" />
+            )}
+            <AlertDescription>{uploadMessage}</AlertDescription>
+          </Alert>
         )}
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="sportzone-panel">
+      <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] h-fit">
+        <Card>
           <CardHeader>
-            <CardTitle>Account details</CardTitle>
-            <CardDescription>Basic information returned by the authenticated profile API.</CardDescription>
+            <CardTitle>Personal information</CardTitle>
+            <CardDescription>Name and contact details used for booking communication.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <ProfileField icon={<Mail className="h-4 w-4" aria-hidden="true" />} label="Email" value={currentProfile.email} />
-            <ProfileField icon={<Phone className="h-4 w-4" aria-hidden="true" />} label="Phone" value={currentProfile.phone} />
-            <ProfileField icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />} label="Role" value={roleLabels[currentProfile.role]} />
-            <ProfileField
-              icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
-              label="User ID"
-              value={`#${currentProfile.id}`}
-            />
+          <CardContent>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ProfileInputField
+                id="profile-full-name"
+                label="Full name"
+                value={currentProfile.fullName}
+                icon={<UserCircle className="size-4" aria-hidden="true" />}
+              />
+              <ProfileInputField
+                id="profile-phone"
+                label="Phone"
+                value={currentProfile.phone}
+                icon={<Mobile className="size-4" aria-hidden="true" />}
+              />
+              <ProfileInputField
+                id="profile-email"
+                label="Email"
+                value={currentProfile.email}
+                icon={<Mail className="size-4" aria-hidden="true" />}
+              />
+              <ProfileInputField
+                id="profile-user-id"
+                label="User ID"
+                value={`#${currentProfile.id}`}
+                icon={<Calendar className="size-4" aria-hidden="true" />}
+              />
+            </div>
           </CardContent>
+          <CardFooter className="border-t sm:justify-end p-2">
+            <Button type="button" disabled>
+              Edit profile
+            </Button>
+          </CardFooter>
         </Card>
 
-        <Card className="sportzone-panel">
+        <Card className="h-fit">
           <CardHeader>
-            <CardTitle>Verification</CardTitle>
-            <CardDescription>Email verification controls whether local login is allowed.</CardDescription>
+            <CardTitle>Account status</CardTitle>
+            <CardDescription>Role, verification, and profile freshness.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3 rounded-2xl border border-border/80 bg-secondary/60 p-4">
-              {currentProfile.emailVerified ? (
-                <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-              ) : (
-                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+          <CardContent className="space-y-5">
+            <div className="grid gap-3">
+              <StatusRow label="Role" value={roleLabels[currentProfile.role]} icon={<ShieldCheck className="size-4" aria-hidden="true" />} />
+              {status && (
+                <StatusRow
+                  label="Status"
+                  value={statusLabels[status]}
+                  icon={<CheckCircle className="size-4" aria-hidden="true" />}
+                />
               )}
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  {currentProfile.emailVerified ? 'Email verified' : 'Email not verified'}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  {currentProfile.emailVerified
-                    ? 'Your account can use protected booking features.'
-                    : 'Verify your email before using protected booking features.'}
-                </p>
-              </div>
             </div>
 
             {!currentProfile.emailVerified && (
@@ -316,40 +333,88 @@ export function ProfilePage() {
               </Button>
             )}
           </CardContent>
+          <CardFooter className="border-t p-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setReloadKey((current) => current + 1)}
+              disabled={isUploadingAvatar}
+            >
+              <Refresh className="size-4" aria-hidden="true" />
+              Reload latest profile
+            </Button>
+          </CardFooter>
         </Card>
+
+        <Alert variant={currentProfile.emailVerified ? 'default' : 'destructive'}>
+          {currentProfile.emailVerified ? (
+            <CheckCircle fill='green' color='background' className="size-6" aria-hidden="true" />
+          ) : (
+            <X className="size-4" aria-hidden="true" />
+          )}
+          <AlertTitle>{currentProfile.emailVerified ? 'Email verified' : 'Email not verified'}</AlertTitle>
+          <AlertDescription>
+            {currentProfile.emailVerified
+              ? 'Your account can use protected booking features.'
+              : 'Verify your email before using protected booking features.'}
+          </AlertDescription>
+        </Alert>
       </section>
     </div>
   );
 }
 
-function ProfileField({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function ProfileInputField({ id, icon, label, value }: { id: string; icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/80 bg-secondary/55 p-4">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+    <div className="space-y-2">
+      <Label htmlFor={id} className="flex items-center gap-2 text-muted-foreground">
+        {icon}
+        {label}
+      </Label>
+      <Input id={id} value={value} readOnly className="bg-muted/40" />
+    </div>
+  );
+}
+
+function StatusRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {icon}
         {label}
       </div>
-      <p className="mt-3 break-words text-sm font-semibold text-foreground">{value}</p>
+      <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="page-shell">
-      <section className="page-hero">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <Card>
+        <CardContent className="p-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-          <div className="h-24 w-24 rounded-full bg-muted animate-soft-pulse" />
+          <Skeleton className="size-24 rounded-full" />
           <div className="flex-1 space-y-3">
-            <div className="h-7 w-48 rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-10 max-w-md rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-5 max-w-sm rounded-full bg-muted animate-soft-pulse" />
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-10 max-w-md" />
+            <Skeleton className="h-5 max-w-sm" />
           </div>
         </div>
-      </section>
+        </CardContent>
+      </Card>
       <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="h-72 rounded-2xl bg-muted animate-soft-pulse" />
-        <div className="h-72 rounded-2xl bg-muted animate-soft-pulse" />
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-60 rounded-lg" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-60 rounded-lg" />
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

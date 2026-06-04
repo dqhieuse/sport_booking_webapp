@@ -1,15 +1,17 @@
 import {
-  ArrowLeft,
   ChevronRight,
-  Clock,
+  ClockCircle,
   MapPin,
-} from 'lucide-react';
+} from '@mynaui/icons-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
+import { Skeleton } from '@/components/ui/skeleton';
+import { BackBreadcrumb } from '@/components/back-breadcrumb';
+import { Card, CardContent } from '@/components/ui/card';
 import { DetailImageCarousel } from '@/components/detail-image-carousel';
 import { getPublicCourtById, getPublicCourtImages } from '@/features/courts/api/courtsApi';
 import type { CourtDetail, CourtImage } from '@/features/courts/types';
@@ -34,27 +36,27 @@ function CourtDetailSkeleton() {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <div className="h-4 w-24 rounded-full bg-muted animate-soft-pulse" />
-        <div className="h-10 w-2/3 rounded-lg bg-muted animate-soft-pulse" />
-        <div className="h-5 w-40 rounded-full bg-muted animate-soft-pulse" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-5 w-40" />
       </div>
 
-      <div className="aspect-[16/7] w-full rounded-[1.75rem] bg-muted animate-soft-pulse" />
+      <Skeleton className="aspect-[16/7] w-full rounded-lg" />
 
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <div className="space-y-3">
-            <div className="h-5 w-1/3 rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
           </div>
           <div className="space-y-3">
-            <div className="h-5 w-1/4 rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-4 w-2/3 rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-4 w-1/2 rounded-full bg-muted animate-soft-pulse" />
+            <Skeleton className="h-5 w-1/4" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
         </div>
-        <div className="h-56 rounded-2xl bg-muted animate-soft-pulse" />
+        <Skeleton className="h-56 rounded-lg" />
       </div>
     </div>
   );
@@ -122,7 +124,6 @@ export function CourtDetailPage() {
           to={routePaths.courts}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to courts
         </Link>
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-6">
@@ -137,15 +138,7 @@ export function CourtDetailPage() {
 
   return (
     <div className="page-shell">
-      <nav aria-label="Breadcrumb" className="border-b border-border/80 pb-4 mb-8">
-        <Link
-          to={routePaths.courts}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to courts
-        </Link>
-      </nav>
+      <BackBreadcrumb parentLabel="Courts" parentTo={routePaths.courts} currentLabel={court?.name || 'Court details'} />
 
       {isLoading && <CourtDetailSkeleton />}
 
@@ -168,7 +161,7 @@ export function CourtDetailPage() {
               {court.name}
             </h1>
             <p className="flex items-center gap-1.5 text-base text-muted-foreground">
-              <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <MapPin className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               {court.venue.name} - {court.venue.address}
             </p>
           </header>
@@ -189,9 +182,10 @@ export function CourtDetailPage() {
 
               <section className="space-y-4">
                 <h2 className="font-display text-xl font-semibold text-foreground">Venue details</h2>
-                <div className="sportzone-panel rounded-2xl p-5 space-y-4">
+                <Card>
+                  <CardContent className="space-y-4 p-5">
                   <div className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                    <MapPin className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <div>
                       <p className="font-medium text-foreground">{court.venue.name}</p>
                       <p className="mt-0.5 text-sm text-muted-foreground">{court.venue.address}</p>
@@ -200,7 +194,7 @@ export function CourtDetailPage() {
 
                   {(court.venue.openingTime || court.venue.closingTime) && (
                     <div className="flex items-start gap-3 border-t border-border pt-4">
-                      <Clock className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                      <ClockCircle className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                       <div>
                         <p className="font-medium text-foreground">Opening hours</p>
                         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -209,13 +203,15 @@ export function CourtDetailPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                  </CardContent>
+                </Card>
               </section>
             </div>
 
             {/* Right: Booking panel */}
             <aside>
-              <div className="sportzone-panel sticky top-24 rounded-2xl p-6 space-y-5">
+              <Card className="sticky top-24">
+                <CardContent className="space-y-5 p-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Price</p>
                   <p className="font-display text-4xl font-semibold text-primary">
@@ -249,11 +245,11 @@ export function CourtDetailPage() {
 
                 <Button
                   size="lg"
-                  className="w-full rounded-2xl"
+                  className="w-full"
                   disabled={court.status !== 'ACTIVE'}
                 >
                   Book this court
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  <ChevronRight className="size-4" aria-hidden="true" />
                 </Button>
 
                 {court.status !== 'ACTIVE' && (
@@ -261,7 +257,8 @@ export function CourtDetailPage() {
                     This court is currently unavailable for booking.
                   </p>
                 )}
-              </div>
+                </CardContent>
+              </Card>
             </aside>
           </div>
         </>

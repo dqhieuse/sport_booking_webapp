@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin } from 'lucide-react';
+import { ArrowRight, MapPin } from '@mynaui/icons-react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 
 export function CourtSuggestionCard({ court }: CourtSuggestionCardProps) {
   return (
-    <Card className="sportzone-panel group overflow-hidden">
+    <Card className="group overflow-hidden">
       <div className="grid h-full gap-0 sm:grid-cols-[160px_1fr]">
         <div className="relative min-h-36 overflow-hidden bg-muted">
           {court.primaryImageUrl ? (
@@ -33,7 +33,6 @@ export function CourtSuggestionCard({ court }: CourtSuggestionCardProps) {
               Court
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent" />
         </div>
 
         <CardContent className="flex h-full flex-col gap-4 p-5">
@@ -45,7 +44,7 @@ export function CourtSuggestionCard({ court }: CourtSuggestionCardProps) {
             <h3 className="line-clamp-1 font-display text-xl font-semibold text-foreground">{court.name}</h3>
             <p className="line-clamp-1 text-sm text-muted-foreground">{court.venue.name}</p>
             <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-              <MapPin className="mr-1 inline h-4 w-4 text-primary" aria-hidden="true" />
+              <MapPin className="mr-1 inline size-4 text-muted-foreground" aria-hidden="true" />
               {court.venue.address}
             </p>
           </div>
@@ -58,7 +57,7 @@ export function CourtSuggestionCard({ court }: CourtSuggestionCardProps) {
             <Button asChild size="sm">
               <Link to={`/courts/${court.id}`}>
                 View
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </Button>
           </div>

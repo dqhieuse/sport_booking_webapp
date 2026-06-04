@@ -1,17 +1,20 @@
 import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  MailCheck,
-  RefreshCw,
+  CheckCircle,
+  DangerCircle,
+  MailOpen,
+  Refresh,
   ShieldCheck,
-} from 'lucide-react';
+} from '@mynaui/icons-react';
 import { ChangeEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
 import { resendVerificationEmail, verifyEmail } from '@/features/auth/api/authApi';
 import type { EmailVerificationResponse } from '@/features/auth/types';
 import { ApiError } from '@/lib/apiError';
@@ -139,8 +142,8 @@ export function VerifyEmailPage() {
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <div className="space-y-6 lg:sticky lg:top-24">
-          <Badge className="w-fit gap-2 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+          <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
+            <MailOpen className="size-3.5" aria-hidden="true" />
             Email verification
           </Badge>
 
@@ -156,12 +159,12 @@ export function VerifyEmailPage() {
 
           <div className="grid gap-3">
             <InfoRow
-              icon={<MailCheck className="h-5 w-5" aria-hidden="true" />}
+              icon={<MailOpen className="size-5" aria-hidden="true" />}
               title="Check your inbox"
               description="Use the latest email from SportZone because old tokens may no longer be valid."
             />
             <InfoRow
-              icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+              icon={<ShieldCheck className="size-5" aria-hidden="true" />}
               title="Activate before login"
               description="Local accounts can log in only after email verification succeeds."
             />
@@ -169,7 +172,7 @@ export function VerifyEmailPage() {
         </div>
 
         <div className="space-y-5">
-          <Card className="sportzone-panel">
+          <Card>
             <CardHeader>
               <CardTitle>Verify email</CardTitle>
               <p className="text-sm leading-6 text-muted-foreground">
@@ -187,10 +190,10 @@ export function VerifyEmailPage() {
               {status !== 'success' && (
                 <form onSubmit={handleVerifySubmit} noValidate className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="verificationToken" className="text-sm font-medium text-foreground">
+                    <Label htmlFor="verificationToken">
                       Verification token
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       id="verificationToken"
                       name="verificationToken"
                       value={manualToken}
@@ -199,14 +202,11 @@ export function VerifyEmailPage() {
                       placeholder="Paste your verification token"
                       aria-invalid={Boolean(verificationError)}
                       aria-describedby={verificationError ? 'verification-token-error' : undefined}
-                      className={cn(
-                        'soft-input h-12 w-full rounded-full px-4 text-sm',
-                        verificationError && 'border-destructive/70',
-                      )}
+                      className={cn(verificationError && 'border-destructive')}
                     />
                     {verificationError && (
                       <p id="verification-token-error" className="flex items-start gap-2 text-xs leading-5 text-destructive">
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <DangerCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                         {verificationError}
                       </p>
                     )}
@@ -215,13 +215,13 @@ export function VerifyEmailPage() {
                   <Button type="submit" size="lg" className="w-full" disabled={status === 'verifying'}>
                     {status === 'verifying' ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                        <Spinner className="size-5 animate-spin" aria-hidden="true" />
                         Verifying
                       </>
                     ) : (
                       <>
                         Verify email
-                        <MailCheck className="h-5 w-5" aria-hidden="true" />
+                        <MailOpen className="size-5" aria-hidden="true" />
                       </>
                     )}
                   </Button>
@@ -231,7 +231,7 @@ export function VerifyEmailPage() {
           </Card>
 
           {status !== 'success' && (
-            <Card className="sportzone-panel">
+            <Card>
               <CardHeader>
                 <CardTitle>Need a new link?</CardTitle>
                 <p className="text-sm leading-6 text-muted-foreground">
@@ -241,16 +241,16 @@ export function VerifyEmailPage() {
               <CardContent>
                 <form onSubmit={handleResendSubmit} noValidate className="space-y-4">
                   {resendMessage && (
-                    <div className="rounded-2xl border border-primary/25 bg-primary/10 p-4 text-sm leading-6 text-foreground">
+                    <div className="rounded-lg border border-primary/25 bg-primary/10 p-4 text-sm leading-6 text-foreground">
                       {resendMessage}
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <label htmlFor="resendEmail" className="text-sm font-medium text-foreground">
+                    <Label htmlFor="resendEmail">
                       Email
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       id="resendEmail"
                       name="resendEmail"
                       type="email"
@@ -263,14 +263,11 @@ export function VerifyEmailPage() {
                       placeholder="you@example.com"
                       aria-invalid={Boolean(resendError)}
                       aria-describedby={resendError ? 'resend-email-error' : undefined}
-                      className={cn(
-                        'soft-input h-12 w-full rounded-full px-4 text-sm',
-                        resendError && 'border-destructive/70',
-                      )}
+                      className={cn(resendError && 'border-destructive')}
                     />
                     {resendError && (
                       <p id="resend-email-error" className="flex items-start gap-2 text-xs leading-5 text-destructive">
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <DangerCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                         {resendError}
                       </p>
                     )}
@@ -279,13 +276,13 @@ export function VerifyEmailPage() {
                   <Button type="submit" variant="secondary" className="w-full" disabled={isResending}>
                     {isResending ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        <Spinner className="size-4 animate-spin" aria-hidden="true" />
                         Sending
                       </>
                     ) : (
                       <>
                         Send new link
-                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                        <Refresh className="size-4" aria-hidden="true" />
                       </>
                     )}
                   </Button>
@@ -312,8 +309,8 @@ function VerificationState({
 }) {
   if (status === 'verifying') {
     return (
-      <div className="flex gap-3 rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm text-foreground">
-        <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+      <div className="flex gap-3 rounded-lg border bg-muted/40 p-4 text-sm text-foreground">
+        <Spinner className="mt-0.5 size-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
         <p className="leading-6">Verifying your email token...</p>
       </div>
     );
@@ -322,19 +319,15 @@ function VerificationState({
   if (status === 'success' && result) {
     return (
       <div className="space-y-5">
-        <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
-          <div className="flex gap-4">
-            <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
-            <div>
-              <h2 className="font-display text-2xl font-semibold text-foreground">Email verified</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {message || 'Your email has been verified successfully.'}
-              </p>
-            </div>
-          </div>
-        </div>
+        <Alert>
+          <CheckCircle className="size-4 text-primary" aria-hidden="true" />
+          <AlertTitle>Email verified</AlertTitle>
+          <AlertDescription>
+            {message || 'Your email has been verified successfully.'}
+          </AlertDescription>
+        </Alert>
 
-        <dl className="grid gap-3 rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm sm:grid-cols-2">
+        <dl className="grid gap-3 rounded-lg border bg-muted/40 p-4 text-sm sm:grid-cols-2">
           <AccountDetail label="Status" value={result.status.replace(/_/g, ' ')} />
           <AccountDetail label="Email verified" value={result.emailVerified ? 'Yes' : 'No'} />
         </dl>
@@ -348,20 +341,16 @@ function VerificationState({
 
   if (status === 'error') {
     return (
-      <div className="flex gap-3 rounded-2xl border border-destructive/35 bg-destructive/10 p-4 text-sm text-foreground">
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-        <div>
-          <h2 className="font-semibold text-foreground">Verification failed</h2>
-          <p className="mt-1 leading-6 text-muted-foreground">
-            {error || 'The verification token is invalid or expired.'}
-          </p>
-        </div>
-      </div>
+      <Alert variant="destructive">
+        <DangerCircle className="size-4" aria-hidden="true" />
+        <AlertTitle>Verification failed</AlertTitle>
+        <AlertDescription>{error || 'The verification token is invalid or expired.'}</AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm leading-6 text-muted-foreground">
+    <div className="rounded-lg border bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
       Paste the token from your verification email to activate your account.
     </div>
   );
@@ -369,8 +358,8 @@ function VerificationState({
 
 function InfoRow({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="flex gap-3 rounded-2xl border border-border/80 bg-card/80 p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+    <div className="flex gap-3 rounded-lg border bg-card p-4">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-primary">
         {icon}
       </div>
       <div>

@@ -8,6 +8,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import { EmptyState } from '@/components/empty-state';
+import { ImageRectangle } from '@mynaui/icons-react';
 
 type DetailImage = {
   id: number;
@@ -46,9 +48,12 @@ export function DetailImageCarousel({ images, itemName }: DetailImageCarouselPro
 
   if (images.length === 0) {
     return (
-      <div className="flex aspect-[16/7] w-full items-center justify-center rounded-[1.75rem] bg-secondary/80 text-muted-foreground">
-        No images available
-      </div>
+      <EmptyState
+        icon={<ImageRectangle className="size-6" aria-hidden="true" />}
+        title="No images available"
+        description={`${itemName} has not added public images yet.`}
+        className="aspect-[16/7] max-w-none rounded-lg border bg-card"
+      />
     );
   }
 
@@ -57,8 +62,8 @@ export function DetailImageCarousel({ images, itemName }: DetailImageCarouselPro
       <Carousel setApi={setApi} opts={{ loop: images.length > 1 }} className="w-full">
         <CarouselContent className="-ml-0">
           {images.map((image, index) => (
-            <CarouselItem key={image.id} className="pl-0 overflow-hidden rounded-[1.75rem]">
-              <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[1.75rem] shadow-[0_18px_60px_rgba(0,0,0,0.16)] dark:shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
+            <CarouselItem key={image.id} className="overflow-hidden rounded-lg pl-0">
+              <div className="relative aspect-[16/7] w-full overflow-hidden rounded-lg border shadow-sm">
                 <img
                   src={image.imageUrl}
                   alt={`${itemName} image ${index + 1}`}
@@ -91,7 +96,7 @@ export function DetailImageCarousel({ images, itemName }: DetailImageCarouselPro
               type="button"
               onClick={() => api?.scrollTo(index)}
               aria-label={`View image ${index + 1}`}
-              className={`h-16 w-24 shrink-0 overflow-hidden rounded-xl border transition-[border-color,opacity] duration-200 ${
+              className={`h-16 w-24 shrink-0 overflow-hidden rounded-md border transition-[border-color,opacity] duration-200 ${
                 index === currentIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
               }`}
             >
