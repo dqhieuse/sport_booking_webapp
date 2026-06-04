@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,13 +23,18 @@ import com.sportbooking.module.user.entity.UserStatus;
 import com.sportbooking.module.user.repository.RoleRepository;
 import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.entity.VenueStatus;
+import com.sportbooking.module.venue.repository.VenueImageRepository;
 import com.sportbooking.module.venue.repository.VenueRepository;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,6 +51,9 @@ class VendorVenueControllerTest {
 
     @Autowired
     private VenueRepository venueRepository;
+
+    @Autowired
+    private VenueImageRepository venueImageRepository;
 
     @Autowired
     private CourtRepository courtRepository;
@@ -157,6 +166,109 @@ class VendorVenueControllerTest {
                 .andExpect(jsonPath("$.data.name", is("ABC Sports Complex")))
                 .andExpect(jsonPath("$.data.status", is("ACTIVE")))
                 .andExpect(jsonPath("$.data.vendor.fullName", is("Demo Vendor")));
+    }
+
+    @Test
+    void uploadVenueImageStoresFirstImageAsPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "venue.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/vendor/venues/{id}/images", venueId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Venue image uploaded successfully")))
+                .andExpect(jsonPath("$.data.imageUrl").exists())
+                .andExpect(jsonPath("$.data.isPrimary", is(true)))
+                .andExpect(jsonPath("$.data.sortOrder", is(1)))
+                .andReturn();
+
+        String imageUrl = JsonPath.read(result.getResponse().getContentAsString(), "$.data.imageUrl");
+        assertThat(Files.exists(localVenueImagePath(imageUrl))).isTrue();
+        mockMvc.perform(get(URI.create(imageUrl).getPath()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void uploadVenueImageCanInsertAtSortOrderAndSetPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        uploadVenueImageAndReturnId(accessToken, venueId, "first.png", null, false);
+
+        Long secondImageId = uploadVenueImageAndReturnId(accessToken, venueId, "second.png", 1, true);
+
+        var images = venueImageRepository.findByVenueIdOrderBySortOrderAsc(venueId);
+        assertThat(images).hasSize(2);
+        assertThat(images.get(0).getId()).isEqualTo(secondImageId);
+        assertThat(images.get(0).getSortOrder()).isEqualTo(1);
+        assertThat(images.get(0).isPrimary()).isTrue();
+        assertThat(images.get(1).getSortOrder()).isEqualTo(2);
+        assertThat(images.get(1).isPrimary()).isFalse();
+    }
+
+    @Test
+    void uploadVenueImageReturnsBadRequestWhenContentTypeIsInvalid() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "venue.txt",
+                "text/plain",
+                "not-an-image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/vendor/venues/{id}/images", venueId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Venue image must be JPEG, PNG, or WebP")));
+    }
+
+    @Test
+    void uploadVenueImageReturnsBadRequestWhenSortOrderIsInvalid() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "venue.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/vendor/venues/{id}/images", venueId)
+                        .file(image)
+                        .param("sortOrder", "0")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Sort order must be greater than 0")));
+    }
+
+    @Test
+    void uploadVenueImageReturnsForbiddenWhenVenueBelongsToAnotherVendor() throws Exception {
+        String otherVendorToken = createVendorAndReturnAccessToken();
+        Long existingVenueId = venueRepository.findAll().getFirst().getId();
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "venue.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/vendor/venues/{id}/images", existingVenueId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + otherVendorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("You cannot upload images for another vendor's venue")));
     }
 
     @Test
@@ -325,6 +437,52 @@ class VendorVenueControllerTest {
                 .andReturn();
 
         return JsonPath.read(result.getResponse().getContentAsString(), "$.data.accessToken");
+    }
+
+    private Long createVenueAndReturnId(String accessToken) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/vendor/venues")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validVenueJson()))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Integer id = JsonPath.read(result.getResponse().getContentAsString(), "$.data.id");
+        return id.longValue();
+    }
+
+    private Long uploadVenueImageAndReturnId(
+            String accessToken,
+            Long venueId,
+            String filename,
+            Integer sortOrder,
+            boolean isPrimary
+    ) throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                filename,
+                "image/png",
+                ("fake-content-" + filename).getBytes()
+        );
+        var request = multipart("/api/vendor/venues/{id}/images", venueId)
+                .file(image)
+                .header("Authorization", "Bearer " + accessToken)
+                .param("isPrimary", Boolean.toString(isPrimary));
+        if (sortOrder != null) {
+            request.param("sortOrder", sortOrder.toString());
+        }
+
+        MvcResult result = mockMvc.perform(request)
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Integer id = JsonPath.read(result.getResponse().getContentAsString(), "$.data.id");
+        return id.longValue();
+    }
+
+    private Path localVenueImagePath(String imageUrl) {
+        String filename = Path.of(URI.create(imageUrl).getPath()).getFileName().toString();
+        return Path.of("target/test-uploads/venues").toAbsolutePath().normalize().resolve(filename);
     }
 
     private String createVendorAndReturnAccessToken() {

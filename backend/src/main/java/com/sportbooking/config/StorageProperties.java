@@ -20,6 +20,8 @@ public class StorageProperties {
 
     private Avatar avatar = new Avatar();
 
+    private VenueImage venueImage = new VenueImage();
+
     @Getter
     @Setter
     public static class Local {
@@ -34,6 +36,16 @@ public class StorageProperties {
     @Setter
     public static class Avatar {
         private DataSize maxFileSize = DataSize.ofMegabytes(2);
+
+        private List<String> allowedContentTypes = List.of("image/jpeg", "image/png", "image/webp");
+    }
+
+    @Getter
+    @Setter
+    public static class VenueImage {
+        private DataSize maxFileSize = DataSize.ofMegabytes(5);
+
+        private int maxImages = 10;
 
         private List<String> allowedContentTypes = List.of("image/jpeg", "image/png", "image/webp");
     }
