@@ -9,7 +9,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TimeSlotRepository extends JpaRepository<TimeSlot, Long> {
 
+    List<TimeSlot> findAllByOrderByStartTimeAscEndTimeAsc();
+
     List<TimeSlot> findByStatus(TimeSlotStatus status);
+
+    List<TimeSlot> findByStatusOrderByStartTimeAscEndTimeAsc(TimeSlotStatus status);
 
     Optional<TimeSlot> findByStartTimeAndEndTime(LocalTime startTime, LocalTime endTime);
 
