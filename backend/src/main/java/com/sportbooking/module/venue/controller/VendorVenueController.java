@@ -90,6 +90,26 @@ public class VendorVenueController {
         return ApiResponse.success("Venue image uploaded successfully", response);
     }
 
+    @DeleteMapping("/{id}/images/{imageId}")
+    public ApiResponse<Void> deleteVenueImage(
+            @PathVariable Long id,
+            @PathVariable Long imageId,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        vendorVenueService.deleteVenueImage(id, imageId, authorizationHeader);
+        return ApiResponse.success("Venue image deleted successfully", null);
+    }
+
+    @PutMapping("/{id}/images/{imageId}/primary")
+    public ApiResponse<VenueImageResponse> setPrimaryVenueImage(
+            @PathVariable Long id,
+            @PathVariable Long imageId,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        VenueImageResponse response = vendorVenueService.setPrimaryVenueImage(id, imageId, authorizationHeader);
+        return ApiResponse.success("Venue primary image updated successfully", response);
+    }
+
     @PutMapping("/{id}")
     public ApiResponse<VenueDetailResponse> updateVenue(
             @PathVariable Long id,

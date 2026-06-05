@@ -272,6 +272,50 @@ class VendorVenueControllerTest {
     }
 
     @Test
+    void setPrimaryVenueImageUnsetsPreviousPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        Long firstImageId = uploadVenueImageAndReturnId(accessToken, venueId, "first.png", null, false);
+        Long secondImageId = uploadVenueImageAndReturnId(accessToken, venueId, "second.png", null, false);
+
+        mockMvc.perform(put("/api/vendor/venues/{id}/images/{imageId}/primary", venueId, secondImageId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Venue primary image updated successfully")))
+                .andExpect(jsonPath("$.data.id", is(secondImageId.intValue())))
+                .andExpect(jsonPath("$.data.isPrimary", is(true)));
+
+        var firstImage = venueImageRepository.findById(firstImageId).orElseThrow();
+        var secondImage = venueImageRepository.findById(secondImageId).orElseThrow();
+        assertThat(firstImage.isPrimary()).isFalse();
+        assertThat(secondImage.isPrimary()).isTrue();
+    }
+
+    @Test
+    void deleteVenueImageRemovesFileShiftsOrderAndPromotesNextPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        Long firstImageId = uploadVenueImageAndReturnId(accessToken, venueId, "first.png", null, false);
+        Long secondImageId = uploadVenueImageAndReturnId(accessToken, venueId, "second.png", null, false);
+        var firstImagePath = localVenueImagePath(venueImageRepository.findById(firstImageId).orElseThrow().getImageUrl());
+
+        mockMvc.perform(delete("/api/vendor/venues/{id}/images/{imageId}", venueId, firstImageId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Venue image deleted successfully")));
+
+        assertThat(venueImageRepository.findById(firstImageId)).isEmpty();
+        assertThat(Files.exists(firstImagePath)).isFalse();
+        var remainingImages = venueImageRepository.findByVenueIdOrderBySortOrderAsc(venueId);
+        assertThat(remainingImages).hasSize(1);
+        assertThat(remainingImages.getFirst().getId()).isEqualTo(secondImageId);
+        assertThat(remainingImages.getFirst().getSortOrder()).isEqualTo(1);
+        assertThat(remainingImages.getFirst().isPrimary()).isTrue();
+    }
+
+    @Test
     void updateVenueUpdatesOnlyCurrentVendorVenue() throws Exception {
         String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
         Long venueId = venueRepository.findByVendorId(

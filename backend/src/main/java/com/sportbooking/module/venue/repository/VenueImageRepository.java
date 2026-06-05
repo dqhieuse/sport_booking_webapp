@@ -12,6 +12,8 @@ public interface VenueImageRepository extends JpaRepository<VenueImage, Long> {
 
     List<VenueImage> findByVenueIdAndSortOrderGreaterThanEqualOrderBySortOrderDesc(Long venueId, Integer sortOrder);
 
+    List<VenueImage> findByVenueIdAndSortOrderGreaterThanOrderBySortOrderAsc(Long venueId, Integer sortOrder);
+
     Optional<VenueImage> findByVenueIdAndPrimaryTrue(Long venueId);
 
     boolean existsByVenueIdAndSortOrder(Long venueId, Integer sortOrder);

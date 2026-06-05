@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -289,6 +290,50 @@ class VendorCourtControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("You cannot upload images for another vendor's court")));
+    }
+
+    @Test
+    void setPrimaryCourtImageUnsetsPreviousPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        Long firstImageId = uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", null, false);
+
+        mockMvc.perform(put("/api/vendor/courts/{id}/images/{imageId}/primary", courtId, secondImageId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Court primary image updated successfully")))
+                .andExpect(jsonPath("$.data.id", is(secondImageId.intValue())))
+                .andExpect(jsonPath("$.data.isPrimary", is(true)));
+
+        var firstImage = courtImageRepository.findById(firstImageId).orElseThrow();
+        var secondImage = courtImageRepository.findById(secondImageId).orElseThrow();
+        assertThat(firstImage.isPrimary()).isFalse();
+        assertThat(secondImage.isPrimary()).isTrue();
+    }
+
+    @Test
+    void deleteCourtImageRemovesFileShiftsOrderAndPromotesNextPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        Long firstImageId = uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", null, false);
+        var firstImagePath = localCourtImagePath(courtImageRepository.findById(firstImageId).orElseThrow().getImageUrl());
+
+        mockMvc.perform(delete("/api/vendor/courts/{id}/images/{imageId}", courtId, firstImageId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Court image deleted successfully")));
+
+        assertThat(courtImageRepository.findById(firstImageId)).isEmpty();
+        assertThat(Files.exists(firstImagePath)).isFalse();
+        var remainingImages = courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId);
+        assertThat(remainingImages).hasSize(1);
+        assertThat(remainingImages.getFirst().getId()).isEqualTo(secondImageId);
+        assertThat(remainingImages.getFirst().getSortOrder()).isEqualTo(1);
+        assertThat(remainingImages.getFirst().isPrimary()).isTrue();
     }
 
     @Test

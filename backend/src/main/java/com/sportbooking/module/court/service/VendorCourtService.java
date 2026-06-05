@@ -166,6 +166,47 @@ public class VendorCourtService {
     }
 
     @Transactional
+    public void deleteCourtImage(Long courtId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot delete images for another vendor's court");
+        CourtImage image = getCourtImageForCourt(court.getId(), imageId);
+
+        String imageUrl = image.getImageUrl();
+        int deletedSortOrder = image.getSortOrder();
+        boolean deletedPrimary = image.isPrimary();
+
+        courtImageRepository.delete(image);
+        courtImageRepository.flush();
+        shiftCourtImagesAfterDelete(court.getId(), deletedSortOrder);
+
+        if (deletedPrimary) {
+            courtImageRepository.findByCourtIdOrderBySortOrderAsc(court.getId())
+                    .stream()
+                    .findFirst()
+                    .ifPresent(nextPrimaryImage -> nextPrimaryImage.setPrimary(true));
+        }
+
+        imageStorageService.deleteIfManaged(imageUrl, courtImageStorageOptions());
+    }
+
+    @Transactional
+    public CourtImageResponse setPrimaryCourtImage(Long courtId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot update images for another vendor's court");
+        CourtImage image = getCourtImageForCourt(court.getId(), imageId);
+
+        if (image.isPrimary()) {
+            return CourtImageResponse.from(image);
+        }
+
+        unsetPrimaryCourtImages(court.getId());
+        courtImageRepository.flush();
+        image.setPrimary(true);
+
+        return CourtImageResponse.from(courtImageRepository.saveAndFlush(image));
+    }
+
+    @Transactional
     public VendorCourtDetailResponse updateCourt(Long courtId, String authorizationHeader, VendorCourtRequest request) {
         User vendor = getCurrentVendor(authorizationHeader);
         Court court = courtRepository.findById(courtId)
@@ -214,6 +255,26 @@ public class VendorCourtService {
         }
 
         return venue;
+    }
+
+    private Court getOwnedCourt(Long courtId, User vendor, String forbiddenMessage) {
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException(forbiddenMessage);
+        }
+
+        return court;
+    }
+
+    private CourtImage getCourtImageForCourt(Long courtId, Long imageId) {
+        CourtImage image = courtImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court image not found"));
+        if (!image.getCourt().getId().equals(courtId)) {
+            throw new ResourceNotFoundException("Court image not found");
+        }
+
+        return image;
     }
 
     private Sport getActiveSport(Long sportId) {
@@ -280,6 +341,14 @@ public class VendorCourtService {
         for (CourtImage image : imagesToShift) {
             image.setSortOrder(image.getSortOrder() + 1);
             courtImageRepository.saveAndFlush(image);
+        }
+    }
+
+    private void shiftCourtImagesAfterDelete(Long courtId, int deletedSortOrder) {
+        List<CourtImage> imagesToShift = courtImageRepository
+                .findByCourtIdAndSortOrderGreaterThanOrderBySortOrderAsc(courtId, deletedSortOrder);
+        for (CourtImage image : imagesToShift) {
+            image.setSortOrder(image.getSortOrder() - 1);
         }
     }
 

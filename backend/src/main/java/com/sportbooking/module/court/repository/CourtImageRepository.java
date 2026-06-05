@@ -12,6 +12,8 @@ public interface CourtImageRepository extends JpaRepository<CourtImage, Long> {
 
     List<CourtImage> findByCourtIdAndSortOrderGreaterThanEqualOrderBySortOrderDesc(Long courtId, Integer sortOrder);
 
+    List<CourtImage> findByCourtIdAndSortOrderGreaterThanOrderBySortOrderAsc(Long courtId, Integer sortOrder);
+
     Optional<CourtImage> findByCourtIdAndPrimaryTrue(Long courtId);
 
     boolean existsByCourtIdAndSortOrder(Long courtId, Integer sortOrder);

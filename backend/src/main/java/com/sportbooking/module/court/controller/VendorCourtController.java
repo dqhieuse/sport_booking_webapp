@@ -94,6 +94,26 @@ public class VendorCourtController {
         return ApiResponse.success("Court image uploaded successfully", response);
     }
 
+    @DeleteMapping("/{id}/images/{imageId}")
+    public ApiResponse<Void> deleteCourtImage(
+            @PathVariable Long id,
+            @PathVariable Long imageId,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        vendorCourtService.deleteCourtImage(id, imageId, authorizationHeader);
+        return ApiResponse.success("Court image deleted successfully", null);
+    }
+
+    @PutMapping("/{id}/images/{imageId}/primary")
+    public ApiResponse<CourtImageResponse> setPrimaryCourtImage(
+            @PathVariable Long id,
+            @PathVariable Long imageId,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        CourtImageResponse response = vendorCourtService.setPrimaryCourtImage(id, imageId, authorizationHeader);
+        return ApiResponse.success("Court primary image updated successfully", response);
+    }
+
     @PutMapping("/{id}")
     public ApiResponse<VendorCourtDetailResponse> updateCourt(
             @PathVariable Long id,

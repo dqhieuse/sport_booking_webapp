@@ -121,6 +121,7 @@ public class VendorVenueService {
             boolean primary = requestedPrimary || currentImageCount == 0;
             if (primary) {
                 unsetPrimaryImages(venueId);
+                venueImageRepository.flush();
             }
 
             VenueImage image = new VenueImage();
@@ -134,6 +135,47 @@ public class VendorVenueService {
             imageStorageService.deleteIfManaged(imageUrl, venueImageStorageOptions());
             throw exception;
         }
+    }
+
+    @Transactional
+    public void deleteVenueImage(Long venueId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = getOwnedVenue(venueId, vendor, "You cannot delete images for another vendor's venue");
+        VenueImage image = getVenueImageForVenue(venue.getId(), imageId);
+
+        String imageUrl = image.getImageUrl();
+        int deletedSortOrder = image.getSortOrder();
+        boolean deletedPrimary = image.isPrimary();
+
+        venueImageRepository.delete(image);
+        venueImageRepository.flush();
+        shiftImagesAfterDelete(venue.getId(), deletedSortOrder);
+
+        if (deletedPrimary) {
+            venueImageRepository.findByVenueIdOrderBySortOrderAsc(venue.getId())
+                    .stream()
+                    .findFirst()
+                    .ifPresent(nextPrimaryImage -> nextPrimaryImage.setPrimary(true));
+        }
+
+        imageStorageService.deleteIfManaged(imageUrl, venueImageStorageOptions());
+    }
+
+    @Transactional
+    public VenueImageResponse setPrimaryVenueImage(Long venueId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = getOwnedVenue(venueId, vendor, "You cannot update images for another vendor's venue");
+        VenueImage image = getVenueImageForVenue(venue.getId(), imageId);
+
+        if (image.isPrimary()) {
+            return VenueImageResponse.from(image);
+        }
+
+        unsetPrimaryImages(venue.getId());
+        venueImageRepository.flush();
+        image.setPrimary(true);
+
+        return VenueImageResponse.from(venueImageRepository.saveAndFlush(image));
     }
 
     @Transactional
@@ -184,6 +226,26 @@ public class VendorVenueService {
         return user;
     }
 
+    private Venue getOwnedVenue(Long venueId, User vendor, String forbiddenMessage) {
+        Venue venue = venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
+        if (!venue.getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException(forbiddenMessage);
+        }
+
+        return venue;
+    }
+
+    private VenueImage getVenueImageForVenue(Long venueId, Long imageId) {
+        VenueImage image = venueImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue image not found"));
+        if (!image.getVenue().getId().equals(venueId)) {
+            throw new ResourceNotFoundException("Venue image not found");
+        }
+
+        return image;
+    }
+
     private int resolveSortOrder(Long venueId, Integer requestedSortOrder) {
         if (requestedSortOrder != null && requestedSortOrder <= 0) {
             throw new InvalidRequestException("Sort order must be greater than 0");
@@ -203,6 +265,14 @@ public class VendorVenueService {
         for (VenueImage image : imagesToShift) {
             image.setSortOrder(image.getSortOrder() + 1);
             venueImageRepository.saveAndFlush(image);
+        }
+    }
+
+    private void shiftImagesAfterDelete(Long venueId, int deletedSortOrder) {
+        List<VenueImage> imagesToShift = venueImageRepository
+                .findByVenueIdAndSortOrderGreaterThanOrderBySortOrderAsc(venueId, deletedSortOrder);
+        for (VenueImage image : imagesToShift) {
+            image.setSortOrder(image.getSortOrder() - 1);
         }
     }
 
