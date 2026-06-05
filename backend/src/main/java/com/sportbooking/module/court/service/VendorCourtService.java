@@ -26,6 +26,7 @@ import com.sportbooking.module.court.dto.VendorCourtListResponse;
 import com.sportbooking.module.court.dto.VendorCourtRequest;
 import com.sportbooking.module.court.dto.VendorCourtTimeSlotConfigResponse;
 import com.sportbooking.module.court.dto.VendorCourtTimeSlotResponse;
+import com.sportbooking.module.court.dto.VendorCourtTimeSlotUpdateRequest;
 import com.sportbooking.module.court.dto.VendorCourtVenueResponse;
 import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtImage;
@@ -103,6 +104,35 @@ public class VendorCourtService {
     public List<VendorCourtTimeSlotConfigResponse> getOwnCourtTimeSlots(Long courtId, String authorizationHeader) {
         User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = getOwnedCourt(courtId, vendor, "You cannot view another vendor's court time slots");
+        Map<Long, TimeSlotStatus> courtSlotStatusByTimeSlotId = courtTimeSlotRepository.findByCourtId(court.getId())
+                .stream()
+                .collect(Collectors.toMap(
+                        courtTimeSlot -> courtTimeSlot.getTimeSlot().getId(),
+                        CourtTimeSlot::getStatus
+                ));
+
+        return timeSlotRepository.findByStatusOrderByStartTimeAscEndTimeAsc(TimeSlotStatus.ACTIVE)
+                .stream()
+                .map(timeSlot -> new VendorCourtTimeSlotConfigResponse(
+                        timeSlot.getId(),
+                        timeSlot.getStartTime(),
+                        timeSlot.getEndTime(),
+                        courtSlotStatusByTimeSlotId.getOrDefault(timeSlot.getId(), TimeSlotStatus.INACTIVE)
+                ))
+                .toList();
+    }
+
+    @Transactional
+    public List<VendorCourtTimeSlotConfigResponse> updateOwnCourtTimeSlots(
+            Long courtId,
+            String authorizationHeader,
+            VendorCourtTimeSlotUpdateRequest request
+    ) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot update another vendor's court time slots");
+
+        syncTimeSlots(court, request.timeSlotIds());
+
         Map<Long, TimeSlotStatus> courtSlotStatusByTimeSlotId = courtTimeSlotRepository.findByCourtId(court.getId())
                 .stream()
                 .collect(Collectors.toMap(
