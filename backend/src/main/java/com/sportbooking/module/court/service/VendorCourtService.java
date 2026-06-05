@@ -1,11 +1,27 @@
 package com.sportbooking.module.court.service;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.common.exception.UnauthorizedException;
+import com.sportbooking.common.storage.ImageStorageOptions;
+import com.sportbooking.common.storage.ImageStorageService;
+import com.sportbooking.config.StorageProperties;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.CourtSportResponse;
 import com.sportbooking.module.court.dto.VendorCourtDetailResponse;
 import com.sportbooking.module.court.dto.VendorCourtListResponse;
@@ -13,6 +29,7 @@ import com.sportbooking.module.court.dto.VendorCourtRequest;
 import com.sportbooking.module.court.dto.VendorCourtTimeSlotResponse;
 import com.sportbooking.module.court.dto.VendorCourtVenueResponse;
 import com.sportbooking.module.court.entity.Court;
+import com.sportbooking.module.court.entity.CourtImage;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.entity.CourtTimeSlot;
 import com.sportbooking.module.court.repository.CourtImageRepository;
@@ -31,22 +48,16 @@ import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.entity.Venue;
 import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueRepository;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class VendorCourtService {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String COURT_IMAGE_DIRECTORY = "courts";
+    private static final String COURT_IMAGE_URL_PREFIX = "/uploads/courts/";
 
     private final CourtRepository courtRepository;
     private final CourtImageRepository courtImageRepository;
@@ -56,6 +67,8 @@ public class VendorCourtService {
     private final TimeSlotRepository timeSlotRepository;
     private final UserRepository userRepository;
     private final JwtAccessTokenService jwtAccessTokenService;
+    private final ImageStorageService imageStorageService;
+    private final StorageProperties storageProperties;
 
     @Transactional(readOnly = true)
     public PageResponse<VendorCourtListResponse> getOwnCourts(
@@ -105,6 +118,92 @@ public class VendorCourtService {
         syncTimeSlots(savedCourt, request.timeSlotIds());
 
         return toVendorDetailResponse(savedCourt);
+    }
+
+    @Transactional
+    public CourtImageResponse uploadCourtImage(
+            Long courtId,
+            String authorizationHeader,
+            MultipartFile file,
+            Integer requestedSortOrder,
+            boolean requestedPrimary
+    ) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You cannot upload images for another vendor's court");
+        }
+
+        long currentImageCount = courtImageRepository.countByCourtId(courtId);
+        if (currentImageCount >= storageProperties.getCourtImage().getMaxImages()) {
+            throw new InvalidRequestException("Court can have at most "
+                    + storageProperties.getCourtImage().getMaxImages() + " images");
+        }
+
+        int sortOrder = resolveImageSortOrder(courtId, requestedSortOrder);
+        String imageUrl = imageStorageService.store(file, courtImageStorageOptions());
+
+        try {
+            shiftCourtImagesFromSortOrder(courtId, sortOrder);
+            boolean primary = requestedPrimary || currentImageCount == 0;
+            if (primary) {
+                unsetPrimaryCourtImages(courtId);
+                courtImageRepository.flush();
+            }
+
+            CourtImage image = new CourtImage();
+            image.setCourt(court);
+            image.setImageUrl(imageUrl);
+            image.setSortOrder(sortOrder);
+            image.setPrimary(primary);
+
+            return CourtImageResponse.from(courtImageRepository.saveAndFlush(image));
+        } catch (RuntimeException exception) {
+            imageStorageService.deleteIfManaged(imageUrl, courtImageStorageOptions());
+            throw exception;
+        }
+    }
+
+    @Transactional
+    public void deleteCourtImage(Long courtId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot delete images for another vendor's court");
+        CourtImage image = getCourtImageForCourt(court.getId(), imageId);
+
+        String imageUrl = image.getImageUrl();
+        int deletedSortOrder = image.getSortOrder();
+        boolean deletedPrimary = image.isPrimary();
+
+        courtImageRepository.delete(image);
+        courtImageRepository.flush();
+        shiftCourtImagesAfterDelete(court.getId(), deletedSortOrder);
+
+        if (deletedPrimary) {
+            courtImageRepository.findByCourtIdOrderBySortOrderAsc(court.getId())
+                    .stream()
+                    .findFirst()
+                    .ifPresent(nextPrimaryImage -> nextPrimaryImage.setPrimary(true));
+        }
+
+        imageStorageService.deleteIfManaged(imageUrl, courtImageStorageOptions());
+    }
+
+    @Transactional
+    public CourtImageResponse setPrimaryCourtImage(Long courtId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot update images for another vendor's court");
+        CourtImage image = getCourtImageForCourt(court.getId(), imageId);
+
+        if (image.isPrimary()) {
+            return CourtImageResponse.from(image);
+        }
+
+        unsetPrimaryCourtImages(court.getId());
+        courtImageRepository.flush();
+        image.setPrimary(true);
+
+        return CourtImageResponse.from(courtImageRepository.saveAndFlush(image));
     }
 
     @Transactional
@@ -158,6 +257,26 @@ public class VendorCourtService {
         return venue;
     }
 
+    private Court getOwnedCourt(Long courtId, User vendor, String forbiddenMessage) {
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException(forbiddenMessage);
+        }
+
+        return court;
+    }
+
+    private CourtImage getCourtImageForCourt(Long courtId, Long imageId) {
+        CourtImage image = courtImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Court image not found"));
+        if (!image.getCourt().getId().equals(courtId)) {
+            throw new ResourceNotFoundException("Court image not found");
+        }
+
+        return image;
+    }
+
     private Sport getActiveSport(Long sportId) {
         return sportRepository.findByIdAndStatus(sportId, SportStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Sport not found"));
@@ -201,6 +320,54 @@ public class VendorCourtService {
         courtTimeSlot.setTimeSlot(timeSlot);
         courtTimeSlot.setStatus(TimeSlotStatus.ACTIVE);
         return courtTimeSlot;
+    }
+
+    private int resolveImageSortOrder(Long courtId, Integer requestedSortOrder) {
+        if (requestedSortOrder != null && requestedSortOrder <= 0) {
+            throw new InvalidRequestException("Sort order must be greater than 0");
+        }
+
+        int endSortOrder = courtImageRepository.findMaxSortOrderByCourtId(courtId) + 1;
+        if (requestedSortOrder == null || requestedSortOrder > endSortOrder) {
+            return endSortOrder;
+        }
+
+        return requestedSortOrder;
+    }
+
+    private void shiftCourtImagesFromSortOrder(Long courtId, int sortOrder) {
+        List<CourtImage> imagesToShift = courtImageRepository
+                .findByCourtIdAndSortOrderGreaterThanEqualOrderBySortOrderDesc(courtId, sortOrder);
+        for (CourtImage image : imagesToShift) {
+            image.setSortOrder(image.getSortOrder() + 1);
+            courtImageRepository.saveAndFlush(image);
+        }
+    }
+
+    private void shiftCourtImagesAfterDelete(Long courtId, int deletedSortOrder) {
+        List<CourtImage> imagesToShift = courtImageRepository
+                .findByCourtIdAndSortOrderGreaterThanOrderBySortOrderAsc(courtId, deletedSortOrder);
+        for (CourtImage image : imagesToShift) {
+            image.setSortOrder(image.getSortOrder() - 1);
+        }
+    }
+
+    private void unsetPrimaryCourtImages(Long courtId) {
+        courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId)
+                .forEach(image -> image.setPrimary(false));
+    }
+
+    private ImageStorageOptions courtImageStorageOptions() {
+        return new ImageStorageOptions(
+                COURT_IMAGE_DIRECTORY,
+                COURT_IMAGE_URL_PREFIX,
+                storageProperties.getCourtImage().getMaxFileSize(),
+                storageProperties.getCourtImage().getAllowedContentTypes(),
+                "Court image is required",
+                "Court image must be JPEG, PNG, or WebP",
+                "Court image must be at most 5MB",
+                "Could not store court image"
+        );
     }
 
     private VendorCourtDetailResponse toVendorDetailResponse(Court court) {

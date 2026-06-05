@@ -28,6 +28,10 @@ spring:
                     auth: ${SMTP_AUTH:true}
                     starttls:
                         enable: ${SMTP_STARTTLS_ENABLE:true}
+    servlet:
+        multipart:
+            max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:10MB}
+            max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:10MB}
 
 server:
     port: ${SERVER_PORT:8080}
@@ -58,6 +62,20 @@ app:
             upload-dir: ${APP_STORAGE_LOCAL_UPLOAD_DIR:../sport-booking-uploads}
         avatar:
             max-file-size: ${APP_AVATAR_MAX_FILE_SIZE:2MB}
+            allowed-content-types:
+                - image/jpeg
+                - image/png
+                - image/webp
+        venue-image:
+            max-file-size: ${APP_VENUE_IMAGE_MAX_FILE_SIZE:5MB}
+            max-images: ${APP_VENUE_IMAGE_MAX_IMAGES:10}
+            allowed-content-types:
+                - image/jpeg
+                - image/png
+                - image/webp
+        court-image:
+            max-file-size: ${APP_COURT_IMAGE_MAX_FILE_SIZE:5MB}
+            max-images: ${APP_COURT_IMAGE_MAX_IMAGES:10}
             allowed-content-types:
                 - image/jpeg
                 - image/png
