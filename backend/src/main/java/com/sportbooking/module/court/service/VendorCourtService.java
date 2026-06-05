@@ -2,12 +2,11 @@ package com.sportbooking.module.court.service;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,17 +15,18 @@ import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
-import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.common.storage.ImageStorageOptions;
 import com.sportbooking.common.storage.ImageStorageService;
 import com.sportbooking.config.StorageProperties;
-import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.auth.service.CurrentUserService;
 import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.CourtSportResponse;
 import com.sportbooking.module.court.dto.VendorCourtDetailResponse;
 import com.sportbooking.module.court.dto.VendorCourtListResponse;
 import com.sportbooking.module.court.dto.VendorCourtRequest;
+import com.sportbooking.module.court.dto.VendorCourtTimeSlotConfigResponse;
 import com.sportbooking.module.court.dto.VendorCourtTimeSlotResponse;
+import com.sportbooking.module.court.dto.VendorCourtTimeSlotUpdateRequest;
 import com.sportbooking.module.court.dto.VendorCourtVenueResponse;
 import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtImage;
@@ -41,10 +41,7 @@ import com.sportbooking.module.sport.repository.SportRepository;
 import com.sportbooking.module.timeslot.entity.TimeSlot;
 import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import com.sportbooking.module.timeslot.repository.TimeSlotRepository;
-import com.sportbooking.module.user.entity.RoleName;
 import com.sportbooking.module.user.entity.User;
-import com.sportbooking.module.user.entity.UserStatus;
-import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.entity.Venue;
 import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueRepository;
@@ -55,7 +52,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class VendorCourtService {
 
-    private static final String BEARER_PREFIX = "Bearer ";
     private static final String COURT_IMAGE_DIRECTORY = "courts";
     private static final String COURT_IMAGE_URL_PREFIX = "/uploads/courts/";
 
@@ -65,8 +61,7 @@ public class VendorCourtService {
     private final SportRepository sportRepository;
     private final VenueRepository venueRepository;
     private final TimeSlotRepository timeSlotRepository;
-    private final UserRepository userRepository;
-    private final JwtAccessTokenService jwtAccessTokenService;
+    private final CurrentUserService currentUserService;
     private final ImageStorageService imageStorageService;
     private final StorageProperties storageProperties;
 
@@ -78,7 +73,7 @@ public class VendorCourtService {
             CourtStatus status,
             Pageable pageable
     ) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         var courtPage = courtRepository.findVendorCourts(
                 vendor.getId(),
                 venueId,
@@ -95,7 +90,7 @@ public class VendorCourtService {
 
     @Transactional(readOnly = true)
     public VendorCourtDetailResponse getOwnCourtById(String authorizationHeader, Long courtId) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
         if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
@@ -105,9 +100,60 @@ public class VendorCourtService {
         return toVendorDetailResponse(court);
     }
 
+    @Transactional(readOnly = true)
+    public List<VendorCourtTimeSlotConfigResponse> getOwnCourtTimeSlots(Long courtId, String authorizationHeader) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot view another vendor's court time slots");
+        Map<Long, TimeSlotStatus> courtSlotStatusByTimeSlotId = courtTimeSlotRepository.findByCourtId(court.getId())
+                .stream()
+                .collect(Collectors.toMap(
+                        courtTimeSlot -> courtTimeSlot.getTimeSlot().getId(),
+                        CourtTimeSlot::getStatus
+                ));
+
+        return timeSlotRepository.findByStatusOrderByStartTimeAscEndTimeAsc(TimeSlotStatus.ACTIVE)
+                .stream()
+                .map(timeSlot -> new VendorCourtTimeSlotConfigResponse(
+                        timeSlot.getId(),
+                        timeSlot.getStartTime(),
+                        timeSlot.getEndTime(),
+                        courtSlotStatusByTimeSlotId.getOrDefault(timeSlot.getId(), TimeSlotStatus.INACTIVE)
+                ))
+                .toList();
+    }
+
+    @Transactional
+    public List<VendorCourtTimeSlotConfigResponse> updateOwnCourtTimeSlots(
+            Long courtId,
+            String authorizationHeader,
+            VendorCourtTimeSlotUpdateRequest request
+    ) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot update another vendor's court time slots");
+
+        syncTimeSlots(court, request.timeSlotIds());
+
+        Map<Long, TimeSlotStatus> courtSlotStatusByTimeSlotId = courtTimeSlotRepository.findByCourtId(court.getId())
+                .stream()
+                .collect(Collectors.toMap(
+                        courtTimeSlot -> courtTimeSlot.getTimeSlot().getId(),
+                        CourtTimeSlot::getStatus
+                ));
+
+        return timeSlotRepository.findByStatusOrderByStartTimeAscEndTimeAsc(TimeSlotStatus.ACTIVE)
+                .stream()
+                .map(timeSlot -> new VendorCourtTimeSlotConfigResponse(
+                        timeSlot.getId(),
+                        timeSlot.getStartTime(),
+                        timeSlot.getEndTime(),
+                        courtSlotStatusByTimeSlotId.getOrDefault(timeSlot.getId(), TimeSlotStatus.INACTIVE)
+                ))
+                .toList();
+    }
+
     @Transactional
     public VendorCourtDetailResponse createCourt(String authorizationHeader, VendorCourtRequest request) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Venue venue = getOwnedActiveVenue(request.venueId(), vendor);
         Sport sport = getActiveSport(request.sportId());
 
@@ -128,7 +174,7 @@ public class VendorCourtService {
             Integer requestedSortOrder,
             boolean requestedPrimary
     ) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
         if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
@@ -167,7 +213,7 @@ public class VendorCourtService {
 
     @Transactional
     public void deleteCourtImage(Long courtId, Long imageId, String authorizationHeader) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = getOwnedCourt(courtId, vendor, "You cannot delete images for another vendor's court");
         CourtImage image = getCourtImageForCourt(court.getId(), imageId);
 
@@ -191,7 +237,7 @@ public class VendorCourtService {
 
     @Transactional
     public CourtImageResponse setPrimaryCourtImage(Long courtId, Long imageId, String authorizationHeader) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = getOwnedCourt(courtId, vendor, "You cannot update images for another vendor's court");
         CourtImage image = getCourtImageForCourt(court.getId(), imageId);
 
@@ -208,7 +254,7 @@ public class VendorCourtService {
 
     @Transactional
     public VendorCourtDetailResponse updateCourt(Long courtId, String authorizationHeader, VendorCourtRequest request) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
         if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
@@ -225,7 +271,7 @@ public class VendorCourtService {
 
     @Transactional
     public VendorCourtDetailResponse deactivateCourt(Long courtId, String authorizationHeader) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Court court = courtRepository.findById(courtId)
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
         if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
@@ -415,23 +461,6 @@ public class VendorCourtService {
                 .orElse(null);
     }
 
-    private User getCurrentVendor(String authorizationHeader) {
-        String accessToken = extractBearerToken(authorizationHeader);
-        Jwt jwt = decodeToken(accessToken);
-        Long userId = parseUserId(jwt.getSubject());
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UnauthorizedException("Access token user does not exist"));
-
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ForbiddenException("Account is not active");
-        }
-        if (user.getRole().getName() != RoleName.VENDOR) {
-            throw new ForbiddenException("Vendor role is required");
-        }
-
-        return user;
-    }
-
     private String normalizeNullableText(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -440,32 +469,4 @@ public class VendorCourtService {
         return value.trim();
     }
 
-    private String extractBearerToken(String authorizationHeader) {
-        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-            throw new UnauthorizedException("Access token is required");
-        }
-
-        String accessToken = authorizationHeader.substring(BEARER_PREFIX.length()).trim();
-        if (accessToken.isEmpty()) {
-            throw new UnauthorizedException("Access token is required");
-        }
-
-        return accessToken;
-    }
-
-    private Jwt decodeToken(String accessToken) {
-        try {
-            return jwtAccessTokenService.decode(accessToken);
-        } catch (JwtException exception) {
-            throw new UnauthorizedException("Access token is invalid or expired");
-        }
-    }
-
-    private Long parseUserId(String subject) {
-        try {
-            return Long.parseLong(subject);
-        } catch (NumberFormatException exception) {
-            throw new UnauthorizedException("Access token is invalid or expired");
-        }
-    }
 }
