@@ -2,6 +2,7 @@ package com.sportbooking.module.court.service;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,6 +24,7 @@ import com.sportbooking.module.court.dto.CourtSportResponse;
 import com.sportbooking.module.court.dto.VendorCourtDetailResponse;
 import com.sportbooking.module.court.dto.VendorCourtListResponse;
 import com.sportbooking.module.court.dto.VendorCourtRequest;
+import com.sportbooking.module.court.dto.VendorCourtTimeSlotConfigResponse;
 import com.sportbooking.module.court.dto.VendorCourtTimeSlotResponse;
 import com.sportbooking.module.court.dto.VendorCourtVenueResponse;
 import com.sportbooking.module.court.entity.Court;
@@ -95,6 +97,28 @@ public class VendorCourtService {
         }
 
         return toVendorDetailResponse(court);
+    }
+
+    @Transactional(readOnly = true)
+    public List<VendorCourtTimeSlotConfigResponse> getOwnCourtTimeSlots(Long courtId, String authorizationHeader) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Court court = getOwnedCourt(courtId, vendor, "You cannot view another vendor's court time slots");
+        Map<Long, TimeSlotStatus> courtSlotStatusByTimeSlotId = courtTimeSlotRepository.findByCourtId(court.getId())
+                .stream()
+                .collect(Collectors.toMap(
+                        courtTimeSlot -> courtTimeSlot.getTimeSlot().getId(),
+                        CourtTimeSlot::getStatus
+                ));
+
+        return timeSlotRepository.findByStatusOrderByStartTimeAscEndTimeAsc(TimeSlotStatus.ACTIVE)
+                .stream()
+                .map(timeSlot -> new VendorCourtTimeSlotConfigResponse(
+                        timeSlot.getId(),
+                        timeSlot.getStartTime(),
+                        timeSlot.getEndTime(),
+                        courtSlotStatusByTimeSlotId.getOrDefault(timeSlot.getId(), TimeSlotStatus.INACTIVE)
+                ))
+                .toList();
     }
 
     @Transactional

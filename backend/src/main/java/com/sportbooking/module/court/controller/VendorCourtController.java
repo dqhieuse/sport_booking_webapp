@@ -6,9 +6,11 @@ import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.VendorCourtDetailResponse;
 import com.sportbooking.module.court.dto.VendorCourtListResponse;
 import com.sportbooking.module.court.dto.VendorCourtRequest;
+import com.sportbooking.module.court.dto.VendorCourtTimeSlotConfigResponse;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.service.VendorCourtService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -62,6 +64,18 @@ public class VendorCourtController {
             @PathVariable Long id
     ) {
         VendorCourtDetailResponse response = vendorCourtService.getOwnCourtById(authorizationHeader, id);
+        return ApiResponse.success("Success", response);
+    }
+
+    @GetMapping("/{id}/time-slots")
+    public ApiResponse<List<VendorCourtTimeSlotConfigResponse>> getOwnCourtTimeSlots(
+            @PathVariable Long id,
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
+        List<VendorCourtTimeSlotConfigResponse> response = vendorCourtService.getOwnCourtTimeSlots(
+                id,
+                authorizationHeader
+        );
         return ApiResponse.success("Success", response);
     }
 
