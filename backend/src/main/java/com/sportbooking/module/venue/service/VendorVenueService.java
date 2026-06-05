@@ -5,6 +5,9 @@ import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.common.exception.UnauthorizedException;
+import com.sportbooking.common.storage.ImageStorageOptions;
+import com.sportbooking.common.storage.ImageStorageService;
+import com.sportbooking.config.StorageProperties;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.repository.CourtRepository;
@@ -15,8 +18,10 @@ import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.dto.VendorVenueRequest;
 import com.sportbooking.module.venue.dto.VendorVenueListResponse;
 import com.sportbooking.module.venue.dto.VenueDetailResponse;
+import com.sportbooking.module.venue.dto.VenueImageResponse;
 import com.sportbooking.module.venue.dto.VenueVendorResponse;
 import com.sportbooking.module.venue.entity.Venue;
+import com.sportbooking.module.venue.entity.VenueImage;
 import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueImageRepository;
 import com.sportbooking.module.venue.repository.VenueRepository;
@@ -27,18 +32,23 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
 public class VendorVenueService {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String VENUE_IMAGE_DIRECTORY = "venues";
+    private static final String VENUE_IMAGE_URL_PREFIX = "/uploads/venues/";
 
     private final VenueRepository venueRepository;
     private final VenueImageRepository venueImageRepository;
     private final CourtRepository courtRepository;
     private final UserRepository userRepository;
     private final JwtAccessTokenService jwtAccessTokenService;
+    private final ImageStorageService imageStorageService;
+    private final StorageProperties storageProperties;
 
     @Transactional(readOnly = true)
     public PageResponse<VendorVenueListResponse> getOwnVenues(
@@ -80,6 +90,92 @@ public class VendorVenueService {
         applyRequest(venue, request);
 
         return toDetailResponse(venueRepository.save(venue));
+    }
+
+    @Transactional
+    public VenueImageResponse uploadVenueImage(
+            Long venueId,
+            String authorizationHeader,
+            MultipartFile file,
+            Integer requestedSortOrder,
+            boolean requestedPrimary
+    ) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
+        if (!venue.getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You cannot upload images for another vendor's venue");
+        }
+
+        long currentImageCount = venueImageRepository.countByVenueId(venueId);
+        if (currentImageCount >= storageProperties.getVenueImage().getMaxImages()) {
+            throw new InvalidRequestException("Venue can have at most "
+                    + storageProperties.getVenueImage().getMaxImages() + " images");
+        }
+
+        int sortOrder = resolveSortOrder(venueId, requestedSortOrder);
+        String imageUrl = imageStorageService.store(file, venueImageStorageOptions());
+
+        try {
+            shiftImagesFromSortOrder(venueId, sortOrder);
+            boolean primary = requestedPrimary || currentImageCount == 0;
+            if (primary) {
+                unsetPrimaryImages(venueId);
+                venueImageRepository.flush();
+            }
+
+            VenueImage image = new VenueImage();
+            image.setVenue(venue);
+            image.setImageUrl(imageUrl);
+            image.setSortOrder(sortOrder);
+            image.setPrimary(primary);
+
+            return VenueImageResponse.from(venueImageRepository.saveAndFlush(image));
+        } catch (RuntimeException exception) {
+            imageStorageService.deleteIfManaged(imageUrl, venueImageStorageOptions());
+            throw exception;
+        }
+    }
+
+    @Transactional
+    public void deleteVenueImage(Long venueId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = getOwnedVenue(venueId, vendor, "You cannot delete images for another vendor's venue");
+        VenueImage image = getVenueImageForVenue(venue.getId(), imageId);
+
+        String imageUrl = image.getImageUrl();
+        int deletedSortOrder = image.getSortOrder();
+        boolean deletedPrimary = image.isPrimary();
+
+        venueImageRepository.delete(image);
+        venueImageRepository.flush();
+        shiftImagesAfterDelete(venue.getId(), deletedSortOrder);
+
+        if (deletedPrimary) {
+            venueImageRepository.findByVenueIdOrderBySortOrderAsc(venue.getId())
+                    .stream()
+                    .findFirst()
+                    .ifPresent(nextPrimaryImage -> nextPrimaryImage.setPrimary(true));
+        }
+
+        imageStorageService.deleteIfManaged(imageUrl, venueImageStorageOptions());
+    }
+
+    @Transactional
+    public VenueImageResponse setPrimaryVenueImage(Long venueId, Long imageId, String authorizationHeader) {
+        User vendor = getCurrentVendor(authorizationHeader);
+        Venue venue = getOwnedVenue(venueId, vendor, "You cannot update images for another vendor's venue");
+        VenueImage image = getVenueImageForVenue(venue.getId(), imageId);
+
+        if (image.isPrimary()) {
+            return VenueImageResponse.from(image);
+        }
+
+        unsetPrimaryImages(venue.getId());
+        venueImageRepository.flush();
+        image.setPrimary(true);
+
+        return VenueImageResponse.from(venueImageRepository.saveAndFlush(image));
     }
 
     @Transactional
@@ -128,6 +224,74 @@ public class VendorVenueService {
         }
 
         return user;
+    }
+
+    private Venue getOwnedVenue(Long venueId, User vendor, String forbiddenMessage) {
+        Venue venue = venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
+        if (!venue.getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException(forbiddenMessage);
+        }
+
+        return venue;
+    }
+
+    private VenueImage getVenueImageForVenue(Long venueId, Long imageId) {
+        VenueImage image = venueImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Venue image not found"));
+        if (!image.getVenue().getId().equals(venueId)) {
+            throw new ResourceNotFoundException("Venue image not found");
+        }
+
+        return image;
+    }
+
+    private int resolveSortOrder(Long venueId, Integer requestedSortOrder) {
+        if (requestedSortOrder != null && requestedSortOrder <= 0) {
+            throw new InvalidRequestException("Sort order must be greater than 0");
+        }
+
+        int endSortOrder = venueImageRepository.findMaxSortOrderByVenueId(venueId) + 1;
+        if (requestedSortOrder == null || requestedSortOrder > endSortOrder) {
+            return endSortOrder;
+        }
+
+        return requestedSortOrder;
+    }
+
+    private void shiftImagesFromSortOrder(Long venueId, int sortOrder) {
+        List<VenueImage> imagesToShift = venueImageRepository
+                .findByVenueIdAndSortOrderGreaterThanEqualOrderBySortOrderDesc(venueId, sortOrder);
+        for (VenueImage image : imagesToShift) {
+            image.setSortOrder(image.getSortOrder() + 1);
+            venueImageRepository.saveAndFlush(image);
+        }
+    }
+
+    private void shiftImagesAfterDelete(Long venueId, int deletedSortOrder) {
+        List<VenueImage> imagesToShift = venueImageRepository
+                .findByVenueIdAndSortOrderGreaterThanOrderBySortOrderAsc(venueId, deletedSortOrder);
+        for (VenueImage image : imagesToShift) {
+            image.setSortOrder(image.getSortOrder() - 1);
+        }
+    }
+
+    private void unsetPrimaryImages(Long venueId) {
+        venueImageRepository.findByVenueIdOrderBySortOrderAsc(venueId)
+                .forEach(image -> image.setPrimary(false));
+    }
+
+    private ImageStorageOptions venueImageStorageOptions() {
+        return new ImageStorageOptions(
+                VENUE_IMAGE_DIRECTORY,
+                VENUE_IMAGE_URL_PREFIX,
+                storageProperties.getVenueImage().getMaxFileSize(),
+                storageProperties.getVenueImage().getAllowedContentTypes(),
+                "Venue image is required",
+                "Venue image must be JPEG, PNG, or WebP",
+                "Venue image must be at most 5MB",
+                "Could not store venue image"
+        );
     }
 
     private void validateBusinessHours(VendorVenueRequest request) {

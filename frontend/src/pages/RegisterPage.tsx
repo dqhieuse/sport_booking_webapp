@@ -1,10 +1,14 @@
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, Mail, ShieldCheck, UserPlus } from 'lucide-react';
+import { CheckCircle, DangerCircle, Eye, EyeOff, Mail, ShieldCheck, UserPlus } from '@mynaui/icons-react';
 import { ChangeEvent, FormEvent, ReactNode, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
 import { registerLocalAccount } from '@/features/auth/api/authApi';
 import type { AuthUserResponse, RegisterRequest } from '@/features/auth/types';
 import { ApiError } from '@/lib/apiError';
@@ -192,8 +196,8 @@ export function RegisterPage() {
     <div className="mx-auto max-w-6xl">
       <section className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div className="space-y-6 lg:sticky lg:top-24">
-          <Badge className="w-fit gap-2 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+          <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
+            <UserPlus className="size-3.5" aria-hidden="true" />
             Join SportZone
           </Badge>
 
@@ -209,24 +213,24 @@ export function RegisterPage() {
 
           <div className="grid gap-3">
             <InfoRow
-              icon={<UserPlus className="h-5 w-5" aria-hidden="true" />}
+              icon={<UserPlus className="size-5" aria-hidden="true" />}
               title="Simple account setup"
               description="Only your name, email, phone, and password are required."
             />
             <InfoRow
-              icon={<Mail className="h-5 w-5" aria-hidden="true" />}
+              icon={<Mail className="size-5" aria-hidden="true" />}
               title="Email verification"
               description="Check your inbox after registration to activate the account."
             />
             <InfoRow
-              icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+              icon={<ShieldCheck className="size-5" aria-hidden="true" />}
               title="Protected credentials"
               description="Passwords are submitted securely to the backend and never displayed back."
             />
           </div>
         </div>
 
-        <Card className="sportzone-panel">
+        <Card>
           <CardHeader>
             <CardTitle>Register</CardTitle>
             <p className="text-sm leading-6 text-muted-foreground">
@@ -302,16 +306,16 @@ export function RegisterPage() {
                   placeholder="Re-enter your password"
                 />
 
-                <Button type="submit" size="lg" className="w-full rounded-xl" disabled={isSubmitting}>
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                      <Spinner className="size-5 animate-spin" aria-hidden="true" />
                       Creating account
                     </>
                   ) : (
                     <>
                       Create account
-                      <UserPlus className="h-5 w-5" aria-hidden="true" />
+                      <UserPlus className="size-5" aria-hidden="true" />
                     </>
                   )}
                 </Button>
@@ -338,10 +342,10 @@ type TextFieldProps = {
 function TextField({ id, label, value, onChange, error, type = 'text', autoComplete, placeholder }: TextFieldProps) {
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
+      <Label htmlFor={id}>
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id={id}
         name={id}
         type={type}
@@ -351,10 +355,7 @@ function TextField({ id, label, value, onChange, error, type = 'text', autoCompl
         placeholder={placeholder}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className={cn(
-          'soft-input h-12 w-full rounded-full px-4 text-sm',
-          error && 'border-destructive/70',
-        )}
+        className={cn(error && 'border-destructive')}
       />
       {error && <FieldError id={`${id}-error`} message={error} />}
     </div>
@@ -381,16 +382,11 @@ function PasswordField({
 }: PasswordFieldProps) {
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
+      <Label htmlFor={id}>
         {label}
-      </label>
-      <div
-        className={cn(
-          'soft-input flex h-12 items-center rounded-full',
-          error && 'border-destructive/70',
-        )}
-      >
-        <input
+      </Label>
+      <div className="relative">
+        <Input
           id={id}
           name={id}
           type={showPassword ? 'text' : 'password'}
@@ -400,15 +396,15 @@ function PasswordField({
           autoComplete={autoComplete}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-          className="min-w-0 flex-1 bg-transparent px-4 text-sm text-foreground placeholder:text-muted-foreground"
+          className={cn('pr-10', error && 'border-destructive')}
         />
         <button
           type="button"
           onClick={onTogglePassword}
-          className="soft-icon-button mr-2 h-9 w-9"
+          className="soft-icon-button absolute right-1 top-1 size-8"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
         >
-          {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+          {showPassword ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
         </button>
       </div>
       {error ? <FieldError id={`${id}-error`} message={error} /> : hint ? <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p> : null}
@@ -419,7 +415,7 @@ function PasswordField({
 function FieldError({ id, message }: { id: string; message: string }) {
   return (
     <p id={id} className="flex items-start gap-2 text-xs leading-5 text-destructive">
-      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <DangerCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
       {message}
     </p>
   );
@@ -427,17 +423,17 @@ function FieldError({ id, message }: { id: string; message: string }) {
 
 function InlineAlert({ message }: { message: string }) {
   return (
-    <div className="flex gap-3 rounded-2xl border border-destructive/35 bg-destructive/10 p-4 text-sm text-foreground">
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
-      <p className="leading-6">{message}</p>
-    </div>
+    <Alert variant="destructive">
+      <DangerCircle className="size-4" aria-hidden="true" />
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
 function InfoRow({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
   return (
-    <div className="flex gap-3 rounded-2xl border border-border/80 bg-card/80 p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+    <div className="flex gap-3 rounded-lg border bg-card p-4">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-primary">
         {icon}
       </div>
       <div>
@@ -451,9 +447,9 @@ function InfoRow({ icon, title, description }: { icon: ReactNode; title: string;
 function RegistrationSuccess({ user, onRegisterAnother }: { user: AuthUserResponse; onRegisterAnother: () => void }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
+      <div className="rounded-lg border border-primary/25 bg-primary/10 p-5">
         <div className="flex gap-4">
-          <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
+          <CheckCircle className="mt-1 size-6 shrink-0 text-primary" aria-hidden="true" />
           <div>
             <h2 className="font-display text-2xl font-semibold text-foreground">Check your email</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -464,7 +460,7 @@ function RegistrationSuccess({ user, onRegisterAnother }: { user: AuthUserRespon
         </div>
       </div>
 
-      <dl className="grid gap-3 rounded-2xl border border-border/80 bg-secondary/70 p-4 text-sm sm:grid-cols-2">
+      <dl className="grid gap-3 rounded-lg border bg-muted/40 p-4 text-sm sm:grid-cols-2">
         <AccountDetail label="Full name" value={user.fullName} />
         <AccountDetail label="Phone" value={user.phone} />
         <AccountDetail label="Status" value={user.status.replace(/_/g, ' ')} />

@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
 import com.sportbooking.module.court.entity.CourtStatus;
+import com.sportbooking.module.court.repository.CourtImageRepository;
 import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
 import com.sportbooking.module.sport.entity.SportStatus;
@@ -26,12 +29,16 @@ import com.sportbooking.module.user.repository.RoleRepository;
 import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueRepository;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
@@ -48,6 +55,9 @@ class VendorCourtControllerTest {
 
     @Autowired
     private CourtRepository courtRepository;
+
+    @Autowired
+    private CourtImageRepository courtImageRepository;
 
     @Autowired
     private CourtTimeSlotRepository courtTimeSlotRepository;
@@ -177,6 +187,168 @@ class VendorCourtControllerTest {
         Integer courtId = JsonPath.read(result.getResponse().getContentAsString(), "$.data.id");
         assertThat(courtTimeSlotRepository.findByCourtIdAndStatus(courtId.longValue(), TimeSlotStatus.ACTIVE))
                 .hasSize(2);
+    }
+
+    @Test
+    void uploadCourtImageStoresFirstImageAsPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "court.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        MvcResult result = mockMvc.perform(multipart("/api/vendor/courts/{id}/images", courtId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Court image uploaded successfully")))
+                .andExpect(jsonPath("$.data.imageUrl").exists())
+                .andExpect(jsonPath("$.data.isPrimary", is(true)))
+                .andExpect(jsonPath("$.data.sortOrder", is(1)))
+                .andReturn();
+
+        String imageUrl = JsonPath.read(result.getResponse().getContentAsString(), "$.data.imageUrl");
+        assertThat(Files.exists(localCourtImagePath(imageUrl))).isTrue();
+        mockMvc.perform(get(URI.create(imageUrl).getPath()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void uploadCourtImageCanInsertAtSortOrderAndSetPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", 1, true);
+
+        var images = courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId);
+        assertThat(images).hasSize(2);
+        assertThat(images.get(0).getId()).isEqualTo(secondImageId);
+        assertThat(images.get(0).getSortOrder()).isEqualTo(1);
+        assertThat(images.get(0).isPrimary()).isTrue();
+        assertThat(images.get(1).getSortOrder()).isEqualTo(2);
+        assertThat(images.get(1).isPrimary()).isFalse();
+    }
+
+    @Test
+    void uploadCourtImageShiftsExistingImagesWhenInsertedInMiddle() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        Long firstImageId = uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", null, false);
+
+        Long middleImageId = uploadCourtImageAndReturnId(accessToken, courtId, "middle.png", 2, false);
+
+        var images = courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId);
+        assertThat(images).hasSize(3);
+        assertThat(images).extracting("id").containsExactly(firstImageId, middleImageId, secondImageId);
+        assertThat(images).extracting("sortOrder").containsExactly(1, 2, 3);
+    }
+
+    @Test
+    void uploadCourtImageReturnsBadRequestWhenContentTypeIsInvalid() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "court.txt",
+                "text/plain",
+                "not-an-image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/vendor/courts/{id}/images", courtId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Court image must be JPEG, PNG, or WebP")));
+    }
+
+    @Test
+    void uploadCourtImageReturnsBadRequestWhenSortOrderIsInvalid() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "court.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/vendor/courts/{id}/images", courtId)
+                        .file(image)
+                        .param("sortOrder", "0")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Sort order must be greater than 0")));
+    }
+
+    @Test
+    void uploadCourtImageReturnsForbiddenWhenCourtBelongsToAnotherVendor() throws Exception {
+        String otherVendorToken = createVendorAndReturnAccessToken();
+        Long existingCourtId = courtRepository.findAll().getFirst().getId();
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                "court.png",
+                "image/png",
+                "fake-png-content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/vendor/courts/{id}/images", existingCourtId)
+                        .file(image)
+                        .header("Authorization", "Bearer " + otherVendorToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("You cannot upload images for another vendor's court")));
+    }
+
+    @Test
+    void setPrimaryCourtImageUnsetsPreviousPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        Long firstImageId = uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", null, false);
+
+        mockMvc.perform(put("/api/vendor/courts/{id}/images/{imageId}/primary", courtId, secondImageId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Court primary image updated successfully")))
+                .andExpect(jsonPath("$.data.id", is(secondImageId.intValue())))
+                .andExpect(jsonPath("$.data.isPrimary", is(true)));
+
+        var firstImage = courtImageRepository.findById(firstImageId).orElseThrow();
+        var secondImage = courtImageRepository.findById(secondImageId).orElseThrow();
+        assertThat(firstImage.isPrimary()).isFalse();
+        assertThat(secondImage.isPrimary()).isTrue();
+    }
+
+    @Test
+    void deleteCourtImageRemovesFileShiftsOrderAndPromotesNextPrimary() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        Long firstImageId = uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", null, false);
+        var firstImagePath = localCourtImagePath(courtImageRepository.findById(firstImageId).orElseThrow().getImageUrl());
+
+        mockMvc.perform(delete("/api/vendor/courts/{id}/images/{imageId}", courtId, firstImageId)
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Court image deleted successfully")));
+
+        assertThat(courtImageRepository.findById(firstImageId)).isEmpty();
+        assertThat(Files.exists(firstImagePath)).isFalse();
+        var remainingImages = courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId);
+        assertThat(remainingImages).hasSize(1);
+        assertThat(remainingImages.getFirst().getId()).isEqualTo(secondImageId);
+        assertThat(remainingImages.getFirst().getSortOrder()).isEqualTo(1);
+        assertThat(remainingImages.getFirst().isPrimary()).isTrue();
     }
 
     @Test
@@ -318,6 +490,52 @@ class VendorCourtControllerTest {
                 .andReturn();
 
         return JsonPath.read(result.getResponse().getContentAsString(), "$.data.accessToken");
+    }
+
+    private Long createCourtAndReturnId(String accessToken) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/vendor/courts")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validCourtJson()))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Integer id = JsonPath.read(result.getResponse().getContentAsString(), "$.data.id");
+        return id.longValue();
+    }
+
+    private Long uploadCourtImageAndReturnId(
+            String accessToken,
+            Long courtId,
+            String filename,
+            Integer sortOrder,
+            boolean isPrimary
+    ) throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "file",
+                filename,
+                "image/png",
+                ("fake-content-" + filename).getBytes()
+        );
+        var request = multipart("/api/vendor/courts/{id}/images", courtId)
+                .file(image)
+                .header("Authorization", "Bearer " + accessToken)
+                .param("isPrimary", Boolean.toString(isPrimary));
+        if (sortOrder != null) {
+            request.param("sortOrder", sortOrder.toString());
+        }
+
+        MvcResult result = mockMvc.perform(request)
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Integer id = JsonPath.read(result.getResponse().getContentAsString(), "$.data.id");
+        return id.longValue();
+    }
+
+    private Path localCourtImagePath(String imageUrl) {
+        String filename = Path.of(URI.create(imageUrl).getPath()).getFileName().toString();
+        return Path.of("target/test-uploads/courts").toAbsolutePath().normalize().resolve(filename);
     }
 
     private String createVendorAndReturnAccessToken() {

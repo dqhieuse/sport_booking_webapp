@@ -1,9 +1,12 @@
-import { ArrowRight, Search } from 'lucide-react';
+import { ArrowRight, Calendar, MapPin, Search } from '@mynaui/icons-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/empty-state';
+import { Input } from '@/components/ui/input';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { getPublicCourts } from '@/features/courts/api/courtsApi';
 import { CourtSuggestionCard } from '@/features/courts/components/CourtSuggestionCard';
@@ -41,12 +44,12 @@ function DiscoverySkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="rounded-2xl border border-border/80 bg-card/80 p-4">
-          <div className="h-32 rounded-xl bg-muted animate-soft-pulse" />
+        <div key={index} className="rounded-lg border bg-card p-4">
+          <Skeleton className="h-32 rounded-md" />
           <div className="mt-5 space-y-3">
-            <div className="h-5 w-2/3 rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-4 w-full rounded-full bg-muted animate-soft-pulse" />
-            <div className="h-4 w-4/5 rounded-full bg-muted animate-soft-pulse" />
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
           </div>
         </div>
       ))}
@@ -122,14 +125,14 @@ export function HomePage() {
       <section>
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div className="space-y-7">
-            <Badge className="w-fit gap-2 px-4 py-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+            <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
+              <Calendar className="size-3.5" aria-hidden="true" />
               Book faster
             </Badge>
 
             <div className="max-w-4xl space-y-5">
               <h1 className="font-display text-4xl font-semibold leading-[1.06] text-foreground sm:text-5xl lg:text-6xl">
-                Find your next court without the phone calls.
+                Find your next court without the phone calls
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                 Explore sports, compare venues, and jump into available courts from one clean discovery screen.
@@ -138,28 +141,28 @@ export function HomePage() {
 
             <form
               onSubmit={handleSearchSubmit}
-              className="flex flex-col items-stretch gap-2 rounded-[1.35rem] border border-border/80 bg-secondary/70 p-2 shadow-inner shadow-black/[0.03] transition focus-within:border-primary/35 focus-within:bg-card/90 focus-within:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)] sm:flex-row sm:items-center dark:shadow-black/20"
+              className="flex flex-col items-stretch gap-2 rounded-lg border bg-background p-2 shadow-sm sm:flex-row sm:items-center"
             >
               <label className="sr-only" htmlFor="court-search">
                 Search courts
               </label>
               <div className="flex flex-1 items-center gap-3 px-4 py-3">
-                <Search className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-                <input
+                <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <Input
                   id="court-search"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
                   placeholder="Search by court, venue, or sport"
-                  className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground"
+                  className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
               <Button type="submit" size="default" className="sm:mr-0">
                 Search courts
-                <ArrowRight className="h-5" aria-hidden="true" />
+                <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
             </form>
           </div>
-          <div className="hidden rounded-[1.5rem] border border-border/80 bg-secondary/60 p-5 lg:block">
+          <div className="hidden rounded-lg border bg-card p-5 shadow-sm lg:block">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Metric label="Sports" value={isLoading ? '...' : String(discovery.sports.length)} />
               <Metric label="Venues" value={isLoading ? '...' : String(discovery.venues.length)} />
@@ -194,7 +197,7 @@ export function HomePage() {
                 <Button key={sport.id} asChild variant="secondary">
                   <Link to={`${routePaths.courts}?sportId=${sport.id}`}>
                     {sport.name}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
                 </Button>
               ))}
@@ -248,7 +251,7 @@ function SectionHeader({ eyebrow, title, to }: SectionHeaderProps) {
       <Button asChild variant="ghost" className="w-fit">
         <Link to={to}>
           View all
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </Button>
     </div>
@@ -257,15 +260,18 @@ function SectionHeader({ eyebrow, title, to }: SectionHeaderProps) {
 
 function EmptyDiscoveryMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-border/80 bg-card/80 p-6 text-sm text-muted-foreground">
-      {message}
-    </div>
+    <EmptyState
+      icon={<MapPin className="size-6" aria-hidden="true" />}
+      title="Nothing to show yet"
+      description={message}
+      className="max-w-none rounded-lg border bg-card py-10"
+    />
   );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/80 p-4">
+    <div className="rounded-lg border bg-background p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-2xl font-semibold text-foreground">{value}</p>
     </div>
