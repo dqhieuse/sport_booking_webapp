@@ -214,6 +214,21 @@ class VendorVenueControllerTest {
     }
 
     @Test
+    void uploadVenueImageShiftsExistingImagesWhenInsertedInMiddle() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long venueId = createVenueAndReturnId(accessToken);
+        Long firstImageId = uploadVenueImageAndReturnId(accessToken, venueId, "first.png", null, false);
+        Long secondImageId = uploadVenueImageAndReturnId(accessToken, venueId, "second.png", null, false);
+
+        Long middleImageId = uploadVenueImageAndReturnId(accessToken, venueId, "middle.png", 2, false);
+
+        var images = venueImageRepository.findByVenueIdOrderBySortOrderAsc(venueId);
+        assertThat(images).hasSize(3);
+        assertThat(images).extracting("id").containsExactly(firstImageId, middleImageId, secondImageId);
+        assertThat(images).extracting("sortOrder").containsExactly(1, 2, 3);
+    }
+
+    @Test
     void uploadVenueImageReturnsBadRequestWhenContentTypeIsInvalid() throws Exception {
         String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
         Long venueId = createVenueAndReturnId(accessToken);

@@ -235,6 +235,21 @@ class VendorCourtControllerTest {
     }
 
     @Test
+    void uploadCourtImageShiftsExistingImagesWhenInsertedInMiddle() throws Exception {
+        String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
+        Long courtId = createCourtAndReturnId(accessToken);
+        Long firstImageId = uploadCourtImageAndReturnId(accessToken, courtId, "first.png", null, false);
+        Long secondImageId = uploadCourtImageAndReturnId(accessToken, courtId, "second.png", null, false);
+
+        Long middleImageId = uploadCourtImageAndReturnId(accessToken, courtId, "middle.png", 2, false);
+
+        var images = courtImageRepository.findByCourtIdOrderBySortOrderAsc(courtId);
+        assertThat(images).hasSize(3);
+        assertThat(images).extracting("id").containsExactly(firstImageId, middleImageId, secondImageId);
+        assertThat(images).extracting("sortOrder").containsExactly(1, 2, 3);
+    }
+
+    @Test
     void uploadCourtImageReturnsBadRequestWhenContentTypeIsInvalid() throws Exception {
         String accessToken = loginAndReturnAccessToken("vendor@sportbooking.local");
         Long courtId = createCourtAndReturnId(accessToken);
