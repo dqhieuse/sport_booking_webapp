@@ -994,8 +994,12 @@ Auth: USER, VENDOR, ADMIN
 
 Note:
 
-- Available slots are calculated from active `court_time_slots`.
-- The system excludes slots that already have active bookings on the selected date.
+- The response includes every time slot configured for the court, ordered by start time.
+- `AVAILABLE`: the slot can be selected.
+- `BOOKED`: the slot has a `PENDING` or `CONFIRMED` booking on the selected date.
+- `EXPIRED`: the slot has already started when the selected date is today.
+- `MAINTENANCE`: the court slot configuration or global time slot is inactive.
+- The booking window includes today and the next 13 days.
 
 Query params:
 
@@ -1017,13 +1021,13 @@ Response:
         "id": 1,
         "startTime": "06:00",
         "endTime": "07:00",
-        "available": true
+        "status": "BOOKED"
       },
       {
         "id": 2,
         "startTime": "07:00",
         "endTime": "08:00",
-        "available": true
+        "status": "MAINTENANCE"
       }
     ]
   }
