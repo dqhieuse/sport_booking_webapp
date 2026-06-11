@@ -1476,6 +1476,7 @@ Note:
 - User can only view their own bookings.
 - Vendor can only view bookings for their own courts.
 - Admin can view all bookings.
+- An authenticated caller without ownership permission receives `403 Forbidden`.
 
 Response:
 
@@ -1491,6 +1492,15 @@ Response:
     "totalPrice": 120000,
     "status": "PENDING",
     "note": "Booking for a group of 6 people",
+    "slots": [
+      {
+        "id": 21,
+        "timeSlotId": 3,
+        "startTime": "08:00",
+        "endTime": "09:00",
+        "slotPrice": 120000
+      }
+    ],
     "user": {
       "id": 1,
       "fullName": "Nguyen Van A",
@@ -1525,6 +1535,14 @@ PUT /bookings/{id}/cancel
 ```
 
 Auth: USER
+
+Cancellation rules:
+
+- Only the booking owner can cancel.
+- Only future `PENDING` or `CONFIRMED` bookings can be cancelled.
+- Cancelling releases the selected time slots for another booking.
+- A paid VNPAY payment moves to `REFUND_PENDING`.
+- A cash payment already marked `PAID` must be handled by the Vendor.
 
 Response:
 

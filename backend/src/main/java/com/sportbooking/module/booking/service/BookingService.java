@@ -2,10 +2,17 @@ package com.sportbooking.module.booking.service;
 
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.DuplicateResourceException;
+import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.module.auth.service.CurrentUserService;
 import com.sportbooking.module.booking.dto.BookingPaymentResponse;
+import com.sportbooking.module.booking.dto.BookingDetailCourtResponse;
+import com.sportbooking.module.booking.dto.BookingDetailPaymentResponse;
+import com.sportbooking.module.booking.dto.BookingDetailResponse;
+import com.sportbooking.module.booking.dto.BookingDetailUserResponse;
+import com.sportbooking.module.booking.dto.BookingDetailVenueResponse;
+import com.sportbooking.module.booking.dto.BookingCancellationResponse;
 import com.sportbooking.module.booking.dto.CreateBookingRequest;
 import com.sportbooking.module.booking.dto.CreateBookingResponse;
 import com.sportbooking.module.booking.dto.CreatedBookingSlotResponse;
@@ -13,6 +20,11 @@ import com.sportbooking.module.booking.dto.MyBookingCourtResponse;
 import com.sportbooking.module.booking.dto.MyBookingPaymentResponse;
 import com.sportbooking.module.booking.dto.MyBookingResponse;
 import com.sportbooking.module.booking.dto.MyBookingVenueResponse;
+import com.sportbooking.module.booking.dto.VendorBookingCourtResponse;
+import com.sportbooking.module.booking.dto.VendorBookingPaymentResponse;
+import com.sportbooking.module.booking.dto.VendorBookingResponse;
+import com.sportbooking.module.booking.dto.VendorBookingActionResponse;
+import com.sportbooking.module.booking.dto.VendorBookingUserResponse;
 import com.sportbooking.module.booking.entity.Booking;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
@@ -30,11 +42,13 @@ import com.sportbooking.module.payment.entity.PaymentStatus;
 import com.sportbooking.module.payment.repository.PaymentRepository;
 import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import com.sportbooking.module.user.entity.User;
+import com.sportbooking.module.user.entity.RoleName;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -78,6 +92,192 @@ public class BookingService {
                 .toList();
 
         return PageResponse.from(bookingPage, items);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<VendorBookingResponse> getVendorBookings(
+            String authorizationHeader,
+            BookingStatus status,
+            Long courtId,
+            LocalDate date,
+            Pageable pageable
+    ) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+
+        if (courtId != null) {
+            Court court = courtRepository.findById(courtId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+            if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+                throw new ForbiddenException("You do not own this court");
+            }
+        }
+
+        var bookingPage = bookingRepository.findVendorBookings(
+                vendor.getId(),
+                status,
+                courtId,
+                date,
+                pageable
+        );
+
+        List<VendorBookingResponse> items = bookingPage.stream()
+                .map(this::toVendorBookingResponse)
+                .toList();
+
+        return PageResponse.from(bookingPage, items);
+    }
+
+    private VendorBookingResponse toVendorBookingResponse(Booking booking) {
+        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
+                .sorted((first, second) -> first.getTimeSlot().getStartTime()
+                        .compareTo(second.getTimeSlot().getStartTime()))
+                .toList();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        var court = booking.getCourt();
+        var bookingUser = booking.getUser();
+
+        return new VendorBookingResponse(
+                booking.getId(),
+                booking.getBookingDate(),
+                bookingTimeSlots.getFirst().getTimeSlot().getStartTime(),
+                bookingTimeSlots.getLast().getTimeSlot().getEndTime(),
+                booking.getTotalPrice(),
+                booking.getStatus(),
+                new VendorBookingUserResponse(bookingUser.getId(), bookingUser.getFullName(), bookingUser.getPhone()),
+                new VendorBookingCourtResponse(court.getId(), court.getName()),
+                new VendorBookingPaymentResponse(payment.getMethod(), payment.getStatus())
+        );
+    }
+
+    private Booking getAndValidateVendorBooking(User vendor, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if (!booking.getCourt().getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You do not own this booking");
+        }
+        return booking;
+    }
+
+    @Transactional
+    public VendorBookingActionResponse confirmBookingByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new InvalidRequestException("Only pending bookings can be confirmed");
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.saveAndFlush(booking);
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional
+    public VendorBookingActionResponse rejectBookingByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new InvalidRequestException("Only pending bookings can be rejected");
+        }
+
+        booking.setStatus(BookingStatus.REJECTED);
+        bookingRepository.saveAndFlush(booking);
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            payment.setStatus(PaymentStatus.REFUND_PENDING);
+            payment.setRefundAmount(payment.getAmount());
+            payment.setRefundReason("Vendor rejected booking");
+            paymentRepository.saveAndFlush(payment);
+        }
+
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional
+    public VendorBookingActionResponse cancelBookingByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        validateBookingCanBeCancelled(booking);
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.saveAndFlush(booking);
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            if (payment.getMethod() == PaymentMethod.VNPAY) {
+                payment.setStatus(PaymentStatus.REFUND_PENDING);
+                payment.setRefundAmount(payment.getAmount());
+                payment.setRefundReason("Vendor cancelled booking");
+                paymentRepository.saveAndFlush(payment);
+            }
+        }
+
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional
+    public VendorBookingActionResponse markCashPaidByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
+            throw new InvalidRequestException("Cannot mark paid for cancelled or rejected booking");
+        }
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        if (payment.getMethod() != PaymentMethod.CASH_AT_COURT) {
+            throw new InvalidRequestException("Only CASH_AT_COURT bookings can be marked as paid");
+        }
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new InvalidRequestException("Payment is already paid");
+        }
+
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(LocalDateTime.now());
+        paymentRepository.saveAndFlush(payment);
+
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingDetail(String authorizationHeader, Long bookingId) {
+        User currentUser = currentUserService.requireActiveUser(authorizationHeader);
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        validateBookingDetailPermission(currentUser, booking);
+
+        return toBookingDetailResponse(booking);
+    }
+
+    @Transactional
+    public BookingCancellationResponse cancelBooking(String authorizationHeader, Long bookingId) {
+        User currentUser = currentUserService.requireActiveCustomer(authorizationHeader);
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if (!booking.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You cannot cancel this booking");
+        }
+
+        validateBookingCanBeCancelled(booking);
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        handleCancellationPayment(payment);
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.saveAndFlush(booking);
+        if (payment.getStatus() == PaymentStatus.REFUND_PENDING) {
+            paymentRepository.saveAndFlush(payment);
+        }
+
+        return new BookingCancellationResponse(
+                booking.getId(),
+                booking.getStatus(),
+                payment.getStatus()
+        );
     }
 
     @Transactional
@@ -319,6 +519,97 @@ public class BookingService {
                 ),
                 new MyBookingVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
                 new MyBookingPaymentResponse(payment.getMethod(), payment.getStatus())
+        );
+    }
+
+    private void validateBookingDetailPermission(User currentUser, Booking booking) {
+        RoleName roleName = currentUser.getRole().getName();
+        boolean allowed = switch (roleName) {
+            case USER -> booking.getUser().getId().equals(currentUser.getId());
+            case VENDOR -> booking.getCourt().getVenue().getVendor().getId().equals(currentUser.getId());
+            case ADMIN -> true;
+        };
+        if (!allowed) {
+            throw new ForbiddenException("You cannot view this booking");
+        }
+    }
+
+    private void validateBookingCanBeCancelled(Booking booking) {
+        if (booking.getStatus() != BookingStatus.PENDING
+                && booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new InvalidRequestException("Booking cannot be cancelled in its current status");
+        }
+
+        if (booking.getBookingDate().isBefore(LocalDate.now())) {
+            throw new InvalidRequestException("Booking has already started");
+        }
+        if (booking.getBookingDate().isEqual(LocalDate.now())) {
+            LocalTime startTime = booking.getTimeSlots().stream()
+                    .map(bookingTimeSlot -> bookingTimeSlot.getTimeSlot().getStartTime())
+                    .min(LocalTime::compareTo)
+                    .orElseThrow();
+            if (!startTime.isAfter(LocalTime.now())) {
+                throw new InvalidRequestException("Booking has already started");
+            }
+        }
+    }
+
+    private void handleCancellationPayment(Payment payment) {
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            return;
+        }
+        if (payment.getMethod() == PaymentMethod.CASH_AT_COURT) {
+            throw new InvalidRequestException("Paid cash booking must be cancelled by the vendor");
+        }
+
+        payment.setStatus(PaymentStatus.REFUND_PENDING);
+        payment.setRefundAmount(payment.getAmount());
+        payment.setRefundReason("User cancelled booking");
+    }
+
+    private BookingDetailResponse toBookingDetailResponse(Booking booking) {
+        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
+                .sorted((first, second) -> first.getTimeSlot().getStartTime()
+                        .compareTo(second.getTimeSlot().getStartTime()))
+                .toList();
+        List<CreatedBookingSlotResponse> slots = bookingTimeSlots.stream()
+                .map(bookingTimeSlot -> new CreatedBookingSlotResponse(
+                        bookingTimeSlot.getId(),
+                        bookingTimeSlot.getTimeSlot().getId(),
+                        bookingTimeSlot.getTimeSlot().getStartTime(),
+                        bookingTimeSlot.getTimeSlot().getEndTime(),
+                        bookingTimeSlot.getSlotPrice()
+                ))
+                .toList();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        User bookingUser = booking.getUser();
+        var court = booking.getCourt();
+        var venue = court.getVenue();
+
+        return new BookingDetailResponse(
+                booking.getId(),
+                booking.getBookingDate(),
+                bookingTimeSlots.getFirst().getTimeSlot().getStartTime(),
+                bookingTimeSlots.getLast().getTimeSlot().getEndTime(),
+                booking.getTotalPrice(),
+                booking.getStatus(),
+                booking.getNote(),
+                slots,
+                new BookingDetailUserResponse(
+                        bookingUser.getId(),
+                        bookingUser.getFullName(),
+                        bookingUser.getEmail(),
+                        bookingUser.getPhone()
+                ),
+                new BookingDetailCourtResponse(court.getId(), court.getName(), court.getPricePerHour()),
+                new BookingDetailVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
+                new BookingDetailPaymentResponse(
+                        payment.getMethod(),
+                        payment.getStatus(),
+                        payment.getAmount(),
+                        payment.getPaidAt()
+                ),
+                booking.getCreatedAt()
         );
     }
 
