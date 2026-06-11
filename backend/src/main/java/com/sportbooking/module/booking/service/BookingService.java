@@ -23,6 +23,7 @@ import com.sportbooking.module.booking.dto.MyBookingVenueResponse;
 import com.sportbooking.module.booking.dto.VendorBookingCourtResponse;
 import com.sportbooking.module.booking.dto.VendorBookingPaymentResponse;
 import com.sportbooking.module.booking.dto.VendorBookingResponse;
+import com.sportbooking.module.booking.dto.VendorBookingActionResponse;
 import com.sportbooking.module.booking.dto.VendorBookingUserResponse;
 import com.sportbooking.module.booking.entity.Booking;
 import com.sportbooking.module.booking.entity.BookingStatus;
@@ -145,6 +146,77 @@ public class BookingService {
                 new VendorBookingCourtResponse(court.getId(), court.getName()),
                 new VendorBookingPaymentResponse(payment.getMethod(), payment.getStatus())
         );
+    }
+
+    private Booking getAndValidateVendorBooking(User vendor, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if (!booking.getCourt().getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You do not own this booking");
+        }
+        return booking;
+    }
+
+    @Transactional
+    public VendorBookingActionResponse confirmBookingByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new InvalidRequestException("Only pending bookings can be confirmed");
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.saveAndFlush(booking);
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional
+    public VendorBookingActionResponse rejectBookingByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new InvalidRequestException("Only pending bookings can be rejected");
+        }
+
+        booking.setStatus(BookingStatus.REJECTED);
+        bookingRepository.saveAndFlush(booking);
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            payment.setStatus(PaymentStatus.REFUND_PENDING);
+            payment.setRefundAmount(payment.getAmount());
+            payment.setRefundReason("Vendor rejected booking");
+            paymentRepository.saveAndFlush(payment);
+        }
+
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional
+    public VendorBookingActionResponse cancelBookingByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        validateBookingCanBeCancelled(booking);
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.saveAndFlush(booking);
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            if (payment.getMethod() == PaymentMethod.VNPAY) {
+                payment.setStatus(PaymentStatus.REFUND_PENDING);
+                payment.setRefundAmount(payment.getAmount());
+                payment.setRefundReason("Vendor cancelled booking");
+                paymentRepository.saveAndFlush(payment);
+            }
+        }
+
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
     }
 
     @Transactional(readOnly = true)

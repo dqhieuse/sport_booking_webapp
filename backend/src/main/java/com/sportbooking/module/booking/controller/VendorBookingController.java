@@ -3,6 +3,7 @@ package com.sportbooking.module.booking.controller;
 import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.module.booking.dto.VendorBookingResponse;
+import com.sportbooking.module.booking.dto.VendorBookingActionResponse;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.service.BookingService;
 import java.time.LocalDate;
@@ -12,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -53,5 +56,32 @@ public class VendorBookingController {
                 pageable
         );
         return ApiResponse.success("Success", response);
+    }
+
+    @PutMapping("/{id}/confirm")
+    public ApiResponse<VendorBookingActionResponse> confirmBooking(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @PathVariable Long id
+    ) {
+        VendorBookingActionResponse response = bookingService.confirmBookingByVendor(authorizationHeader, id);
+        return ApiResponse.success("Booking confirmed successfully", response);
+    }
+
+    @PutMapping("/{id}/reject")
+    public ApiResponse<VendorBookingActionResponse> rejectBooking(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @PathVariable Long id
+    ) {
+        VendorBookingActionResponse response = bookingService.rejectBookingByVendor(authorizationHeader, id);
+        return ApiResponse.success("Booking rejected successfully", response);
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ApiResponse<VendorBookingActionResponse> cancelBooking(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @PathVariable Long id
+    ) {
+        VendorBookingActionResponse response = bookingService.cancelBookingByVendor(authorizationHeader, id);
+        return ApiResponse.success("Booking cancelled successfully", response);
     }
 }
