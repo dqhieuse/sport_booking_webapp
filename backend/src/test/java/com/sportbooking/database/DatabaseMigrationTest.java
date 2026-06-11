@@ -30,6 +30,30 @@ class DatabaseMigrationTest {
                 "select count(*) from information_schema.tables where table_name = 'bookings'",
                 Integer.class
         );
+        Integer paymentTableCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.tables where table_name = 'payments'",
+                Integer.class
+        );
+        Integer bookingTimeSlotTableCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.tables where table_name = 'booking_time_slots'",
+                Integer.class
+        );
+        Integer activeSlotKeyColumnCount = jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                from information_schema.columns
+                where table_name = 'booking_time_slots' and column_name = 'active_slot_key'
+                """,
+                Integer.class
+        );
+        Integer legacyBookingTimeSlotColumnCount = jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                from information_schema.columns
+                where table_name = 'bookings' and column_name = 'time_slot_id'
+                """,
+                Integer.class
+        );
 
         assertThat(roleCount).isEqualTo(3);
         assertThat(sportCount).isEqualTo(5);
@@ -41,5 +65,9 @@ class DatabaseMigrationTest {
         assertThat(courtImageCount).isEqualTo(5);
         assertThat(courtTimeSlotCount).isEqualTo(40);
         assertThat(bookingTableCount).isEqualTo(1);
+        assertThat(paymentTableCount).isEqualTo(1);
+        assertThat(bookingTimeSlotTableCount).isEqualTo(1);
+        assertThat(activeSlotKeyColumnCount).isEqualTo(1);
+        assertThat(legacyBookingTimeSlotColumnCount).isZero();
     }
 }
