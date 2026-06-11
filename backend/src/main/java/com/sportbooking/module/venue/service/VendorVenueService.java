@@ -4,17 +4,13 @@ import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
-import com.sportbooking.common.exception.UnauthorizedException;
 import com.sportbooking.common.storage.ImageStorageOptions;
 import com.sportbooking.common.storage.ImageStorageService;
 import com.sportbooking.config.StorageProperties;
-import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.auth.service.CurrentUserService;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.repository.CourtRepository;
-import com.sportbooking.module.user.entity.RoleName;
 import com.sportbooking.module.user.entity.User;
-import com.sportbooking.module.user.entity.UserStatus;
-import com.sportbooking.module.user.repository.UserRepository;
 import com.sportbooking.module.venue.dto.VendorVenueRequest;
 import com.sportbooking.module.venue.dto.VendorVenueListResponse;
 import com.sportbooking.module.venue.dto.VenueDetailResponse;
@@ -28,8 +24,6 @@ import com.sportbooking.module.venue.repository.VenueRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,15 +32,13 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class VendorVenueService {
 
-    private static final String BEARER_PREFIX = "Bearer ";
     private static final String VENUE_IMAGE_DIRECTORY = "venues";
     private static final String VENUE_IMAGE_URL_PREFIX = "/uploads/venues/";
 
     private final VenueRepository venueRepository;
     private final VenueImageRepository venueImageRepository;
     private final CourtRepository courtRepository;
-    private final UserRepository userRepository;
-    private final JwtAccessTokenService jwtAccessTokenService;
+    private final CurrentUserService currentUserService;
     private final ImageStorageService imageStorageService;
     private final StorageProperties storageProperties;
 
@@ -56,7 +48,7 @@ public class VendorVenueService {
             VenueStatus status,
             Pageable pageable
     ) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         var venuePage = status == null
                 ? venueRepository.findByVendorId(vendor.getId(), pageable)
                 : venueRepository.findByVendorIdAndStatus(vendor.getId(), status, pageable);
@@ -69,7 +61,7 @@ public class VendorVenueService {
 
     @Transactional(readOnly = true)
     public VenueDetailResponse getOwnVenueById(String authorizationHeader, Long venueId) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Venue venue = venueRepository.findById(venueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
         if (!venue.getVendor().getId().equals(vendor.getId())) {
@@ -81,7 +73,7 @@ public class VendorVenueService {
 
     @Transactional
     public VenueDetailResponse createVenue(String authorizationHeader, VendorVenueRequest request) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         validateBusinessHours(request);
 
         Venue venue = new Venue();
@@ -100,7 +92,7 @@ public class VendorVenueService {
             Integer requestedSortOrder,
             boolean requestedPrimary
     ) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Venue venue = venueRepository.findById(venueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
         if (!venue.getVendor().getId().equals(vendor.getId())) {
@@ -139,7 +131,7 @@ public class VendorVenueService {
 
     @Transactional
     public void deleteVenueImage(Long venueId, Long imageId, String authorizationHeader) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Venue venue = getOwnedVenue(venueId, vendor, "You cannot delete images for another vendor's venue");
         VenueImage image = getVenueImageForVenue(venue.getId(), imageId);
 
@@ -163,7 +155,7 @@ public class VendorVenueService {
 
     @Transactional
     public VenueImageResponse setPrimaryVenueImage(Long venueId, Long imageId, String authorizationHeader) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Venue venue = getOwnedVenue(venueId, vendor, "You cannot update images for another vendor's venue");
         VenueImage image = getVenueImageForVenue(venue.getId(), imageId);
 
@@ -180,7 +172,7 @@ public class VendorVenueService {
 
     @Transactional
     public VenueDetailResponse updateVenue(Long venueId, String authorizationHeader, VendorVenueRequest request) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         validateBusinessHours(request);
 
         Venue venue = venueRepository.findById(venueId)
@@ -195,7 +187,7 @@ public class VendorVenueService {
 
     @Transactional
     public VenueDetailResponse deactivateVenue(Long venueId, String authorizationHeader) {
-        User vendor = getCurrentVendor(authorizationHeader);
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
         Venue venue = venueRepository.findById(venueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Venue not found"));
         if (!venue.getVendor().getId().equals(vendor.getId())) {
@@ -207,23 +199,6 @@ public class VendorVenueService {
                 .forEach(court -> court.setStatus(CourtStatus.INACTIVE));
 
         return toDetailResponse(venueRepository.save(venue));
-    }
-
-    private User getCurrentVendor(String authorizationHeader) {
-        String accessToken = extractBearerToken(authorizationHeader);
-        Jwt jwt = decodeToken(accessToken);
-        Long userId = parseUserId(jwt.getSubject());
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UnauthorizedException("Access token user does not exist"));
-
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ForbiddenException("Account is not active");
-        }
-        if (user.getRole().getName() != RoleName.VENDOR) {
-            throw new ForbiddenException("Vendor role is required");
-        }
-
-        return user;
     }
 
     private Venue getOwnedVenue(Long venueId, User vendor, String forbiddenMessage) {
@@ -353,32 +328,4 @@ public class VendorVenueService {
         return value.trim();
     }
 
-    private String extractBearerToken(String authorizationHeader) {
-        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-            throw new UnauthorizedException("Access token is required");
-        }
-
-        String accessToken = authorizationHeader.substring(BEARER_PREFIX.length()).trim();
-        if (accessToken.isEmpty()) {
-            throw new UnauthorizedException("Access token is required");
-        }
-
-        return accessToken;
-    }
-
-    private Jwt decodeToken(String accessToken) {
-        try {
-            return jwtAccessTokenService.decode(accessToken);
-        } catch (JwtException exception) {
-            throw new UnauthorizedException("Access token is invalid or expired");
-        }
-    }
-
-    private Long parseUserId(String subject) {
-        try {
-            return Long.parseLong(subject);
-        } catch (NumberFormatException exception) {
-            throw new UnauthorizedException("Access token is invalid or expired");
-        }
-    }
 }

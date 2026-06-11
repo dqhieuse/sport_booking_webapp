@@ -1,11 +1,9 @@
 import {
   Calendar,
-  Camera,
   CheckCircle,
   Edit,
   Mail,
   Mobile,
-  Pencil,
   Refresh,
   ShieldCheck,
   UserCircle,

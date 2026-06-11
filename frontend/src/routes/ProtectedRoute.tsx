@@ -1,14 +1,13 @@
-import { DangerTriangle, LockKeyhole } from '@mynaui/icons-react';
-import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { LockKeyhole } from '@mynaui/icons-react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import type { RoleName } from '@/features/auth/userTypes';
 import { useAuth } from '@/features/auth/useAuth';
 
-import { getRedirectPath } from './routeRedirect';
+import { getRedirectPath, getRoleHomePath } from './routeRedirect';
 import { routePaths } from './routePaths';
 
 type ProtectedRouteProps = {
@@ -28,7 +27,7 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && !allowedRoles.includes(session.user.role)) {
-    return <AccessDeniedPage allowedRoles={allowedRoles} />;
+    return <Navigate to={getRoleHomePath(session.user.role)} replace />;
   }
 
   return <Outlet />;
@@ -50,29 +49,18 @@ export function PublicOnlyRoute() {
   return <Outlet />;
 }
 
-function AccessDeniedPage({ allowedRoles }: { allowedRoles: RoleName[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <Badge variant="destructive" className="w-fit gap-2">
-          <DangerTriangle className="size-3.5" aria-hidden="true" />
-          Access denied
-        </Badge>
-        <CardTitle>You do not have permission to open this page.</CardTitle>
-        <CardDescription className="max-w-2xl leading-6">
-          This route is only available for {allowedRoles.join(' or ')} accounts.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-3">
-        <Button asChild>
-          <Link to={routePaths.home}>Back to home</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to={routePaths.profile}>View profile</Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
+export function RoleRestrictedRoute({ blockedRoles }: { blockedRoles: RoleName[] }) {
+  const { isInitializing, session } = useAuth();
+
+  if (isInitializing) {
+    return <AuthRouteState title="Checking session" description="Please wait while SportZone restores your login session." />;
+  }
+
+  if (session && blockedRoles.includes(session.user.role)) {
+    return <Navigate to={getRoleHomePath(session.user.role)} replace />;
+  }
+
+  return <Outlet />;
 }
 
 function AuthRouteState({ title, description }: { title: string; description: string }) {

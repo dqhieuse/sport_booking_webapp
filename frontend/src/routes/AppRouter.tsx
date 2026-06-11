@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { MainLayout } from '../layouts/MainLayout';
+import { VendorLayout } from '../layouts/VendorLayout';
+import { AdminProfilePage } from '../pages/admin/AdminProfilePage';
 import { CourtDetailPage } from '../pages/CourtDetailPage';
 import { CourtsPage } from '../pages/CourtsPage';
 import { HomePage } from '../pages/HomePage';
@@ -13,7 +15,18 @@ import { SportsPage } from '../pages/SportsPage';
 import { VenueDetailPage } from '../pages/VenueDetailPage';
 import { VenuesPage } from '../pages/VenuesPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';
-import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute';
+import { VendorCourtSlotsPage } from '../pages/vendor/VendorCourtSlotsPage';
+import { VendorCourtCreatePage } from '../pages/vendor/VendorCourtCreatePage';
+import { VendorCourtEditPage } from '../pages/vendor/VendorCourtEditPage';
+import { VendorCourtsPage } from '../pages/vendor/VendorCourtsPage';
+import { VendorDashboardPage } from '../pages/vendor/VendorDashboardPage';
+import { VendorImageCreatePage } from '../pages/vendor/VendorImageCreatePage';
+import { VendorImagesPage } from '../pages/vendor/VendorImagesPage';
+import { VendorProfilePage } from '../pages/vendor/VendorProfilePage';
+import { VendorVenueCreatePage } from '../pages/vendor/VendorVenueCreatePage';
+import { VendorVenueEditPage } from '../pages/vendor/VendorVenueEditPage';
+import { VendorVenuesPage } from '../pages/vendor/VendorVenuesPage';
+import { ProtectedRoute, PublicOnlyRoute, RoleRestrictedRoute } from './ProtectedRoute';
 import { routePaths } from './routePaths';
 
 export function AppRouter() {
@@ -21,27 +34,29 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route index element={<HomePage />} />
-          <Route
-            path={routePaths.sports}
-            element={<SportsPage />}
-          />
-          <Route
-            path={routePaths.venues}
-            element={<VenuesPage />}
-          />
-          <Route
-            path={routePaths.venueDetail}
-            element={<VenueDetailPage />}
-          />
-          <Route
-            path={routePaths.courts}
-            element={<CourtsPage />}
-          />
-          <Route
-            path={routePaths.courtDetail}
-            element={<CourtDetailPage />}
-          />
+          <Route element={<RoleRestrictedRoute blockedRoles={['VENDOR', 'ADMIN']} />}>
+            <Route index element={<HomePage />} />
+            <Route
+              path={routePaths.sports}
+              element={<SportsPage />}
+            />
+            <Route
+              path={routePaths.venues}
+              element={<VenuesPage />}
+            />
+            <Route
+              path={routePaths.venueDetail}
+              element={<VenueDetailPage />}
+            />
+            <Route
+              path={routePaths.courts}
+              element={<CourtsPage />}
+            />
+            <Route
+              path={routePaths.courtDetail}
+              element={<CourtDetailPage />}
+            />
+          </Route>
           <Route element={<PublicOnlyRoute />}>
             <Route
               path={routePaths.login}
@@ -56,7 +71,7 @@ export function AppRouter() {
             path={routePaths.verifyEmail}
             element={<VerifyEmailPage />}
           />
-          <Route element={<ProtectedRoute />}>
+          <Route element={<ProtectedRoute allowedRoles={['USER']} />}>
             <Route
               path={routePaths.profile}
               element={<ProfilePage />}
@@ -66,51 +81,91 @@ export function AppRouter() {
               element={<RoutePlaceholderPage title="Booking history" description="Review bookings and cancellation status." />}
             />
           </Route>
-          <Route element={<ProtectedRoute allowedRoles={['VENDOR']} />}>
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['VENDOR']} />}>
+          <Route element={<VendorLayout />}>
             <Route
               path={routePaths.vendorDashboard}
-              element={<RoutePlaceholderPage title="Vendor dashboard" description="Overview of vendor venues, courts, and bookings." />}
+              element={<VendorDashboardPage />}
+            />
+            <Route
+              path={routePaths.vendorProfile}
+              element={<VendorProfilePage />}
             />
             <Route
               path={routePaths.vendorVenues}
-              element={<RoutePlaceholderPage title="Vendor venues" description="Manage venues owned by the current vendor." />}
+              element={<VendorVenuesPage />}
+            />
+            <Route
+              path={routePaths.vendorVenueCreate}
+              element={<VendorVenueCreatePage />}
+            />
+            <Route
+              path={routePaths.vendorVenueEdit}
+              element={<VendorVenueEditPage />}
             />
             <Route
               path={routePaths.vendorCourts}
-              element={<RoutePlaceholderPage title="Vendor courts" description="Manage courts, prices, images, and time slots." />}
+              element={<VendorCourtsPage />}
+            />
+            <Route
+              path={routePaths.vendorCourtCreate}
+              element={<VendorCourtCreatePage />}
+            />
+            <Route
+              path={routePaths.vendorCourtEdit}
+              element={<VendorCourtEditPage />}
+            />
+            <Route
+              path={routePaths.vendorImages}
+              element={<VendorImagesPage />}
+            />
+            <Route
+              path={routePaths.vendorImageCreate}
+              element={<VendorImageCreatePage />}
+            />
+            <Route
+              path={routePaths.vendorSlots}
+              element={<VendorCourtSlotsPage />}
             />
             <Route
               path={routePaths.vendorBookings}
               element={<RoutePlaceholderPage title="Vendor bookings" description="Confirm, cancel, and manage venue bookings." />}
             />
           </Route>
-          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-            <Route
-              path={routePaths.adminDashboard}
-              element={<RoutePlaceholderPage title="Admin dashboard" description="Platform overview for administrators." />}
-            />
-            <Route
-              path={routePaths.adminSports}
-              element={<RoutePlaceholderPage title="Admin sports" description="Manage sport categories." />}
-            />
-            <Route
-              path={routePaths.adminUsers}
-              element={<RoutePlaceholderPage title="Admin users" description="Manage users, vendors, and account status." />}
-            />
-            <Route
-              path={routePaths.adminVenues}
-              element={<RoutePlaceholderPage title="Admin venues" description="Moderate venue information." />}
-            />
-            <Route
-              path={routePaths.adminCourts}
-              element={<RoutePlaceholderPage title="Admin courts" description="Moderate court information." />}
-            />
-            <Route
-              path={routePaths.adminBookings}
-              element={<RoutePlaceholderPage title="Admin bookings" description="Review platform bookings." />}
-            />
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+          <Route
+            path={routePaths.adminDashboard}
+            element={<RoutePlaceholderPage title="Admin dashboard" description="Platform overview for administrators." />}
+          />
+          <Route
+            path={routePaths.adminProfile}
+            element={<AdminProfilePage />}
+          />
+          <Route
+            path={routePaths.adminSports}
+            element={<RoutePlaceholderPage title="Admin sports" description="Manage sport categories." />}
+          />
+          <Route
+            path={routePaths.adminUsers}
+            element={<RoutePlaceholderPage title="Admin users" description="Manage users, vendors, and account status." />}
+          />
+          <Route
+            path={routePaths.adminVenues}
+            element={<RoutePlaceholderPage title="Admin venues" description="Moderate venue information." />}
+          />
+          <Route
+            path={routePaths.adminCourts}
+            element={<RoutePlaceholderPage title="Admin courts" description="Moderate court information." />}
+          />
+          <Route
+            path={routePaths.adminBookings}
+            element={<RoutePlaceholderPage title="Admin bookings" description="Review platform bookings." />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>

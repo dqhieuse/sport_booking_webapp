@@ -11,7 +11,7 @@ type ApiErrorMessageProps = {
 
 export function ApiErrorMessage({ title, message, onRetry }: ApiErrorMessageProps) {
   return (
-    <Alert variant="destructive">
+    <Alert variant="destructive_ghost">
       <DangerCircle className="size-4" aria-hidden="true" />
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
