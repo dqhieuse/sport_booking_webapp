@@ -363,6 +363,7 @@ Scope:
 - Validate active court time slot.
 - Validate date is not in the past.
 - Calculate total price.
+- A single booking may contain one to three consecutive time slots, with one payment for the booking total.
 - Build frontend:
   - available slot picker,
   - booking creation page,

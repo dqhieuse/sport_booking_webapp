@@ -1,7 +1,13 @@
 package com.sportbooking.module.court.service;
 
 import com.sportbooking.common.api.PageResponse;
+import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
+import com.sportbooking.module.booking.entity.BookingStatus;
+import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
+import com.sportbooking.module.court.dto.AvailableTimeSlotResponse;
+import com.sportbooking.module.court.dto.AvailableTimeSlotStatus;
+import com.sportbooking.module.court.dto.CourtAvailableSlotsResponse;
 import com.sportbooking.module.court.dto.CourtDetailResponse;
 import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.CourtListResponse;
@@ -12,7 +18,12 @@ import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.repository.CourtImageRepository;
 import com.sportbooking.module.court.repository.CourtRepository;
+import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
+import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +35,8 @@ public class PublicCourtService {
 
     private final CourtRepository courtRepository;
     private final CourtImageRepository courtImageRepository;
+    private final CourtTimeSlotRepository courtTimeSlotRepository;
+    private final BookingTimeSlotRepository bookingTimeSlotRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<CourtListResponse> getActiveCourts(
@@ -67,6 +80,58 @@ public class PublicCourtService {
                 .stream()
                 .map(CourtImageResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CourtAvailableSlotsResponse getAvailableSlots(Long courtId, LocalDate bookingDate) {
+        if (bookingDate.isBefore(LocalDate.now())) {
+            throw new InvalidRequestException("Booking date must not be in the past");
+        }
+        if (bookingDate.isAfter(LocalDate.now().plusDays(13))) {
+            throw new InvalidRequestException("Booking date must be within the next 14 days");
+        }
+
+        if (!courtRepository.existsByIdAndStatus(courtId, CourtStatus.ACTIVE)) {
+            throw new ResourceNotFoundException("Court not found");
+        }
+
+        List<AvailableTimeSlotResponse> items = courtTimeSlotRepository
+                .findActiveBookableSlots(courtId, TimeSlotStatus.ACTIVE)
+                .stream()
+                .map(courtTimeSlot -> new AvailableTimeSlotResponse(
+                        courtTimeSlot.getTimeSlot().getId(),
+                        courtTimeSlot.getTimeSlot().getStartTime(),
+                        courtTimeSlot.getTimeSlot().getEndTime(),
+                        getAvailableTimeSlotStatus(
+                                courtId,
+                                bookingDate,
+                                courtTimeSlot.getTimeSlot().getId(),
+                                courtTimeSlot.getTimeSlot().getStartTime()
+                        )
+                ))
+                .toList();
+
+        return new CourtAvailableSlotsResponse(courtId, bookingDate, items);
+    }
+
+    private AvailableTimeSlotStatus getAvailableTimeSlotStatus(
+            Long courtId,
+            LocalDate bookingDate,
+            Long timeSlotId,
+            LocalTime startTime
+    ) {
+        boolean isExpired = bookingDate.isEqual(LocalDate.now()) && !startTime.isAfter(LocalTime.now());
+        if (isExpired) {
+            return AvailableTimeSlotStatus.EXPIRED;
+        }
+
+        boolean isBooked = bookingTimeSlotRepository.existsByCourtIdAndBookingDateAndTimeSlotIdAndBookingStatusIn(
+                courtId,
+                bookingDate,
+                timeSlotId,
+                Set.of(BookingStatus.PENDING, BookingStatus.CONFIRMED)
+        );
+        return isBooked ? AvailableTimeSlotStatus.BOOKED : AvailableTimeSlotStatus.AVAILABLE;
     }
 
     private CourtListResponse toListResponse(Court court) {

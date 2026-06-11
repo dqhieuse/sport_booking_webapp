@@ -42,6 +42,15 @@ public class CurrentUserService {
     }
 
     @Transactional(readOnly = true)
+    public User requireActiveCustomer(String authorizationHeader) {
+        return requireActiveUserWithAnyRole(
+                authorizationHeader,
+                "User role is required",
+                RoleName.USER
+        );
+    }
+
+    @Transactional(readOnly = true)
     public User requireActiveVendorOrAdmin(String authorizationHeader) {
         return requireActiveUserWithAnyRole(
                 authorizationHeader,

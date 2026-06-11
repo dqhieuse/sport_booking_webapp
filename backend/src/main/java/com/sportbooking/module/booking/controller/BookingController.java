@@ -1,0 +1,35 @@
+package com.sportbooking.module.booking.controller;
+
+import com.sportbooking.common.api.ApiResponse;
+import com.sportbooking.module.booking.dto.CreateBookingRequest;
+import com.sportbooking.module.booking.dto.CreateBookingResponse;
+import com.sportbooking.module.booking.service.BookingService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/bookings")
+@RequiredArgsConstructor
+public class BookingController {
+
+    private final BookingService bookingService;
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<CreateBookingResponse>> createBooking(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Valid @RequestBody CreateBookingRequest request
+    ) {
+        CreateBookingResponse response = bookingService.createBooking(authorizationHeader, request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Booking created successfully", response));
+    }
+}
