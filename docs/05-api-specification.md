@@ -1349,12 +1349,20 @@ Request body:
 ```json
 {
   "courtId": 1,
-  "timeSlotId": 3,
+  "timeSlotIds": [3, 4, 5],
   "bookingDate": "2026-05-15",
   "paymentMethod": "VNPAY",
   "note": "Booking for a group of 6 people"
 }
 ```
+
+Rules:
+
+- `timeSlotIds` must contain one to three unique slots.
+- Selected slots must be active for the court and consecutive by time.
+- Total duration must not exceed three hours.
+- Booking date must be within today and the next 13 days.
+- The backend recalculates all prices and validates availability inside one transaction.
 
 Response:
 
@@ -1367,12 +1375,23 @@ Response:
     "courtName": "Badminton Court 01",
     "bookingDate": "2026-05-15",
     "startTime": "08:00",
-    "endTime": "09:00",
-    "totalPrice": 120000,
+    "endTime": "11:00",
+    "durationMinutes": 180,
+    "totalPrice": 360000,
     "status": "PENDING",
+    "slots": [
+      {
+        "id": 21,
+        "timeSlotId": 3,
+        "startTime": "08:00",
+        "endTime": "09:00",
+        "slotPrice": 120000
+      }
+    ],
     "payment": {
       "method": "VNPAY",
       "status": "PENDING",
+      "amount": 360000,
       "paymentUrl": "https://sandbox.vnpayment.vn/paymentv2/..."
     }
   }

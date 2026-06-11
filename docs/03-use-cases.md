@@ -286,8 +286,8 @@ Preconditions:
 
 - User is logged in.
 - Court exists and is active.
-- Selected time slot is available.
-- Selected time slot is enabled for the selected court.
+- User selects one to three consecutive time slots.
+- Every selected time slot is available and enabled for the selected court.
 - Booking date is not in the past.
 - User selects a payment method.
 
@@ -295,13 +295,14 @@ Main flow:
 
 1. User selects a court.
 2. User selects a date.
-3. User selects a time slot.
+3. User selects one to three consecutive time slots, up to three hours.
 4. User selects a payment method. The preferred method is prepaid online payment through VNPAY.
 5. User clicks confirm booking.
-6. The system validates the court, date, time slot, court time slot configuration, and payment method again.
+6. The system validates the court, date, all selected slots, consecutive duration, court slot configuration, and payment method again.
 7. The system checks duplicate bookings.
-8. The system creates a booking with status `PENDING`.
-9. The system creates payment information based on the selected payment method.
+8. The system creates one booking with status `PENDING`.
+9. The system creates one `booking_time_slots` record for each selected slot.
+10. The system creates one payment for the booking total.
 
 Payment flow A: VNPAY prepaid
 
