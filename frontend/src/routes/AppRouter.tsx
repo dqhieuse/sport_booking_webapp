@@ -17,12 +17,14 @@ import { VenuesPage } from '../pages/VenuesPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';
 import { VendorCourtSlotsPage } from '../pages/vendor/VendorCourtSlotsPage';
 import { VendorCourtCreatePage } from '../pages/vendor/VendorCourtCreatePage';
+import { VendorCourtEditPage } from '../pages/vendor/VendorCourtEditPage';
 import { VendorCourtsPage } from '../pages/vendor/VendorCourtsPage';
 import { VendorDashboardPage } from '../pages/vendor/VendorDashboardPage';
 import { VendorImageCreatePage } from '../pages/vendor/VendorImageCreatePage';
 import { VendorImagesPage } from '../pages/vendor/VendorImagesPage';
 import { VendorProfilePage } from '../pages/vendor/VendorProfilePage';
 import { VendorVenueCreatePage } from '../pages/vendor/VendorVenueCreatePage';
+import { VendorVenueEditPage } from '../pages/vendor/VendorVenueEditPage';
 import { VendorVenuesPage } from '../pages/vendor/VendorVenuesPage';
 import { ProtectedRoute, PublicOnlyRoute, RoleRestrictedRoute } from './ProtectedRoute';
 import { routePaths } from './routePaths';
@@ -101,12 +103,20 @@ export function AppRouter() {
               element={<VendorVenueCreatePage />}
             />
             <Route
+              path={routePaths.vendorVenueEdit}
+              element={<VendorVenueEditPage />}
+            />
+            <Route
               path={routePaths.vendorCourts}
               element={<VendorCourtsPage />}
             />
             <Route
               path={routePaths.vendorCourtCreate}
               element={<VendorCourtCreatePage />}
+            />
+            <Route
+              path={routePaths.vendorCourtEdit}
+              element={<VendorCourtEditPage />}
             />
             <Route
               path={routePaths.vendorImages}

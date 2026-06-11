@@ -1,8 +1,14 @@
-import { MapPinHouse, Refresh, Search } from "@mynaui/icons-react";
+import {
+    ExternalLink,
+    MapPinHouse,
+    Refresh,
+    Search,
+} from "@mynaui/icons-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/empty-state";
+import { PaginationControls } from "@/components/pagination-controls";
 import { ApiErrorMessage } from "@/components/ui/api-error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +40,8 @@ import {
     getVendorVenues,
 } from "@/features/vendor/api/vendorApi";
 import type { VendorVenue } from "@/features/vendor/types";
-import { routePaths } from "@/routes/routePaths";
+import { getVendorVenueEditPath, routePaths } from "@/routes/routePaths";
+import type { PageResponse } from "@/types/api";
 import { CheckIcon, PlusIcon, Power, XIcon } from "lucide-react";
 import {
     Tooltip,
@@ -42,12 +49,22 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
 const ALL_VALUE = "all";
+const PAGE_SIZE = 10;
 
 function getErrorMessage(error: unknown) {
     return error instanceof Error
@@ -56,10 +73,19 @@ function getErrorMessage(error: unknown) {
 }
 
 export function VendorVenuesPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const statusParam = searchParams.get("status");
+    const statusFilter =
+        statusParam === "ACTIVE" || statusParam === "INACTIVE"
+            ? statusParam
+            : ALL_VALUE;
+    const pageParam = Number(searchParams.get("page"));
+    const requestedPage =
+        Number.isInteger(pageParam) && pageParam > 0 ? pageParam - 1 : 0;
     const [venues, setVenues] = useState<VendorVenue[]>([]);
+    const [venuesPage, setVenuesPage] = useState<PageResponse<VendorVenue> | null>(null);
     const [loadState, setLoadState] = useState<LoadState>("idle");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState(ALL_VALUE);
     const [isMutating, setIsMutating] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -77,12 +103,13 @@ export function VendorVenuesPage() {
                             statusFilter === ALL_VALUE
                                 ? undefined
                                 : (statusFilter as "ACTIVE" | "INACTIVE"),
-                        page: 0,
-                        size: 100,
+                        page: requestedPage,
+                        size: PAGE_SIZE,
                     },
                     controller.signal,
                 );
                 setVenues(response.data.items);
+                setVenuesPage(response.data);
                 setLoadState("success");
             } catch (error) {
                 if (controller.signal.aborted) {
@@ -97,9 +124,56 @@ export function VendorVenuesPage() {
         void loadVenues();
 
         return () => controller.abort();
-    }, [reloadKey, statusFilter]);
+    }, [reloadKey, requestedPage, statusFilter]);
 
     const isLoading = loadState === "idle" || loadState === "loading";
+
+    useEffect(() => {
+        if (!venuesPage || requestedPage === 0) {
+            return;
+        }
+
+        const nextPage =
+            venuesPage.totalPages === 0
+                ? 0
+                : Math.max(venuesPage.totalPages - 1, 0);
+        if (venuesPage.totalPages === 0 || requestedPage >= venuesPage.totalPages) {
+            setSearchParams((current) => {
+                const next = new URLSearchParams(current);
+                if (nextPage <= 0) {
+                    next.delete("page");
+                } else {
+                    next.set("page", String(nextPage + 1));
+                }
+                return next;
+            }, { replace: true });
+        }
+    }, [requestedPage, setSearchParams, venuesPage]);
+
+    function handleStatusFilterChange(value: string) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            if (value === ALL_VALUE) {
+                next.delete("status");
+            } else {
+                next.set("status", value);
+            }
+            next.delete("page");
+            return next;
+        });
+    }
+
+    function handlePageChange(page: number) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            if (page <= 0) {
+                next.delete("page");
+            } else {
+                next.set("page", String(page + 1));
+            }
+            return next;
+        });
+    }
 
     async function handleDeactivate(venueId: number) {
         setIsMutating(true);
@@ -168,7 +242,7 @@ export function VendorVenuesPage() {
                         <div className="flex flex-wrap gap-2">
                             <Select
                                 value={statusFilter}
-                                onValueChange={setStatusFilter}
+                                onValueChange={handleStatusFilterChange}
                             >
                                 <SelectTrigger
                                     className="w-36"
@@ -224,13 +298,27 @@ export function VendorVenuesPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="text-foreground font-semibold ps-2.5">Name</TableHead>
-                                            <TableHead className="text-foreground font-semibold">Address</TableHead>
-                                            <TableHead className="text-foreground font-semibold">Phone</TableHead>
-                                            <TableHead className="text-foreground font-semibold">Open</TableHead>
-                                            <TableHead className="text-foreground font-semibold">Close</TableHead>
-                                            <TableHead className="text-foreground font-semibold">Courts</TableHead>
-                                            <TableHead className="text-foreground font-semibold">Status</TableHead>
+                                            <TableHead className="text-foreground font-semibold ps-2.5">
+                                                Name
+                                            </TableHead>
+                                            <TableHead className="text-foreground font-semibold">
+                                                Address
+                                            </TableHead>
+                                            <TableHead className="text-foreground font-semibold">
+                                                Phone
+                                            </TableHead>
+                                            <TableHead className="text-foreground font-semibold">
+                                                Open
+                                            </TableHead>
+                                            <TableHead className="text-foreground font-semibold">
+                                                Close
+                                            </TableHead>
+                                            <TableHead className="text-foreground font-semibold">
+                                                Courts
+                                            </TableHead>
+                                            <TableHead className="text-foreground font-semibold">
+                                                Status
+                                            </TableHead>
                                             <TableHead className="text-right text-foreground font-semibold">
                                                 Actions
                                             </TableHead>
@@ -244,19 +332,32 @@ export function VendorVenuesPage() {
                                                 >
                                                     <Tooltip>
                                                         <TooltipTrigger>
-                                                            <TableCell>
+                                                            <TableCell className="group">
                                                                 <div>
                                                                     <div className="min-w-0">
-                                                                        <p className="font-medium text-foreground line-clamp-1">
+                                                                        <Link
+                                                                            to={getVendorVenueEditPath(
+                                                                                venue.id,
+                                                                            )}
+                                                                            className="group inline-flex items-center font-medium text-foreground line-clamp-1 !no-underline"
+                                                                        >
                                                                             {
                                                                                 venue.name
                                                                             }
-                                                                        </p>
+                                                                            <ExternalLink
+                                                                                className="size-3.5 inline-block ms-1 text-muted-foreground hover:text-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                                                                aria-hidden="true"
+                                                                                stroke={2}
+                                                                            />
+                                                                        </Link>
                                                                     </div>
                                                                 </div>
                                                             </TableCell>
                                                         </TooltipTrigger>
-                                                        <TooltipContent className="bg-secondary rounded-xl p-1" side="right">
+                                                        <TooltipContent
+                                                            className="bg-secondary rounded-xl p-1"
+                                                            side="right"
+                                                        >
                                                             <div className="flex h-24 w-32 items-center justify-center overflow-hidden rounded-lg bg-muted">
                                                                 {venue.primaryImageUrl ? (
                                                                     <img
@@ -313,34 +414,80 @@ export function VendorVenuesPage() {
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-wrap justify-end gap-2">
                                                         <Button
-                                                            type="button"
                                                             variant="outline"
+                                                            asChild
                                                         >
-                                                            Edit
+                                                            <Link
+                                                                to={getVendorVenueEditPath(
+                                                                    venue.id,
+                                                                )}
+                                                            >
+                                                                Edit
+                                                            </Link>
                                                         </Button>
                                                         <Dialog>
-                                                            <DialogTrigger asChild>
-                                                                <Button disabled={ isMutating || venue.status === "INACTIVE" } variant="destructive_ghost">
-                                                                Deactivate
+                                                            <DialogTrigger
+                                                                asChild
+                                                            >
+                                                                <Button
+                                                                    disabled={
+                                                                        isMutating ||
+                                                                        venue.status ===
+                                                                            "INACTIVE"
+                                                                    }
+                                                                    variant="destructive_ghost"
+                                                                >
+                                                                    Deactivate
                                                                 </Button>
                                                             </DialogTrigger>
                                                             <DialogContent className="!rounded-2xl p-5">
                                                                 <DialogHeader>
-                                                                <DialogTitle className="">Deactivate Venue</DialogTitle>
-                                                                <DialogDescription>
-                                                                    Are you sure you want to permanently deactivate venue name <span className="font-medium text-foreground">{venue.name}</span>?
-                                                                </DialogDescription>
+                                                                    <DialogTitle className="">
+                                                                        Deactivate
+                                                                        Venue
+                                                                    </DialogTitle>
+                                                                    <DialogDescription>
+                                                                        Are you
+                                                                        sure you
+                                                                        want to
+                                                                        permanently
+                                                                        deactivate
+                                                                        venue
+                                                                        name{" "}
+                                                                        <span className="font-medium text-foreground">
+                                                                            {
+                                                                                venue.name
+                                                                            }
+                                                                        </span>
+                                                                        ?
+                                                                    </DialogDescription>
                                                                 </DialogHeader>
                                                                 <DialogFooter className="flex flex-row-reverse gap-2">
-                                                                    <DialogClose asChild>
-                                                                        <Button onClick={() => {void handleDeactivate(venue.id)}} variant="destructive_ghost">
-                                                                            <Power className="font-bold" size={16} />
+                                                                    <DialogClose
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            onClick={() => {
+                                                                                void handleDeactivate(
+                                                                                    venue.id,
+                                                                                );
+                                                                            }}
+                                                                            variant="destructive_ghost"
+                                                                        >
+                                                                            <Power
+                                                                                className="font-bold"
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
                                                                             Deactivate
                                                                         </Button>
                                                                     </DialogClose>
-                                                                    <DialogClose asChild>
+                                                                    <DialogClose
+                                                                        asChild
+                                                                    >
                                                                         <Button variant="outline">
-                                                                        Cancel
+                                                                            Cancel
                                                                         </Button>
                                                                     </DialogClose>
                                                                 </DialogFooter>
@@ -353,6 +500,16 @@ export function VendorVenuesPage() {
                                     </TableBody>
                                 </Table>
                             </div>
+                        )}
+
+                        {venuesPage && venuesPage.totalPages > 0 && (
+                            <PaginationControls
+                                page={venuesPage.page}
+                                totalPages={venuesPage.totalPages}
+                                totalItems={venuesPage.totalItems}
+                                itemLabel="venues"
+                                onPageChange={handlePageChange}
+                            />
                         )}
                     </CardContent>
                 </Card>

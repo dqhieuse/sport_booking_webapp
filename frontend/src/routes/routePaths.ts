@@ -14,8 +14,10 @@ export const routePaths = {
   vendorProfile: '/vendor/profile',
   vendorVenues: '/vendor/venues',
   vendorVenueCreate: '/vendor/venues/new',
+  vendorVenueEdit: '/vendor/venues/:venueId/edit',
   vendorCourts: '/vendor/courts',
   vendorCourtCreate: '/vendor/courts/new',
+  vendorCourtEdit: '/vendor/courts/:courtId/edit',
   vendorImages: '/vendor/images',
   vendorImageCreate: '/vendor/images/new',
   vendorSlots: '/vendor/slots',
@@ -28,3 +30,11 @@ export const routePaths = {
   adminCourts: '/admin/courts',
   adminBookings: '/admin/bookings',
 } as const;
+
+export function getVendorVenueEditPath(venueId: number) {
+  return routePaths.vendorVenueEdit.replace(':venueId', String(venueId));
+}
+
+export function getVendorCourtEditPath(courtId: number) {
+  return routePaths.vendorCourtEdit.replace(':courtId', String(courtId));
+}

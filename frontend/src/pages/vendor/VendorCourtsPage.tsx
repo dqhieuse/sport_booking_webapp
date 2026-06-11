@@ -1,8 +1,16 @@
-import { Calendar, Plus, Power, Refresh, Search } from "@mynaui/icons-react";
+import {
+    Calendar,
+    ExternalLink,
+    Plus,
+    Power,
+    Refresh,
+    Search,
+} from "@mynaui/icons-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/empty-state";
+import { PaginationControls } from "@/components/pagination-controls";
 import { ApiErrorMessage } from "@/components/ui/api-error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +45,8 @@ import {
     getVendorVenues,
 } from "@/features/vendor/api/vendorApi";
 import type { VendorCourt, VendorVenue } from "@/features/vendor/types";
-import { routePaths } from "@/routes/routePaths";
+import { getVendorCourtEditPath, routePaths } from "@/routes/routePaths";
+import type { PageResponse } from "@/types/api";
 import { CheckIcon, MapPinHouse, XIcon } from "lucide-react";
 import {
     Tooltip,
@@ -46,11 +55,21 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogFooter, DialogDescription, DialogTitle, DialogTrigger, DialogHeader, DialogClose } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+    DialogHeader,
+    DialogClose,
+} from "@/components/ui/dialog";
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
 const ALL_VALUE = "all";
+const PAGE_SIZE = 10;
 
 function getErrorMessage(error: unknown) {
     return error instanceof Error
@@ -59,14 +78,27 @@ function getErrorMessage(error: unknown) {
 }
 
 export function VendorCourtsPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const statusParam = searchParams.get("status");
+    const venueParam = searchParams.get("venueId");
+    const sportParam = searchParams.get("sportId");
+    const statusFilter =
+        statusParam === "ACTIVE" || statusParam === "INACTIVE"
+            ? statusParam
+            : ALL_VALUE;
+    const venueFilter =
+        venueParam && /^\d+$/.test(venueParam) ? venueParam : ALL_VALUE;
+    const sportFilter =
+        sportParam && /^\d+$/.test(sportParam) ? sportParam : ALL_VALUE;
+    const pageParam = Number(searchParams.get("page"));
+    const requestedPage =
+        Number.isInteger(pageParam) && pageParam > 0 ? pageParam - 1 : 0;
     const [courts, setCourts] = useState<VendorCourt[]>([]);
+    const [courtsPage, setCourtsPage] = useState<PageResponse<VendorCourt> | null>(null);
     const [venues, setVenues] = useState<VendorVenue[]>([]);
     const [sports, setSports] = useState<Sport[]>([]);
     const [loadState, setLoadState] = useState<LoadState>("idle");
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState(ALL_VALUE);
-    const [venueFilter, setVenueFilter] = useState(ALL_VALUE);
-    const [sportFilter, setSportFilter] = useState(ALL_VALUE);
     const [isMutating, setIsMutating] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -96,19 +128,20 @@ export function VendorCourtsPage() {
                                     sportFilter === ALL_VALUE
                                         ? undefined
                                         : Number(sportFilter),
-                                page: 0,
-                                size: 100,
+                                page: requestedPage,
+                                size: PAGE_SIZE,
                             },
                             controller.signal,
                         ),
                         getVendorVenues(
-                            { status: "ACTIVE", page: 0, size: 100 },
+                            { status: "ACTIVE", page: 0, size: 10 },
                             controller.signal,
                         ),
                         getPublicSports(controller.signal),
                     ]);
 
                 setCourts(courtResponse.data.items);
+                setCourtsPage(courtResponse.data);
                 setVenues(venueResponse.data.items);
                 setSports(
                     sportResponse.data.filter(
@@ -129,9 +162,59 @@ export function VendorCourtsPage() {
         void loadPage();
 
         return () => controller.abort();
-    }, [reloadKey, sportFilter, statusFilter, venueFilter]);
+    }, [reloadKey, requestedPage, sportFilter, statusFilter, venueFilter]);
 
     const isLoading = loadState === "idle" || loadState === "loading";
+
+    useEffect(() => {
+        if (!courtsPage || requestedPage === 0) {
+            return;
+        }
+
+        const nextPage =
+            courtsPage.totalPages === 0
+                ? 0
+                : Math.max(courtsPage.totalPages - 1, 0);
+        if (courtsPage.totalPages === 0 || requestedPage >= courtsPage.totalPages) {
+            setSearchParams((current) => {
+                const next = new URLSearchParams(current);
+                if (nextPage <= 0) {
+                    next.delete("page");
+                } else {
+                    next.set("page", String(nextPage + 1));
+                }
+                return next;
+            }, { replace: true });
+        }
+    }, [courtsPage, requestedPage, setSearchParams]);
+
+    function updateFilter(
+        key: "status" | "venueId" | "sportId",
+        value: string,
+    ) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            if (value === ALL_VALUE) {
+                next.delete(key);
+            } else {
+                next.set(key, value);
+            }
+            next.delete("page");
+            return next;
+        });
+    }
+
+    function handlePageChange(page: number) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            if (page <= 0) {
+                next.delete("page");
+            } else {
+                next.set("page", String(page + 1));
+            }
+            return next;
+        });
+    }
 
     async function handleDeactivate(courtId: number) {
         setIsMutating(true);
@@ -212,7 +295,9 @@ export function VendorCourtsPage() {
                         <div className="grid gap-3 md:grid-cols-3">
                             <Select
                                 value={statusFilter}
-                                onValueChange={setStatusFilter}
+                                onValueChange={(value) =>
+                                    updateFilter("status", value)
+                                }
                             >
                                 <SelectTrigger aria-label="Status filter">
                                     <SelectValue />
@@ -231,7 +316,9 @@ export function VendorCourtsPage() {
                             </Select>
                             <Select
                                 value={venueFilter}
-                                onValueChange={setVenueFilter}
+                                onValueChange={(value) =>
+                                    updateFilter("venueId", value)
+                                }
                             >
                                 <SelectTrigger aria-label="Venue filter">
                                     <SelectValue />
@@ -252,7 +339,9 @@ export function VendorCourtsPage() {
                             </Select>
                             <Select
                                 value={sportFilter}
-                                onValueChange={setSportFilter}
+                                onValueChange={(value) =>
+                                    updateFilter("sportId", value)
+                                }
                             >
                                 <SelectTrigger aria-label="Sport filter">
                                     <SelectValue />
@@ -320,13 +409,22 @@ export function VendorCourtsPage() {
                                                 >
                                                     <Tooltip>
                                                         <TooltipTrigger>
-                                                            <TableCell>
+                                                            <TableCell className="group">
                                                                 <div className="min-w-0 flex flex-col items-start">
-                                                                    <p className="font-medium text-foreground text-start">
-                                                                        {
-                                                                            court.name
-                                                                        }
-                                                                    </p>
+                                                                    <Link
+                                                                        to={getVendorCourtEditPath(court.id)}
+                                                                        className="inline-flex items-center gap-1 !no-underline"
+                                                                    >
+                                                                        <p className="font-medium text-foreground text-start">
+                                                                            {
+                                                                                court.name
+                                                                            }
+                                                                        </p>
+                                                                        <ExternalLink
+                                                                            className="size-3.5 inline-block text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                    </Link>
                                                                     <p className="text-xs text-muted-foreground text-start">
                                                                         {
                                                                             court.activeTimeSlotCount
@@ -399,34 +497,76 @@ export function VendorCourtsPage() {
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-wrap justify-end gap-2">
                                                         <Button
-                                                            type="button"
                                                             variant="outline"
+                                                            asChild
                                                         >
-                                                            Edit
+                                                            <Link to={getVendorCourtEditPath(court.id)}>
+                                                                Edit
+                                                            </Link>
                                                         </Button>
                                                         <Dialog>
-                                                            <DialogTrigger asChild>
-                                                                <Button disabled={ isMutating || court.status === "INACTIVE" } variant="destructive_ghost">
-                                                                Deactivate
+                                                            <DialogTrigger
+                                                                asChild
+                                                            >
+                                                                <Button
+                                                                    disabled={
+                                                                        isMutating ||
+                                                                        court.status ===
+                                                                            "INACTIVE"
+                                                                    }
+                                                                    variant="destructive_ghost"
+                                                                >
+                                                                    Deactivate
                                                                 </Button>
                                                             </DialogTrigger>
                                                             <DialogContent className="!rounded-2xl p-5">
                                                                 <DialogHeader>
-                                                                <DialogTitle>Deactivate Court</DialogTitle>
-                                                                <DialogDescription>
-                                                                    Are you sure you want to permanently deactivate court name <span className="font-medium text-foreground">{court.name}</span>?
-                                                                </DialogDescription>
+                                                                    <DialogTitle>
+                                                                        Deactivate
+                                                                        Court
+                                                                    </DialogTitle>
+                                                                    <DialogDescription>
+                                                                        Are you
+                                                                        sure you
+                                                                        want to
+                                                                        permanently
+                                                                        deactivate
+                                                                        court
+                                                                        name{" "}
+                                                                        <span className="font-medium text-foreground">
+                                                                            {
+                                                                                court.name
+                                                                            }
+                                                                        </span>
+                                                                        ?
+                                                                    </DialogDescription>
                                                                 </DialogHeader>
                                                                 <DialogFooter className="flex flex-row-reverse gap-2">
-                                                                    <DialogClose asChild>
-                                                                        <Button onClick={() => {void handleDeactivate(court.id)}} variant="destructive_ghost">
-                                                                            <Power className="font-bold" size={16} />
+                                                                    <DialogClose
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            onClick={() => {
+                                                                                void handleDeactivate(
+                                                                                    court.id,
+                                                                                );
+                                                                            }}
+                                                                            variant="destructive_ghost"
+                                                                        >
+                                                                            <Power
+                                                                                className="font-bold"
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
                                                                             Deactivate
                                                                         </Button>
                                                                     </DialogClose>
-                                                                    <DialogClose asChild>
+                                                                    <DialogClose
+                                                                        asChild
+                                                                    >
                                                                         <Button variant="outline">
-                                                                        Cancel
+                                                                            Cancel
                                                                         </Button>
                                                                     </DialogClose>
                                                                 </DialogFooter>
@@ -439,6 +579,16 @@ export function VendorCourtsPage() {
                                     </TableBody>
                                 </Table>
                             </div>
+                        )}
+
+                        {courtsPage && courtsPage.totalPages > 0 && (
+                            <PaginationControls
+                                page={courtsPage.page}
+                                totalPages={courtsPage.totalPages}
+                                totalItems={courtsPage.totalItems}
+                                itemLabel="courts"
+                                onPageChange={handlePageChange}
+                            />
                         )}
                     </CardContent>
                 </Card>

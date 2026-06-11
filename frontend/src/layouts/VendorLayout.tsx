@@ -54,6 +54,12 @@ export function VendorLayout() {
             return items;
         }
 
+        if (/^\/vendor\/venues\/\d+\/edit$/.test(pathname)) {
+            items.push({ label: "Venues", to: routePaths.vendorVenues });
+            items.push({ label: "Edit venue" });
+            return items;
+        }
+
         if (pathname.startsWith(`${routePaths.vendorVenues}/`)) {
             items.push({ label: "Venues", to: routePaths.vendorVenues });
             items.push({ label: "Venue details" });
@@ -68,6 +74,12 @@ export function VendorLayout() {
         if (pathname === routePaths.vendorCourtCreate) {
             items.push({ label: "Courts", to: routePaths.vendorCourts });
             items.push({ label: "Create court" });
+            return items;
+        }
+
+        if (/^\/vendor\/courts\/\d+\/edit$/.test(pathname)) {
+            items.push({ label: "Courts", to: routePaths.vendorCourts });
+            items.push({ label: "Edit court" });
             return items;
         }
 

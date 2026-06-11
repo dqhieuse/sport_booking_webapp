@@ -1,6 +1,6 @@
 import { Image, Plus, Refresh, Save, Star, Trash } from '@mynaui/icons-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { EmptyState } from '@/components/empty-state';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
@@ -34,8 +34,11 @@ function getErrorMessage(error: unknown) {
 }
 
 export function VendorImagesPage() {
-  const [targetType, setTargetType] = useState<GalleryTargetType>('venue');
-  const [selectedTargetId, setSelectedTargetId] = useState(NO_TARGET_VALUE);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetType: GalleryTargetType = searchParams.get('type') === 'court' ? 'court' : 'venue';
+  const targetIdParam = searchParams.get('targetId');
+  const selectedTargetId =
+    targetIdParam && /^\d+$/.test(targetIdParam) ? targetIdParam : NO_TARGET_VALUE;
   const [venues, setVenues] = useState<VendorVenue[]>([]);
   const [courts, setCourts] = useState<VendorCourt[]>([]);
   const [images, setImages] = useState<VendorManagedImage[]>([]);
@@ -81,9 +84,31 @@ export function VendorImagesPage() {
   const targets = targetType === 'venue' ? venues : courts;
 
   useEffect(() => {
-    setSelectedTargetId(targets[0] ? String(targets[0].id) : NO_TARGET_VALUE);
+    if (loadState !== 'success') {
+      return;
+    }
+
+    const currentTargetExists = targets.some((target) => String(target.id) === selectedTargetId);
+    const nextTargetId = currentTargetExists
+      ? selectedTargetId
+      : targets[0]
+        ? String(targets[0].id)
+        : NO_TARGET_VALUE;
+
+    if (nextTargetId !== selectedTargetId) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.set('type', targetType);
+        if (nextTargetId === NO_TARGET_VALUE) {
+          next.delete('targetId');
+        } else {
+          next.set('targetId', nextTargetId);
+        }
+        return next;
+      }, { replace: true });
+    }
     setImages([]);
-  }, [targetType, targets]);
+  }, [loadState, selectedTargetId, setSearchParams, targetType, targets]);
 
   useEffect(() => {
     if (selectedTargetId === NO_TARGET_VALUE) {
@@ -129,6 +154,30 @@ export function VendorImagesPage() {
   const isLoadingTargets = loadState === 'idle' || loadState === 'loading';
   const isLoadingImages = imageLoadState === 'idle' || imageLoadState === 'loading';
   const hasNoTargets = loadState === 'success' && targets.length === 0;
+
+  function handleTargetTypeChange(value: string) {
+    const nextType = value as GalleryTargetType;
+    const nextTargets = nextType === 'venue' ? venues : courts;
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('type', nextType);
+      if (nextTargets[0]) {
+        next.set('targetId', String(nextTargets[0].id));
+      } else {
+        next.delete('targetId');
+      }
+      return next;
+    });
+  }
+
+  function handleTargetChange(value: string) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('type', targetType);
+      next.set('targetId', value);
+      return next;
+    });
+  }
 
   async function handleSetPrimary(imageId: number) {
     if (!selectedTarget) {
@@ -233,7 +282,7 @@ export function VendorImagesPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="target-type">Target type</Label>
-                <Select value={targetType} onValueChange={(value) => setTargetType(value as GalleryTargetType)}>
+                <Select value={targetType} onValueChange={handleTargetTypeChange}>
                   <SelectTrigger id="target-type">
                     <SelectValue />
                   </SelectTrigger>
@@ -246,7 +295,7 @@ export function VendorImagesPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="target-select">Target</Label>
-                <Select value={selectedTargetId} onValueChange={setSelectedTargetId} disabled={targets.length === 0}>
+                <Select value={selectedTargetId} onValueChange={handleTargetChange} disabled={targets.length === 0}>
                   <SelectTrigger id="target-select">
                     <SelectValue placeholder="Choose target" />
                   </SelectTrigger>

@@ -1,5 +1,6 @@
 import { Calendar, Check, ClockSquare, Refresh, Save } from '@mynaui/icons-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { EmptyState } from '@/components/empty-state';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
@@ -26,8 +27,11 @@ function getErrorMessage(error: unknown) {
 }
 
 export function VendorCourtSlotsPage() {
+  const [searchParams] = useSearchParams();
+  const courtIdParam = searchParams.get('courtId');
+  const initialCourtId = courtIdParam && /^\d+$/.test(courtIdParam) ? courtIdParam : NO_COURT_VALUE;
   const [courts, setCourts] = useState<VendorCourt[]>([]);
-  const [selectedCourtId, setSelectedCourtId] = useState<string>(NO_COURT_VALUE);
+  const [selectedCourtId, setSelectedCourtId] = useState<string>(initialCourtId);
   const [slots, setSlots] = useState<VendorCourtTimeSlot[]>([]);
   const [selectedSlotIds, setSelectedSlotIds] = useState<number[]>([]);
   const [courtLoadState, setCourtLoadState] = useState<LoadState>('idle');
