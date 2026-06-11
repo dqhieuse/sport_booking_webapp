@@ -12,6 +12,7 @@ import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
 import com.sportbooking.module.booking.repository.BookingRepository;
 import com.sportbooking.module.court.entity.Court;
+import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.entity.CourtTimeSlot;
 import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
@@ -19,10 +20,13 @@ import com.sportbooking.module.payment.entity.Payment;
 import com.sportbooking.module.payment.entity.PaymentMethod;
 import com.sportbooking.module.payment.entity.PaymentStatus;
 import com.sportbooking.module.payment.repository.PaymentRepository;
+import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import com.sportbooking.module.user.entity.User;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BookingService {
 
+    private static final int MAX_BOOKING_DAYS_AHEAD = 13;
     private static final long MIN_BOOKING_MINUTES = 60;
     private static final long MAX_BOOKING_MINUTES = 180;
 
@@ -46,13 +51,18 @@ public class BookingService {
     @Transactional
     public CreateBookingResponse createBooking(String authorizationHeader, CreateBookingRequest request) {
         User user = currentUserService.requireActiveCustomer(authorizationHeader);
+        validateBookingDate(request.bookingDate());
 
         Court court = courtRepository.findById(request.courtId())
                 .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (court.getStatus() != CourtStatus.ACTIVE) {
+            throw new InvalidRequestException("Court is not active");
+        }
 
         List<Long> timeSlotIds = normalizeTimeSlotIds(request.timeSlotIds());
-        List<CourtTimeSlot> courtTimeSlots = loadCourtTimeSlots(court.getId(), timeSlotIds);
+        List<CourtTimeSlot> courtTimeSlots = loadActiveCourtTimeSlots(court.getId(), timeSlotIds);
         int durationMinutes = validateAndCalculateDuration(courtTimeSlots);
+        validateBookingTime(request.bookingDate(), courtTimeSlots);
 
         Booking booking = createBooking(user, court, request, courtTimeSlots);
 
@@ -71,13 +81,27 @@ public class BookingService {
         return List.copyOf(uniqueIds);
     }
 
-    private List<CourtTimeSlot> loadCourtTimeSlots(Long courtId, List<Long> timeSlotIds) {
+    private void validateBookingDate(LocalDate bookingDate) {
+        LocalDate today = LocalDate.now();
+        if (bookingDate.isBefore(today)) {
+            throw new InvalidRequestException("Booking date must not be in the past");
+        }
+        if (bookingDate.isAfter(today.plusDays(MAX_BOOKING_DAYS_AHEAD))) {
+            throw new InvalidRequestException("Booking date must be within the next 14 days");
+        }
+    }
+
+    private List<CourtTimeSlot> loadActiveCourtTimeSlots(Long courtId, List<Long> timeSlotIds) {
         List<CourtTimeSlot> courtTimeSlots = new ArrayList<>();
         for (Long timeSlotId : timeSlotIds) {
             CourtTimeSlot courtTimeSlot = courtTimeSlotRepository
                     .findByCourtIdAndTimeSlotId(courtId, timeSlotId)
                     .orElseThrow(() -> new InvalidRequestException("Time slot is not configured for this court"));
 
+            if (courtTimeSlot.getStatus() != TimeSlotStatus.ACTIVE
+                    || courtTimeSlot.getTimeSlot().getStatus() != TimeSlotStatus.ACTIVE) {
+                throw new InvalidRequestException("Time slot is not active for this court");
+            }
             courtTimeSlots.add(courtTimeSlot);
         }
 
@@ -112,6 +136,17 @@ public class BookingService {
             throw new InvalidRequestException("Booking duration must be between 1 and 3 hours");
         }
         return Math.toIntExact(totalMinutes);
+    }
+
+    private void validateBookingTime(LocalDate bookingDate, List<CourtTimeSlot> courtTimeSlots) {
+        if (!bookingDate.isEqual(LocalDate.now())) {
+            return;
+        }
+
+        LocalTime firstStartTime = courtTimeSlots.getFirst().getTimeSlot().getStartTime();
+        if (!firstStartTime.isAfter(LocalTime.now())) {
+            throw new InvalidRequestException("Selected booking time has already started");
+        }
     }
 
     private Booking createBooking(

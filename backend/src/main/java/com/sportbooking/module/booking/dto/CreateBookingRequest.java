@@ -1,6 +1,7 @@
 package com.sportbooking.module.booking.dto;
 
 import com.sportbooking.module.payment.entity.PaymentMethod;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -16,6 +17,7 @@ public record CreateBookingRequest(
         List<@NotNull(message = "Time slot ID must not be null") Long> timeSlotIds,
 
         @NotNull(message = "Booking date is required")
+        @FutureOrPresent(message = "Booking date must not be in the past")
         LocalDate bookingDate,
 
         @NotNull(message = "Payment method is required")
