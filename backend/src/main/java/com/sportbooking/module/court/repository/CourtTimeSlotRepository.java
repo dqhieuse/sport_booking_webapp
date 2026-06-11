@@ -1,12 +1,14 @@
 package com.sportbooking.module.court.repository;
 
-import com.sportbooking.module.court.entity.CourtTimeSlot;
-import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import com.sportbooking.module.court.entity.CourtTimeSlot;
+import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 
 public interface CourtTimeSlotRepository extends JpaRepository<CourtTimeSlot, Long> {
 
@@ -32,7 +34,7 @@ public interface CourtTimeSlotRepository extends JpaRepository<CourtTimeSlot, Lo
             select courtTimeSlot
             from CourtTimeSlot courtTimeSlot
             join fetch courtTimeSlot.timeSlot timeSlot
-            where courtTimeSlot.court.id = :courtId
+            where courtTimeSlot.court.id = :courtId and courtTimeSlot.status != "INACTIVE"
             order by timeSlot.startTime asc
             """)
     List<CourtTimeSlot> findConfiguredSlots(@Param("courtId") Long courtId);

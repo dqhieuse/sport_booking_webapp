@@ -10,6 +10,8 @@ export const routePaths = {
   verifyEmail: '/verify-email',
   profile: '/profile',
   bookingHistory: '/bookings',
+  bookingCheckout: '/courts/:courtId/checkout',
+  bookingNotice: '/bookings/:bookingId/notice',
   vendorDashboard: '/vendor',
   vendorProfile: '/vendor/profile',
   vendorVenues: '/vendor/venues',

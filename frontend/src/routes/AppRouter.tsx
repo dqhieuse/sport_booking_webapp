@@ -15,6 +15,8 @@ import { SportsPage } from '../pages/SportsPage';
 import { VenueDetailPage } from '../pages/VenueDetailPage';
 import { VenuesPage } from '../pages/VenuesPage';
 import { VerifyEmailPage } from '../pages/VerifyEmailPage';
+import { BookingCheckoutPage } from '../pages/BookingCheckoutPage';
+import { BookingNoticePage } from '../pages/BookingNoticePage';
 import { VendorCourtSlotsPage } from '../pages/vendor/VendorCourtSlotsPage';
 import { VendorCourtCreatePage } from '../pages/vendor/VendorCourtCreatePage';
 import { VendorCourtEditPage } from '../pages/vendor/VendorCourtEditPage';
@@ -79,6 +81,14 @@ export function AppRouter() {
             <Route
               path={routePaths.bookingHistory}
               element={<RoutePlaceholderPage title="Booking history" description="Review bookings and cancellation status." />}
+            />
+            <Route
+              path={routePaths.bookingCheckout}
+              element={<BookingCheckoutPage />}
+            />
+            <Route
+              path={routePaths.bookingNotice}
+              element={<BookingNoticePage />}
             />
           </Route>
           <Route path="*" element={<NotFoundPage />} />

@@ -6,7 +6,8 @@ import {
 } from '@mynaui/icons-react';
 import { CalendarDays, CheckCircle2, Clock3, RefreshCw, Settings, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/features/auth/useAuth';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -203,6 +204,8 @@ function CourtDetailSkeleton() {
 }
 
 export function CourtDetailPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { courtId } = useParams<{ courtId: string }>();
   const parsedId = Number(courtId);
 
@@ -361,6 +364,25 @@ export function CourtDetailPage() {
         ? 'Maximum booking duration reached.'
         : 'Consecutive slot added to the booking preview.',
     );
+  }
+
+  function handleBookClick() {
+    if (selectedSlots.length === 0) return;
+    const checkoutSearch = `?date=${selectedDate}&slots=${selectedSlotIds.join(',')}`;
+    const checkoutPath = `/courts/${parsedId}/checkout`;
+
+    if (!isAuthenticated) {
+      navigate(routePaths.login, {
+        state: {
+          from: {
+            pathname: checkoutPath,
+            search: checkoutSearch,
+          },
+        },
+      });
+    } else {
+      navigate(`${checkoutPath}${checkoutSearch}`);
+    }
   }
 
   if (!isValidId) {
@@ -717,72 +739,19 @@ export function CourtDetailPage() {
                   </div>
                 )}
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="lg"
-                      className="w-full"
-                      disabled={court.status !== 'ACTIVE' || selectedSlots.length === 0}
-                    >
-                      {selectedSlots.length > 0 ? 'Preview booking' : 'Select a time slot'}
-                      <ChevronRight className="size-4" aria-hidden="true" />
-                    </Button>
-                  </DialogTrigger>
-                  {firstSelectedSlot && lastSelectedSlot && (
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Booking preview</DialogTitle>
-                        <DialogDescription>
-                          Review the selected court and time before the booking API is connected.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Court</span>
-                          <span className="text-right font-medium">{court.name}</span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Date</span>
-                          <span className="text-right font-medium">
-                            {fullDateFormatter.format(parseLocalDate(selectedDate))}
-                          </span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Time</span>
-                          <span className="text-right font-medium">
-                            {formatTime(firstSelectedSlot.startTime)} - {formatTime(lastSelectedSlot.endTime)}
-                          </span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Duration</span>
-                          <span className="text-right font-medium">{formatDuration(selectedDurationMinutes)}</span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4 border-t pt-3">
-                          <span className="font-medium">Estimated total</span>
-                          <span className="font-display text-xl font-semibold text-primary">
-                            {currencyFormatter.format(bookingPreviewTotal)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        This preview does not reserve the court or send data to the server.
-                      </p>
-
-                      <DialogFooter>
-                        <Button type="button" disabled>
-                          Booking API not connected
-                        </Button>
-                        <DialogClose asChild>
-                          <Button type="button" variant="outline">
-                            Back to time slots
-                          </Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  )}
-                </Dialog>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={court.status !== 'ACTIVE' || selectedSlots.length === 0}
+                  onClick={handleBookClick}
+                >
+                  {!isAuthenticated
+                    ? 'Log in to book'
+                    : selectedSlots.length > 0
+                    ? 'Book now'
+                    : 'Select a time slot'}
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                </Button>
 
                 <p className="text-center text-xs text-muted-foreground" aria-live="polite">
                   {court.status !== 'ACTIVE' ? (

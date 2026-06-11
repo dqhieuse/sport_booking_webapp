@@ -1,5 +1,14 @@
 package com.sportbooking.module.court.service;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Set;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
@@ -20,15 +29,8 @@ import com.sportbooking.module.court.entity.CourtTimeSlot;
 import com.sportbooking.module.court.repository.CourtImageRepository;
 import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
-import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.Set;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -124,11 +126,6 @@ public class PublicCourtService {
             CourtTimeSlot courtTimeSlot,
             Set<Long> bookedTimeSlotIds
     ) {
-        if (courtTimeSlot.getStatus() != TimeSlotStatus.ACTIVE
-                || courtTimeSlot.getTimeSlot().getStatus() != TimeSlotStatus.ACTIVE) {
-            return AvailableTimeSlotStatus.MAINTENANCE;
-        }
-
         LocalTime startTime = courtTimeSlot.getTimeSlot().getStartTime();
         boolean isExpired = bookingDate.isEqual(LocalDate.now()) && !startTime.isAfter(LocalTime.now());
         if (isExpired) {
