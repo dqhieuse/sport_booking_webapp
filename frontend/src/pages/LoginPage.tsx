@@ -14,7 +14,7 @@ import { useAuth } from '@/features/auth/useAuth';
 import type { LoginRequest } from '@/features/auth/types';
 import { ApiError } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
-import { getRedirectPath } from '@/routes/routeRedirect';
+import { getRedirectPath, getRoleHomePath } from '@/routes/routeRedirect';
 import { routePaths } from '@/routes/routePaths';
 
 type LoginFormValues = LoginRequest;
@@ -111,7 +111,7 @@ export function LoginPage() {
     try {
       const response = await loginLocalAccount(request);
       login(response.data);
-      navigate(redirectTo, { replace: true });
+      navigate(redirectTo === routePaths.home ? getRoleHomePath(response.data.user.role) : redirectTo, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         const mappedErrors = mapApiErrors(error.errors);

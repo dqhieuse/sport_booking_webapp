@@ -207,7 +207,9 @@ function AuthActions({ compact = false }: { compact?: boolean }) {
 
         <DropdownMenuSeparator />
 
-        <MenuLink to={routePaths.profile} label="Profile"/>
+        {session.user.role === 'USER' && <MenuLink to={routePaths.profile} label="Profile" />}
+        {session.user.role === 'VENDOR' && <MenuLink to={routePaths.vendorProfile} label="Profile" />}
+        {session.user.role === 'ADMIN' && <MenuLink to={routePaths.adminProfile} label="Profile" />}
         <MenuLink to={routePaths.bookingHistory} label="My bookings" />
         {session.user.role === 'VENDOR' && (
           <MenuLink to={routePaths.vendorDashboard} label="Vendor dashboard" />
