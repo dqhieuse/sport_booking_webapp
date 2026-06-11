@@ -48,6 +48,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -215,6 +216,30 @@ public class BookingService {
                 paymentRepository.saveAndFlush(payment);
             }
         }
+
+        return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
+    }
+
+    @Transactional
+    public VendorBookingActionResponse markCashPaidByVendor(String authorizationHeader, Long bookingId) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        Booking booking = getAndValidateVendorBooking(vendor, bookingId);
+
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
+            throw new InvalidRequestException("Cannot mark paid for cancelled or rejected booking");
+        }
+
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        if (payment.getMethod() != PaymentMethod.CASH_AT_COURT) {
+            throw new InvalidRequestException("Only CASH_AT_COURT bookings can be marked as paid");
+        }
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new InvalidRequestException("Payment is already paid");
+        }
+
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(LocalDateTime.now());
+        paymentRepository.saveAndFlush(payment);
 
         return new VendorBookingActionResponse(booking.getId(), booking.getStatus(), payment.getStatus());
     }

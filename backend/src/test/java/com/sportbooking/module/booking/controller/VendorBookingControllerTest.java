@@ -365,6 +365,81 @@ class VendorBookingControllerTest {
                 .andExpect(jsonPath("$.message", is("Booking has already started")));
     }
 
+    @Test
+    void markCashPaidByVendorSucceeds() throws Exception {
+        Court ownCourt = courtRepository.findById(1L).orElseThrow();
+        Booking booking = createTestBooking(ownCourt, LocalDate.now().plusDays(1), PaymentMethod.CASH_AT_COURT, PaymentStatus.UNPAID);
+
+        String token = bearerToken("vendor@sportbooking.local");
+
+        mockMvc.perform(put("/api/vendor/bookings/{id}/mark-cash-paid", booking.getId())
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Payment marked as paid successfully")))
+                .andExpect(jsonPath("$.data.paymentStatus", is("PAID")));
+
+        Payment updatedPayment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        assertThat(updatedPayment.getStatus()).isEqualTo(PaymentStatus.PAID);
+        assertThat(updatedPayment.getPaidAt()).isNotNull();
+    }
+
+    @Test
+    void markCashPaidByVendorRejectsVnpay() throws Exception {
+        Court ownCourt = courtRepository.findById(1L).orElseThrow();
+        Booking booking = createTestBooking(ownCourt, LocalDate.now().plusDays(1), PaymentMethod.VNPAY, PaymentStatus.PENDING);
+
+        String token = bearerToken("vendor@sportbooking.local");
+
+        mockMvc.perform(put("/api/vendor/bookings/{id}/mark-cash-paid", booking.getId())
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Only CASH_AT_COURT bookings can be marked as paid")));
+    }
+
+    @Test
+    void markCashPaidByVendorRejectsCancelledOrRejected() throws Exception {
+        Court ownCourt = courtRepository.findById(1L).orElseThrow();
+        Booking booking = createTestBooking(ownCourt, LocalDate.now().plusDays(1), PaymentMethod.CASH_AT_COURT, PaymentStatus.UNPAID);
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.saveAndFlush(booking);
+
+        String token = bearerToken("vendor@sportbooking.local");
+
+        mockMvc.perform(put("/api/vendor/bookings/{id}/mark-cash-paid", booking.getId())
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Cannot mark paid for cancelled or rejected booking")));
+    }
+
+    @Test
+    void markCashPaidByVendorRejectsAlreadyPaid() throws Exception {
+        Court ownCourt = courtRepository.findById(1L).orElseThrow();
+        Booking booking = createTestBooking(ownCourt, LocalDate.now().plusDays(1), PaymentMethod.CASH_AT_COURT, PaymentStatus.PAID);
+
+        String token = bearerToken("vendor@sportbooking.local");
+
+        mockMvc.perform(put("/api/vendor/bookings/{id}/mark-cash-paid", booking.getId())
+                        .header("Authorization", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Payment is already paid")));
+    }
+
+    @Test
+    void markCashPaidByVendorRejectsNonOwner() throws Exception {
+        User anotherVendor = createTestUser("vendor5@sportbooking.local", com.sportbooking.module.user.entity.RoleName.VENDOR);
+        Venue anotherVenue = createTestVenue(anotherVendor, "Another Venue 5");
+        Court anotherCourt = createTestCourt(anotherVenue, "Another Court 5");
+        Booking booking = createTestBooking(anotherCourt, LocalDate.now().plusDays(1), PaymentMethod.CASH_AT_COURT, PaymentStatus.UNPAID);
+
+        String token = bearerToken("vendor@sportbooking.local");
+
+        mockMvc.perform(put("/api/vendor/bookings/{id}/mark-cash-paid", booking.getId())
+                        .header("Authorization", token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("You do not own this booking")));
+    }
+
     private User createTestUser(String email, com.sportbooking.module.user.entity.RoleName roleName) {
         User user = new User();
         user.setEmail(email);

@@ -84,4 +84,13 @@ public class VendorBookingController {
         VendorBookingActionResponse response = bookingService.cancelBookingByVendor(authorizationHeader, id);
         return ApiResponse.success("Booking cancelled successfully", response);
     }
+
+    @PutMapping("/{id}/mark-cash-paid")
+    public ApiResponse<VendorBookingActionResponse> markCashPaid(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @PathVariable Long id
+    ) {
+        VendorBookingActionResponse response = bookingService.markCashPaidByVendor(authorizationHeader, id);
+        return ApiResponse.success("Payment marked as paid successfully", response);
+    }
 }
