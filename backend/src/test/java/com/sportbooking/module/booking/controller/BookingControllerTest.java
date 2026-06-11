@@ -1,0 +1,248 @@
+package com.sportbooking.module.booking.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.booking.repository.BookingRepository;
+import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
+import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
+import com.sportbooking.module.payment.repository.PaymentRepository;
+import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
+import com.sportbooking.module.user.repository.UserRepository;
+import java.time.LocalDate;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class BookingControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JwtAccessTokenService jwtAccessTokenService;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private BookingTimeSlotRepository bookingTimeSlotRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private CourtTimeSlotRepository courtTimeSlotRepository;
+
+    @Test
+    void createBookingCreatesOneBookingWithThreeConsecutiveSlotsAndOneCashPayment() throws Exception {
+        String bookingDate = LocalDate.now().plusDays(1).toString();
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "courtId": 1,
+                                  "timeSlotIds": [1, 2, 3],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT",
+                                  "note": "  Three-hour practice  "
+                                }
+                                """.formatted(bookingDate)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Booking created successfully")))
+                .andExpect(jsonPath("$.data.startTime", is("06:00:00")))
+                .andExpect(jsonPath("$.data.endTime", is("09:00:00")))
+                .andExpect(jsonPath("$.data.durationMinutes", is(180)))
+                .andExpect(jsonPath("$.data.totalPrice", is(360000.0)))
+                .andExpect(jsonPath("$.data.status", is("PENDING")))
+                .andExpect(jsonPath("$.data.slots", hasSize(3)))
+                .andExpect(jsonPath("$.data.payment.method", is("CASH_AT_COURT")))
+                .andExpect(jsonPath("$.data.payment.status", is("UNPAID")))
+                .andExpect(jsonPath("$.data.payment.amount", is(360000.0)));
+
+        assertThat(bookingRepository.count()).isEqualTo(1);
+        assertThat(bookingTimeSlotRepository.count()).isEqualTo(3);
+        assertThat(paymentRepository.count()).isEqualTo(1);
+        assertThat(bookingRepository.findAll().getFirst().getNote()).isEqualTo("Three-hour practice");
+        assertThat(bookingTimeSlotRepository.findAll())
+                .allSatisfy(bookingTimeSlot -> assertThat(bookingTimeSlot.getActiveSlotKey()).isNotBlank());
+
+        mockMvc.perform(get("/api/courts/{id}/available-slots", 1)
+                        .param("date", bookingDate))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].status", is("BOOKED")))
+                .andExpect(jsonPath("$.data.items[1].status", is("BOOKED")))
+                .andExpect(jsonPath("$.data.items[2].status", is("BOOKED")));
+    }
+
+    @Test
+    void createBookingCreatesSingleSlotBookingAndVnpayPendingPayment() throws Exception {
+        String bookingDate = LocalDate.now().plusDays(1).toString();
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "courtId": 1,
+                                  "timeSlotIds": [4],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "VNPAY"
+                                }
+                                """.formatted(bookingDate)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.slots", hasSize(1)))
+                .andExpect(jsonPath("$.data.durationMinutes", is(60)))
+                .andExpect(jsonPath("$.data.totalPrice", is(120000.0)))
+                .andExpect(jsonPath("$.data.payment.method", is("VNPAY")))
+                .andExpect(jsonPath("$.data.payment.status", is("PENDING")))
+                .andExpect(jsonPath("$.data.payment.paymentUrl").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void createBookingRejectsNonConsecutiveSlotsWithoutSavingAnything() throws Exception {
+        long bookingCount = bookingRepository.count();
+        long paymentCount = paymentRepository.count();
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "courtId": 1,
+                                  "timeSlotIds": [1, 4],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT"
+                                }
+                                """.formatted(LocalDate.now().plusDays(1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Selected time slots must be consecutive")));
+
+        assertThat(bookingRepository.count()).isEqualTo(bookingCount);
+        assertThat(bookingTimeSlotRepository.count()).isZero();
+        assertThat(paymentRepository.count()).isEqualTo(paymentCount);
+    }
+
+    @Test
+    void createBookingRejectsInactiveCourtSlotAndRollsBackWholeSelection() throws Exception {
+        var inactiveSlot = courtTimeSlotRepository.findByCourtIdAndTimeSlotId(1L, 2L).orElseThrow();
+        inactiveSlot.setStatus(TimeSlotStatus.INACTIVE);
+        courtTimeSlotRepository.saveAndFlush(inactiveSlot);
+        long bookingCount = bookingRepository.count();
+        long paymentCount = paymentRepository.count();
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "courtId": 1,
+                                  "timeSlotIds": [1, 2],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT"
+                                }
+                                """.formatted(LocalDate.now().plusDays(1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Time slot is not active for this court")));
+
+        assertThat(bookingRepository.count()).isEqualTo(bookingCount);
+        assertThat(bookingTimeSlotRepository.count()).isZero();
+        assertThat(paymentRepository.count()).isEqualTo(paymentCount);
+    }
+
+    @Test
+    void createBookingRejectsPastAndOutsideFourteenDayWindow() throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSingleSlotRequest(LocalDate.now().minusDays(1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Validation failed")));
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSingleSlotRequest(LocalDate.now().plusDays(14))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Booking date must be within the next 14 days")));
+    }
+
+    @Test
+    void createBookingRejectsDuplicateActiveSlot() throws Exception {
+        String request = validSingleSlotRequest(LocalDate.now().plusDays(1));
+        String token = bearerToken("user@sportbooking.local");
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message", is("One or more selected time slots are no longer available")));
+
+        assertThat(bookingRepository.count()).isEqualTo(1);
+        assertThat(bookingTimeSlotRepository.count()).isEqualTo(1);
+        assertThat(paymentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void createBookingRequiresUserRole() throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSingleSlotRequest(LocalDate.now().plusDays(1))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("User role is required")));
+    }
+
+    @Test
+    void createBookingRequiresAuthentication() throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSingleSlotRequest(LocalDate.now().plusDays(1))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message", is("Authentication is required")));
+    }
+
+    private String bearerToken(String email) {
+        var user = userRepository.findByEmail(email).orElseThrow();
+        return "Bearer " + jwtAccessTokenService.generateToken(user);
+    }
+
+    private String validSingleSlotRequest(LocalDate bookingDate) {
+        return """
+                {
+                  "courtId": 1,
+                  "timeSlotIds": [1],
+                  "bookingDate": "%s",
+                  "paymentMethod": "CASH_AT_COURT"
+                }
+                """.formatted(bookingDate);
+    }
+}

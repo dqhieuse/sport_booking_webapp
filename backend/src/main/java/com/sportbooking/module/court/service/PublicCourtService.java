@@ -3,6 +3,8 @@ package com.sportbooking.module.court.service;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
+import com.sportbooking.module.booking.entity.BookingStatus;
+import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
 import com.sportbooking.module.court.dto.AvailableTimeSlotResponse;
 import com.sportbooking.module.court.dto.AvailableTimeSlotStatus;
 import com.sportbooking.module.court.dto.CourtAvailableSlotsResponse;
@@ -21,6 +23,7 @@ import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,7 @@ public class PublicCourtService {
     private final CourtRepository courtRepository;
     private final CourtImageRepository courtImageRepository;
     private final CourtTimeSlotRepository courtTimeSlotRepository;
+    private final BookingTimeSlotRepository bookingTimeSlotRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<CourtListResponse> getActiveCourts(
@@ -99,8 +103,10 @@ public class PublicCourtService {
                         courtTimeSlot.getTimeSlot().getStartTime(),
                         courtTimeSlot.getTimeSlot().getEndTime(),
                         getAvailableTimeSlotStatus(
+                                courtId,
                                 bookingDate,
-                                courtTimeSlot.getTimeSlot().getEndTime()
+                                courtTimeSlot.getTimeSlot().getId(),
+                                courtTimeSlot.getTimeSlot().getStartTime()
                         )
                 ))
                 .toList();
@@ -108,9 +114,24 @@ public class PublicCourtService {
         return new CourtAvailableSlotsResponse(courtId, bookingDate, items);
     }
 
-    private AvailableTimeSlotStatus getAvailableTimeSlotStatus(LocalDate bookingDate, LocalTime endTime) {
-        boolean isExpired = bookingDate.isEqual(LocalDate.now()) && !endTime.isAfter(LocalTime.now());
-        return isExpired ? AvailableTimeSlotStatus.EXPIRED : AvailableTimeSlotStatus.AVAILABLE;
+    private AvailableTimeSlotStatus getAvailableTimeSlotStatus(
+            Long courtId,
+            LocalDate bookingDate,
+            Long timeSlotId,
+            LocalTime startTime
+    ) {
+        boolean isExpired = bookingDate.isEqual(LocalDate.now()) && !startTime.isAfter(LocalTime.now());
+        if (isExpired) {
+            return AvailableTimeSlotStatus.EXPIRED;
+        }
+
+        boolean isBooked = bookingTimeSlotRepository.existsByCourtIdAndBookingDateAndTimeSlotIdAndBookingStatusIn(
+                courtId,
+                bookingDate,
+                timeSlotId,
+                Set.of(BookingStatus.PENDING, BookingStatus.CONFIRMED)
+        );
+        return isBooked ? AvailableTimeSlotStatus.BOOKED : AvailableTimeSlotStatus.AVAILABLE;
     }
 
     private CourtListResponse toListResponse(Court court) {

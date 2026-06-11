@@ -1,5 +1,6 @@
 package com.sportbooking.module.booking.service;
 
+import com.sportbooking.common.exception.DuplicateResourceException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.module.auth.service.CurrentUserService;
@@ -11,6 +12,7 @@ import com.sportbooking.module.booking.entity.Booking;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
 import com.sportbooking.module.booking.repository.BookingRepository;
+import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
 import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.entity.CourtTimeSlot;
@@ -30,7 +32,9 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,11 +45,14 @@ public class BookingService {
     private static final int MAX_BOOKING_DAYS_AHEAD = 13;
     private static final long MIN_BOOKING_MINUTES = 60;
     private static final long MAX_BOOKING_MINUTES = 180;
+    private static final Set<BookingStatus> ACTIVE_BOOKING_STATUSES =
+            Set.of(BookingStatus.PENDING, BookingStatus.CONFIRMED);
 
     private final CurrentUserService currentUserService;
     private final CourtRepository courtRepository;
     private final CourtTimeSlotRepository courtTimeSlotRepository;
     private final BookingRepository bookingRepository;
+    private final BookingTimeSlotRepository bookingTimeSlotRepository;
     private final PaymentRepository paymentRepository;
 
     @Transactional
@@ -63,14 +70,23 @@ public class BookingService {
         List<CourtTimeSlot> courtTimeSlots = loadActiveCourtTimeSlots(court.getId(), timeSlotIds);
         int durationMinutes = validateAndCalculateDuration(courtTimeSlots);
         validateBookingTime(request.bookingDate(), courtTimeSlots);
+        validateNoDuplicateBookings(court.getId(), request.bookingDate(), courtTimeSlots);
 
         Booking booking = createBooking(user, court, request, courtTimeSlots);
 
-        Booking savedBooking = bookingRepository.saveAndFlush(booking);
+        Booking savedBooking = saveBookingWithDuplicateProtection(booking);
         Payment savedPayment = paymentRepository.saveAndFlush(
                 createPayment(savedBooking, request.paymentMethod())
         );
         return toResponse(savedBooking, savedPayment, durationMinutes);
+    }
+
+    private Booking saveBookingWithDuplicateProtection(Booking booking) {
+        try {
+            return bookingRepository.saveAndFlush(booking);
+        } catch (DataIntegrityViolationException exception) {
+            throw new DuplicateResourceException("One or more selected time slots are no longer available");
+        }
     }
 
     private List<Long> normalizeTimeSlotIds(List<Long> timeSlotIds) {
@@ -146,6 +162,25 @@ public class BookingService {
         LocalTime firstStartTime = courtTimeSlots.getFirst().getTimeSlot().getStartTime();
         if (!firstStartTime.isAfter(LocalTime.now())) {
             throw new InvalidRequestException("Selected booking time has already started");
+        }
+    }
+
+    private void validateNoDuplicateBookings(
+            Long courtId,
+            LocalDate bookingDate,
+            List<CourtTimeSlot> courtTimeSlots
+    ) {
+        for (CourtTimeSlot courtTimeSlot : courtTimeSlots) {
+            boolean duplicateExists = bookingTimeSlotRepository
+                    .existsByCourtIdAndBookingDateAndTimeSlotIdAndBookingStatusIn(
+                            courtId,
+                            bookingDate,
+                            courtTimeSlot.getTimeSlot().getId(),
+                            ACTIVE_BOOKING_STATUSES
+                    );
+            if (duplicateExists) {
+                throw new DuplicateResourceException("One or more selected time slots are no longer available");
+            }
         }
     }
 
