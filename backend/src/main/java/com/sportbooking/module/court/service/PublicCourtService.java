@@ -1,7 +1,11 @@
 package com.sportbooking.module.court.service;
 
 import com.sportbooking.common.api.PageResponse;
+import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
+import com.sportbooking.module.court.dto.AvailableTimeSlotResponse;
+import com.sportbooking.module.court.dto.AvailableTimeSlotStatus;
+import com.sportbooking.module.court.dto.CourtAvailableSlotsResponse;
 import com.sportbooking.module.court.dto.CourtDetailResponse;
 import com.sportbooking.module.court.dto.CourtImageResponse;
 import com.sportbooking.module.court.dto.CourtListResponse;
@@ -12,6 +16,10 @@ import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.repository.CourtImageRepository;
 import com.sportbooking.module.court.repository.CourtRepository;
+import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
+import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +32,7 @@ public class PublicCourtService {
 
     private final CourtRepository courtRepository;
     private final CourtImageRepository courtImageRepository;
+    private final CourtTimeSlotRepository courtTimeSlotRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<CourtListResponse> getActiveCourts(
@@ -67,6 +76,41 @@ public class PublicCourtService {
                 .stream()
                 .map(CourtImageResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CourtAvailableSlotsResponse getAvailableSlots(Long courtId, LocalDate bookingDate) {
+        if (bookingDate.isBefore(LocalDate.now())) {
+            throw new InvalidRequestException("Booking date must not be in the past");
+        }
+        if (bookingDate.isAfter(LocalDate.now().plusDays(13))) {
+            throw new InvalidRequestException("Booking date must be within the next 14 days");
+        }
+
+        if (!courtRepository.existsByIdAndStatus(courtId, CourtStatus.ACTIVE)) {
+            throw new ResourceNotFoundException("Court not found");
+        }
+
+        List<AvailableTimeSlotResponse> items = courtTimeSlotRepository
+                .findActiveBookableSlots(courtId, TimeSlotStatus.ACTIVE)
+                .stream()
+                .map(courtTimeSlot -> new AvailableTimeSlotResponse(
+                        courtTimeSlot.getTimeSlot().getId(),
+                        courtTimeSlot.getTimeSlot().getStartTime(),
+                        courtTimeSlot.getTimeSlot().getEndTime(),
+                        getAvailableTimeSlotStatus(
+                                bookingDate,
+                                courtTimeSlot.getTimeSlot().getEndTime()
+                        )
+                ))
+                .toList();
+
+        return new CourtAvailableSlotsResponse(courtId, bookingDate, items);
+    }
+
+    private AvailableTimeSlotStatus getAvailableTimeSlotStatus(LocalDate bookingDate, LocalTime endTime) {
+        boolean isExpired = bookingDate.isEqual(LocalDate.now()) && !endTime.isAfter(LocalTime.now());
+        return isExpired ? AvailableTimeSlotStatus.EXPIRED : AvailableTimeSlotStatus.AVAILABLE;
     }
 
     private CourtListResponse toListResponse(Court court) {

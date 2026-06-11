@@ -46,3 +46,18 @@ export type CourtImage = {
   isPrimary: boolean;
   sortOrder: number;
 };
+
+export type AvailableTimeSlotStatus = 'AVAILABLE' | 'BOOKED' | 'EXPIRED' | 'MAINTENANCE';
+
+export type AvailableTimeSlot = {
+  id: number;
+  startTime: string;
+  endTime: string;
+  status: AvailableTimeSlotStatus;
+};
+
+export type CourtAvailableSlots = {
+  courtId: number;
+  bookingDate: string;
+  items: AvailableTimeSlot[];
+};

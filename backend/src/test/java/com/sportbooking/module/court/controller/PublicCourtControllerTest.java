@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import java.time.LocalDate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -88,5 +89,47 @@ class PublicCourtControllerTest {
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Court not found")))
                 .andExpect(jsonPath("$.errors", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+    @Test
+    void getAvailableSlotsReturnsConfiguredSlotsForSelectedDate() throws Exception {
+        String bookingDate = LocalDate.now().plusDays(1).toString();
+
+        mockMvc.perform(get("/api/courts/{id}/available-slots", 1)
+                        .param("date", bookingDate))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.courtId", is(1)))
+                .andExpect(jsonPath("$.data.bookingDate", is(bookingDate)))
+                .andExpect(jsonPath("$.data.items", hasSize(8)))
+                .andExpect(jsonPath("$.data.items[0].startTime", is("06:00:00")))
+                .andExpect(jsonPath("$.data.items[0].status", is("AVAILABLE")));
+    }
+
+    @Test
+    void getAvailableSlotsRejectsPastDate() throws Exception {
+        mockMvc.perform(get("/api/courts/{id}/available-slots", 1)
+                        .param("date", LocalDate.now().minusDays(1).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Booking date must not be in the past")));
+    }
+
+    @Test
+    void getAvailableSlotsMarksElapsedSlotsUnavailableForToday() throws Exception {
+        mockMvc.perform(get("/api/courts/{id}/available-slots", 1)
+                        .param("date", LocalDate.now().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].startTime", is("06:00:00")))
+                .andExpect(jsonPath("$.data.items[0].status", is("EXPIRED")));
+    }
+
+    @Test
+    void getAvailableSlotsRejectsDateOutsideBookingWindow() throws Exception {
+        mockMvc.perform(get("/api/courts/{id}/available-slots", 1)
+                        .param("date", LocalDate.now().plusDays(14).toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Booking date must be within the next 14 days")));
     }
 }
