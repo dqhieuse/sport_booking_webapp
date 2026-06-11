@@ -1418,6 +1418,12 @@ page=0
 size=10
 ```
 
+Notes:
+
+- Only bookings owned by the authenticated user are returned.
+- Results are ordered by creation time descending.
+- `status` is optional and accepts a `BookingStatus` value.
+
 Response:
 
 ```json

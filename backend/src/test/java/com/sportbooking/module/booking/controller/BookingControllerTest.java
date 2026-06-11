@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.sportbooking.module.auth.service.JwtAccessTokenService;
+import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.repository.BookingRepository;
 import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
 import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
@@ -228,6 +229,61 @@ class BookingControllerTest {
                         .content(validSingleSlotRequest(LocalDate.now().plusDays(1))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Authentication is required")));
+    }
+
+    @Test
+    void getMyBookingsReturnsCurrentUserBookingsWithPagination() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        createSingleSlotBooking(LocalDate.now().plusDays(2));
+
+        mockMvc.perform(get("/api/bookings/my")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items", hasSize(1)))
+                .andExpect(jsonPath("$.data.items[0].bookingDate", is(LocalDate.now().plusDays(2).toString())))
+                .andExpect(jsonPath("$.data.items[0].startTime", is("06:00:00")))
+                .andExpect(jsonPath("$.data.items[0].endTime", is("07:00:00")))
+                .andExpect(jsonPath("$.data.items[0].court.name", is("Badminton Court A1")))
+                .andExpect(jsonPath("$.data.items[0].venue.name", is("Sunrise Badminton Center")))
+                .andExpect(jsonPath("$.data.items[0].payment.method", is("CASH_AT_COURT")))
+                .andExpect(jsonPath("$.data.page", is(0)))
+                .andExpect(jsonPath("$.data.size", is(1)))
+                .andExpect(jsonPath("$.data.totalItems", is(2)))
+                .andExpect(jsonPath("$.data.totalPages", is(2)));
+    }
+
+    @Test
+    void getMyBookingsFiltersByStatus() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        createSingleSlotBooking(LocalDate.now().plusDays(2));
+        var confirmedBooking = bookingRepository.findAll().getLast();
+        confirmedBooking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.saveAndFlush(confirmedBooking);
+
+        mockMvc.perform(get("/api/bookings/my")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .param("status", "CONFIRMED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items", hasSize(1)))
+                .andExpect(jsonPath("$.data.items[0].status", is("CONFIRMED")));
+    }
+
+    @Test
+    void getMyBookingsRequiresUserRole() throws Exception {
+        mockMvc.perform(get("/api/bookings/my")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("User role is required")));
+    }
+
+    private void createSingleSlotBooking(LocalDate bookingDate) throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validSingleSlotRequest(bookingDate)))
+                .andExpect(status().isCreated());
     }
 
     private String bearerToken(String email) {
