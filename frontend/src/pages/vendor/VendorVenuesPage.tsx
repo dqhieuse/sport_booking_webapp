@@ -379,7 +379,7 @@ export function VendorVenuesPage() {
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
-                                                <TableCell className="max-w-48 truncate">
+                                                <TableCell className="max-w-48 truncate text-muted-foreground">
                                                     {venue.address}
                                                 </TableCell>
                                                 <TableCell>

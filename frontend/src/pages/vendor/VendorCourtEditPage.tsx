@@ -32,6 +32,32 @@ type CourtFormValues = {
   description: string;
 };
 
+const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
+const relativeTimeUnits: Array<{ unit: Intl.RelativeTimeFormatUnit; milliseconds: number }> = [
+  { unit: 'year', milliseconds: 31_536_000_000 },
+  { unit: 'month', milliseconds: 2_592_000_000 },
+  { unit: 'week', milliseconds: 604_800_000 },
+  { unit: 'day', milliseconds: 86_400_000 },
+  { unit: 'hour', milliseconds: 3_600_000 },
+  { unit: 'minute', milliseconds: 60_000 },
+  { unit: 'second', milliseconds: 1_000 },
+];
+
+function formatRelativeTime(value: string, now: number) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return 'Unknown';
+
+  const difference = timestamp - now;
+  const selectedUnit =
+    relativeTimeUnits.find(({ milliseconds }) => Math.abs(difference) >= milliseconds) ??
+    relativeTimeUnits[relativeTimeUnits.length - 1];
+
+  return relativeTimeFormatter.format(
+    Math.round(difference / selectedUnit.milliseconds),
+    selectedUnit.unit,
+  );
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Could not load court.';
 }
@@ -69,6 +95,12 @@ export function VendorCourtEditPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [relativeTimeNow, setRelativeTimeNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setRelativeTimeNow(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (!Number.isInteger(numericCourtId) || numericCourtId <= 0) {
@@ -123,11 +155,13 @@ export function VendorCourtEditPage() {
     if (!formValues) return;
     setIsSubmitting(true);
     try {
-      const response = await updateVendorCourt(numericCourtId, toRequest(formValues));
-      const nextValues = toFormValues(response.data);
-      setCourt(response.data);
+      await updateVendorCourt(numericCourtId, toRequest(formValues));
+      const refreshedResponse = await getVendorCourtById(numericCourtId);
+      const nextValues = toFormValues(refreshedResponse.data);
+      setCourt(refreshedResponse.data);
       setInitialValues(nextValues);
       setFormValues(nextValues);
+      setRelativeTimeNow(Date.now());
       setShowUpdateConfirm(false);
       toast.success('Court updated successfully.');
     } catch (error) {
@@ -221,6 +255,14 @@ export function VendorCourtEditPage() {
                     <p className="flex items-center gap-2"><Trophy className="size-4 text-muted-foreground" />{sports.find((item) => String(item.id) === formValues.sportId)?.name}</p>
                     <p className="flex items-center gap-2"><CircleDollarSign className="size-4 text-muted-foreground" />{Number(formValues.pricePerHour || 0).toLocaleString('vi-VN')} VND/hour</p>
                     <p className="flex items-center gap-2"><MapPin className="size-4 text-muted-foreground" />Court ID #{court.id}</p>
+                    <p className="flex items-center gap-2">
+                      <CalendarClock className="size-4 text-muted-foreground" />
+                      Last updated: <time dateTime={court.updatedAt} title={new Date(court.updatedAt).toLocaleString('vi-VN')}>{formatRelativeTime(court.updatedAt, relativeTimeNow)}</time>
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <CalendarClock className="size-4 text-muted-foreground" />
+                      Created at: <time dateTime={court.createdAt} title={new Date(court.createdAt).toLocaleString('vi-VN')}>{formatRelativeTime(court.createdAt, relativeTimeNow)}</time>
+                    </p>
                   </div>
                 </CardContent>
               </Card>
