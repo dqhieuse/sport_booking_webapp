@@ -20,6 +20,10 @@ import com.sportbooking.module.booking.dto.MyBookingCourtResponse;
 import com.sportbooking.module.booking.dto.MyBookingPaymentResponse;
 import com.sportbooking.module.booking.dto.MyBookingResponse;
 import com.sportbooking.module.booking.dto.MyBookingVenueResponse;
+import com.sportbooking.module.booking.dto.VendorBookingCourtResponse;
+import com.sportbooking.module.booking.dto.VendorBookingPaymentResponse;
+import com.sportbooking.module.booking.dto.VendorBookingResponse;
+import com.sportbooking.module.booking.dto.VendorBookingUserResponse;
 import com.sportbooking.module.booking.entity.Booking;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
@@ -86,6 +90,61 @@ public class BookingService {
                 .toList();
 
         return PageResponse.from(bookingPage, items);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<VendorBookingResponse> getVendorBookings(
+            String authorizationHeader,
+            BookingStatus status,
+            Long courtId,
+            LocalDate date,
+            Pageable pageable
+    ) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+
+        if (courtId != null) {
+            Court court = courtRepository.findById(courtId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+            if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+                throw new ForbiddenException("You do not own this court");
+            }
+        }
+
+        var bookingPage = bookingRepository.findVendorBookings(
+                vendor.getId(),
+                status,
+                courtId,
+                date,
+                pageable
+        );
+
+        List<VendorBookingResponse> items = bookingPage.stream()
+                .map(this::toVendorBookingResponse)
+                .toList();
+
+        return PageResponse.from(bookingPage, items);
+    }
+
+    private VendorBookingResponse toVendorBookingResponse(Booking booking) {
+        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
+                .sorted((first, second) -> first.getTimeSlot().getStartTime()
+                        .compareTo(second.getTimeSlot().getStartTime()))
+                .toList();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        var court = booking.getCourt();
+        var bookingUser = booking.getUser();
+
+        return new VendorBookingResponse(
+                booking.getId(),
+                booking.getBookingDate(),
+                bookingTimeSlots.getFirst().getTimeSlot().getStartTime(),
+                bookingTimeSlots.getLast().getTimeSlot().getEndTime(),
+                booking.getTotalPrice(),
+                booking.getStatus(),
+                new VendorBookingUserResponse(bookingUser.getId(), bookingUser.getFullName(), bookingUser.getPhone()),
+                new VendorBookingCourtResponse(court.getId(), court.getName()),
+                new VendorBookingPaymentResponse(payment.getMethod(), payment.getStatus())
+        );
     }
 
     @Transactional(readOnly = true)
