@@ -1,18 +1,26 @@
 package com.sportbooking.module.booking.controller;
 
 import com.sportbooking.common.api.ApiResponse;
+import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.module.booking.dto.CreateBookingRequest;
 import com.sportbooking.module.booking.dto.CreateBookingResponse;
+import com.sportbooking.module.booking.dto.MyBookingResponse;
+import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -21,6 +29,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookingController {
 
     private final BookingService bookingService;
+
+    @GetMapping("/my")
+    public ApiResponse<PageResponse<MyBookingResponse>> getMyBookings(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ApiResponse.success(
+                "Success",
+                bookingService.getMyBookings(authorizationHeader, status, pageable)
+        );
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<CreateBookingResponse>> createBooking(

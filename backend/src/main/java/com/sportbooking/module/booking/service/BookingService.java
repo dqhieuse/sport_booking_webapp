@@ -1,5 +1,6 @@
 package com.sportbooking.module.booking.service;
 
+import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.DuplicateResourceException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
@@ -8,6 +9,10 @@ import com.sportbooking.module.booking.dto.BookingPaymentResponse;
 import com.sportbooking.module.booking.dto.CreateBookingRequest;
 import com.sportbooking.module.booking.dto.CreateBookingResponse;
 import com.sportbooking.module.booking.dto.CreatedBookingSlotResponse;
+import com.sportbooking.module.booking.dto.MyBookingCourtResponse;
+import com.sportbooking.module.booking.dto.MyBookingPaymentResponse;
+import com.sportbooking.module.booking.dto.MyBookingResponse;
+import com.sportbooking.module.booking.dto.MyBookingVenueResponse;
 import com.sportbooking.module.booking.entity.Booking;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
@@ -16,6 +21,7 @@ import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
 import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtStatus;
 import com.sportbooking.module.court.entity.CourtTimeSlot;
+import com.sportbooking.module.court.repository.CourtImageRepository;
 import com.sportbooking.module.court.repository.CourtRepository;
 import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
 import com.sportbooking.module.payment.entity.Payment;
@@ -35,6 +41,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,10 +57,28 @@ public class BookingService {
 
     private final CurrentUserService currentUserService;
     private final CourtRepository courtRepository;
+    private final CourtImageRepository courtImageRepository;
     private final CourtTimeSlotRepository courtTimeSlotRepository;
     private final BookingRepository bookingRepository;
     private final BookingTimeSlotRepository bookingTimeSlotRepository;
     private final PaymentRepository paymentRepository;
+
+    @Transactional(readOnly = true)
+    public PageResponse<MyBookingResponse> getMyBookings(
+            String authorizationHeader,
+            BookingStatus status,
+            Pageable pageable
+    ) {
+        User user = currentUserService.requireActiveCustomer(authorizationHeader);
+        var bookingPage = status == null
+                ? bookingRepository.findByUserId(user.getId(), pageable)
+                : bookingRepository.findByUserIdAndStatus(user.getId(), status, pageable);
+        List<MyBookingResponse> items = bookingPage.stream()
+                .map(this::toMyBookingResponse)
+                .toList();
+
+        return PageResponse.from(bookingPage, items);
+    }
 
     @Transactional
     public CreateBookingResponse createBooking(String authorizationHeader, CreateBookingRequest request) {
@@ -266,6 +291,34 @@ public class BookingService {
                         payment.getAmount(),
                         null
                 )
+        );
+    }
+
+    private MyBookingResponse toMyBookingResponse(Booking booking) {
+        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
+                .sorted((first, second) -> first.getTimeSlot().getStartTime()
+                        .compareTo(second.getTimeSlot().getStartTime()))
+                .toList();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        var court = booking.getCourt();
+        var venue = court.getVenue();
+
+        return new MyBookingResponse(
+                booking.getId(),
+                booking.getBookingDate(),
+                bookingTimeSlots.getFirst().getTimeSlot().getStartTime(),
+                bookingTimeSlots.getLast().getTimeSlot().getEndTime(),
+                booking.getTotalPrice(),
+                booking.getStatus(),
+                new MyBookingCourtResponse(
+                        court.getId(),
+                        court.getName(),
+                        courtImageRepository.findByCourtIdAndPrimaryTrue(court.getId())
+                                .map(image -> image.getImageUrl())
+                                .orElse(null)
+                ),
+                new MyBookingVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
+                new MyBookingPaymentResponse(payment.getMethod(), payment.getStatus())
         );
     }
 

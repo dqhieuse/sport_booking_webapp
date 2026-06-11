@@ -28,6 +28,15 @@ public interface CourtTimeSlotRepository extends JpaRepository<CourtTimeSlot, Lo
             @Param("status") TimeSlotStatus status
     );
 
+    @Query("""
+            select courtTimeSlot
+            from CourtTimeSlot courtTimeSlot
+            join fetch courtTimeSlot.timeSlot timeSlot
+            where courtTimeSlot.court.id = :courtId
+            order by timeSlot.startTime asc
+            """)
+    List<CourtTimeSlot> findConfiguredSlots(@Param("courtId") Long courtId);
+
     long countByCourtIdAndStatus(Long courtId, TimeSlotStatus status);
 
     Optional<CourtTimeSlot> findByCourtIdAndTimeSlotId(Long courtId, Long timeSlotId);
