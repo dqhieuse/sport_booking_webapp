@@ -60,6 +60,15 @@ public class CurrentUserService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public User requireActiveUser(String authorizationHeader) {
+        User user = requireCurrentUser(authorizationHeader);
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new ForbiddenException("Account is not active");
+        }
+        return user;
+    }
+
     private User requireActiveUserWithAnyRole(
             String authorizationHeader,
             String forbiddenRoleMessage,

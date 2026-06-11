@@ -2,10 +2,16 @@ package com.sportbooking.module.booking.service;
 
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.common.exception.DuplicateResourceException;
+import com.sportbooking.common.exception.ForbiddenException;
 import com.sportbooking.common.exception.InvalidRequestException;
 import com.sportbooking.common.exception.ResourceNotFoundException;
 import com.sportbooking.module.auth.service.CurrentUserService;
 import com.sportbooking.module.booking.dto.BookingPaymentResponse;
+import com.sportbooking.module.booking.dto.BookingDetailCourtResponse;
+import com.sportbooking.module.booking.dto.BookingDetailPaymentResponse;
+import com.sportbooking.module.booking.dto.BookingDetailResponse;
+import com.sportbooking.module.booking.dto.BookingDetailUserResponse;
+import com.sportbooking.module.booking.dto.BookingDetailVenueResponse;
 import com.sportbooking.module.booking.dto.CreateBookingRequest;
 import com.sportbooking.module.booking.dto.CreateBookingResponse;
 import com.sportbooking.module.booking.dto.CreatedBookingSlotResponse;
@@ -30,6 +36,7 @@ import com.sportbooking.module.payment.entity.PaymentStatus;
 import com.sportbooking.module.payment.repository.PaymentRepository;
 import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import com.sportbooking.module.user.entity.User;
+import com.sportbooking.module.user.entity.RoleName;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -78,6 +85,16 @@ public class BookingService {
                 .toList();
 
         return PageResponse.from(bookingPage, items);
+    }
+
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingDetail(String authorizationHeader, Long bookingId) {
+        User currentUser = currentUserService.requireActiveUser(authorizationHeader);
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        validateBookingDetailPermission(currentUser, booking);
+
+        return toBookingDetailResponse(booking);
     }
 
     @Transactional
@@ -319,6 +336,64 @@ public class BookingService {
                 ),
                 new MyBookingVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
                 new MyBookingPaymentResponse(payment.getMethod(), payment.getStatus())
+        );
+    }
+
+    private void validateBookingDetailPermission(User currentUser, Booking booking) {
+        RoleName roleName = currentUser.getRole().getName();
+        boolean allowed = switch (roleName) {
+            case USER -> booking.getUser().getId().equals(currentUser.getId());
+            case VENDOR -> booking.getCourt().getVenue().getVendor().getId().equals(currentUser.getId());
+            case ADMIN -> true;
+        };
+        if (!allowed) {
+            throw new ForbiddenException("You cannot view this booking");
+        }
+    }
+
+    private BookingDetailResponse toBookingDetailResponse(Booking booking) {
+        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
+                .sorted((first, second) -> first.getTimeSlot().getStartTime()
+                        .compareTo(second.getTimeSlot().getStartTime()))
+                .toList();
+        List<CreatedBookingSlotResponse> slots = bookingTimeSlots.stream()
+                .map(bookingTimeSlot -> new CreatedBookingSlotResponse(
+                        bookingTimeSlot.getId(),
+                        bookingTimeSlot.getTimeSlot().getId(),
+                        bookingTimeSlot.getTimeSlot().getStartTime(),
+                        bookingTimeSlot.getTimeSlot().getEndTime(),
+                        bookingTimeSlot.getSlotPrice()
+                ))
+                .toList();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        User bookingUser = booking.getUser();
+        var court = booking.getCourt();
+        var venue = court.getVenue();
+
+        return new BookingDetailResponse(
+                booking.getId(),
+                booking.getBookingDate(),
+                bookingTimeSlots.getFirst().getTimeSlot().getStartTime(),
+                bookingTimeSlots.getLast().getTimeSlot().getEndTime(),
+                booking.getTotalPrice(),
+                booking.getStatus(),
+                booking.getNote(),
+                slots,
+                new BookingDetailUserResponse(
+                        bookingUser.getId(),
+                        bookingUser.getFullName(),
+                        bookingUser.getEmail(),
+                        bookingUser.getPhone()
+                ),
+                new BookingDetailCourtResponse(court.getId(), court.getName(), court.getPricePerHour()),
+                new BookingDetailVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
+                new BookingDetailPaymentResponse(
+                        payment.getMethod(),
+                        payment.getStatus(),
+                        payment.getAmount(),
+                        payment.getPaidAt()
+                ),
+                booking.getCreatedAt()
         );
     }
 

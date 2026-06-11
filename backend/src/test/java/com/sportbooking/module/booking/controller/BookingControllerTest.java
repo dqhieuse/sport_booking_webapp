@@ -278,6 +278,59 @@ class BookingControllerTest {
                 .andExpect(jsonPath("$.message", is("User role is required")));
     }
 
+    @Test
+    void getBookingDetailReturnsFullDetailForOwner() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        Long bookingId = bookingRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(get("/api/bookings/{id}", bookingId)
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(bookingId.intValue())))
+                .andExpect(jsonPath("$.data.user.email", is("user@sportbooking.local")))
+                .andExpect(jsonPath("$.data.court.name", is("Badminton Court A1")))
+                .andExpect(jsonPath("$.data.venue.name", is("Sunrise Badminton Center")))
+                .andExpect(jsonPath("$.data.slots", hasSize(1)))
+                .andExpect(jsonPath("$.data.payment.status", is("UNPAID")));
+    }
+
+    @Test
+    void getBookingDetailRejectsUserWhoDoesNotOwnBooking() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        var booking = bookingRepository.findAll().getFirst();
+        booking.setUser(userRepository.findByEmail("vendor@sportbooking.local").orElseThrow());
+        bookingRepository.saveAndFlush(booking);
+
+        mockMvc.perform(get("/api/bookings/{id}", booking.getId())
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("You cannot view this booking")));
+    }
+
+    @Test
+    void getBookingDetailAllowsCourtVendorAndAdmin() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        Long bookingId = bookingRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(get("/api/bookings/{id}", bookingId)
+                        .header("Authorization", bearerToken("vendor@sportbooking.local")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(bookingId.intValue())));
+
+        mockMvc.perform(get("/api/bookings/{id}", bookingId)
+                        .header("Authorization", bearerToken("admin@sportbooking.local")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(bookingId.intValue())));
+    }
+
+    @Test
+    void getBookingDetailReturnsNotFoundForUnknownBooking() throws Exception {
+        mockMvc.perform(get("/api/bookings/{id}", 9999)
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", is("Booking not found")));
+    }
+
     private void createSingleSlotBooking(LocalDate bookingDate) throws Exception {
         mockMvc.perform(post("/api/bookings")
                         .header("Authorization", bearerToken("user@sportbooking.local"))
