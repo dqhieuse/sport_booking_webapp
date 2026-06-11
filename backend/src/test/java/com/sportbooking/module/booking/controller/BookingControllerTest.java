@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,6 +15,7 @@ import com.sportbooking.module.booking.repository.BookingRepository;
 import com.sportbooking.module.booking.repository.BookingTimeSlotRepository;
 import com.sportbooking.module.court.repository.CourtTimeSlotRepository;
 import com.sportbooking.module.payment.repository.PaymentRepository;
+import com.sportbooking.module.payment.entity.PaymentStatus;
 import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import com.sportbooking.module.user.repository.UserRepository;
 import java.time.LocalDate;
@@ -331,11 +333,135 @@ class BookingControllerTest {
                 .andExpect(jsonPath("$.message", is("Booking not found")));
     }
 
+    @Test
+    void cancelBookingCancelsPendingBookingAndReleasesSlot() throws Exception {
+        LocalDate bookingDate = LocalDate.now().plusDays(1);
+        createSingleSlotBooking(bookingDate);
+        Long bookingId = bookingRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", bookingId)
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Booking cancelled successfully")))
+                .andExpect(jsonPath("$.data.bookingStatus", is("CANCELLED")))
+                .andExpect(jsonPath("$.data.paymentStatus", is("UNPAID")));
+
+        assertThat(bookingRepository.findById(bookingId).orElseThrow().getStatus())
+                .isEqualTo(BookingStatus.CANCELLED);
+        assertThat(bookingTimeSlotRepository.findAll().getFirst().getActiveSlotKey()).isNull();
+
+        mockMvc.perform(get("/api/courts/{id}/available-slots", 1)
+                        .param("date", bookingDate.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].status", is("AVAILABLE")));
+    }
+
+    @Test
+    void cancelBookingMarksPaidVnpayPaymentAsRefundPending() throws Exception {
+        createVnpayBooking(LocalDate.now().plusDays(1));
+        var booking = bookingRepository.findAll().getFirst();
+        var payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        payment.setStatus(PaymentStatus.PAID);
+        paymentRepository.saveAndFlush(payment);
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", booking.getId())
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.bookingStatus", is("CANCELLED")))
+                .andExpect(jsonPath("$.data.paymentStatus", is("REFUND_PENDING")));
+
+        var updatedPayment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        assertThat(updatedPayment.getRefundAmount()).isEqualByComparingTo(updatedPayment.getAmount());
+        assertThat(updatedPayment.getRefundReason()).isEqualTo("User cancelled booking");
+    }
+
+    @Test
+    void cancelBookingRejectsUserWhoDoesNotOwnBooking() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        var booking = bookingRepository.findAll().getFirst();
+        booking.setUser(userRepository.findByEmail("vendor@sportbooking.local").orElseThrow());
+        bookingRepository.saveAndFlush(booking);
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", booking.getId())
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("You cannot cancel this booking")));
+    }
+
+    @Test
+    void cancelBookingRejectsTerminalBooking() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        var booking = bookingRepository.findAll().getFirst();
+        booking.setStatus(BookingStatus.COMPLETED);
+        bookingRepository.saveAndFlush(booking);
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", booking.getId())
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Booking cannot be cancelled in its current status")));
+    }
+
+    @Test
+    void cancelBookingRejectsPaidCashBooking() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        var booking = bookingRepository.findAll().getFirst();
+        var payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        payment.setStatus(PaymentStatus.PAID);
+        paymentRepository.saveAndFlush(payment);
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", booking.getId())
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Paid cash booking must be cancelled by the vendor")));
+
+        assertThat(bookingRepository.findById(booking.getId()).orElseThrow().getStatus())
+                .isEqualTo(BookingStatus.PENDING);
+    }
+
+    @Test
+    void cancelBookingRejectsBookingThatHasAlreadyStarted() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        var booking = bookingRepository.findAll().getFirst();
+        booking.setBookingDate(LocalDate.now().minusDays(1));
+        bookingRepository.saveAndFlush(booking);
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", booking.getId())
+                        .header("Authorization", bearerToken("user@sportbooking.local")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Booking has already started")));
+    }
+
+    @Test
+    void cancelBookingRequiresUserRole() throws Exception {
+        createSingleSlotBooking(LocalDate.now().plusDays(1));
+        Long bookingId = bookingRepository.findAll().getFirst().getId();
+
+        mockMvc.perform(put("/api/bookings/{id}/cancel", bookingId)
+                        .header("Authorization", bearerToken("vendor@sportbooking.local")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("User role is required")));
+    }
+
     private void createSingleSlotBooking(LocalDate bookingDate) throws Exception {
         mockMvc.perform(post("/api/bookings")
                         .header("Authorization", bearerToken("user@sportbooking.local"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validSingleSlotRequest(bookingDate)))
+                .andExpect(status().isCreated());
+    }
+
+    private void createVnpayBooking(LocalDate bookingDate) throws Exception {
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", bearerToken("user@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "courtId": 1,
+                                  "timeSlotIds": [1],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "VNPAY"
+                                }
+                                """.formatted(bookingDate)))
                 .andExpect(status().isCreated());
     }
 

@@ -5,6 +5,7 @@ import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.module.booking.dto.CreateBookingRequest;
 import com.sportbooking.module.booking.dto.CreateBookingResponse;
 import com.sportbooking.module.booking.dto.BookingDetailResponse;
+import com.sportbooking.module.booking.dto.BookingCancellationResponse;
 import com.sportbooking.module.booking.dto.MyBookingResponse;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.service.BookingService;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -54,6 +56,17 @@ public class BookingController {
         return ApiResponse.success(
                 "Success",
                 bookingService.getBookingDetail(authorizationHeader, id)
+        );
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ApiResponse<BookingCancellationResponse> cancelBooking(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @PathVariable Long id
+    ) {
+        return ApiResponse.success(
+                "Booking cancelled successfully",
+                bookingService.cancelBooking(authorizationHeader, id)
         );
     }
 

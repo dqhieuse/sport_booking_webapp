@@ -12,6 +12,7 @@ import com.sportbooking.module.booking.dto.BookingDetailPaymentResponse;
 import com.sportbooking.module.booking.dto.BookingDetailResponse;
 import com.sportbooking.module.booking.dto.BookingDetailUserResponse;
 import com.sportbooking.module.booking.dto.BookingDetailVenueResponse;
+import com.sportbooking.module.booking.dto.BookingCancellationResponse;
 import com.sportbooking.module.booking.dto.CreateBookingRequest;
 import com.sportbooking.module.booking.dto.CreateBookingResponse;
 import com.sportbooking.module.booking.dto.CreatedBookingSlotResponse;
@@ -95,6 +96,32 @@ public class BookingService {
         validateBookingDetailPermission(currentUser, booking);
 
         return toBookingDetailResponse(booking);
+    }
+
+    @Transactional
+    public BookingCancellationResponse cancelBooking(String authorizationHeader, Long bookingId) {
+        User currentUser = currentUserService.requireActiveCustomer(authorizationHeader);
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if (!booking.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("You cannot cancel this booking");
+        }
+
+        validateBookingCanBeCancelled(booking);
+        Payment payment = paymentRepository.findByBookingId(bookingId).orElseThrow();
+        handleCancellationPayment(payment);
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.saveAndFlush(booking);
+        if (payment.getStatus() == PaymentStatus.REFUND_PENDING) {
+            paymentRepository.saveAndFlush(payment);
+        }
+
+        return new BookingCancellationResponse(
+                booking.getId(),
+                booking.getStatus(),
+                payment.getStatus()
+        );
     }
 
     @Transactional
@@ -349,6 +376,39 @@ public class BookingService {
         if (!allowed) {
             throw new ForbiddenException("You cannot view this booking");
         }
+    }
+
+    private void validateBookingCanBeCancelled(Booking booking) {
+        if (booking.getStatus() != BookingStatus.PENDING
+                && booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new InvalidRequestException("Booking cannot be cancelled in its current status");
+        }
+
+        if (booking.getBookingDate().isBefore(LocalDate.now())) {
+            throw new InvalidRequestException("Booking has already started");
+        }
+        if (booking.getBookingDate().isEqual(LocalDate.now())) {
+            LocalTime startTime = booking.getTimeSlots().stream()
+                    .map(bookingTimeSlot -> bookingTimeSlot.getTimeSlot().getStartTime())
+                    .min(LocalTime::compareTo)
+                    .orElseThrow();
+            if (!startTime.isAfter(LocalTime.now())) {
+                throw new InvalidRequestException("Booking has already started");
+            }
+        }
+    }
+
+    private void handleCancellationPayment(Payment payment) {
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            return;
+        }
+        if (payment.getMethod() == PaymentMethod.CASH_AT_COURT) {
+            throw new InvalidRequestException("Paid cash booking must be cancelled by the vendor");
+        }
+
+        payment.setStatus(PaymentStatus.REFUND_PENDING);
+        payment.setRefundAmount(payment.getAmount());
+        payment.setRefundReason("User cancelled booking");
     }
 
     private BookingDetailResponse toBookingDetailResponse(Booking booking) {

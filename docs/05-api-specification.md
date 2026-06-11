@@ -1536,6 +1536,14 @@ PUT /bookings/{id}/cancel
 
 Auth: USER
 
+Cancellation rules:
+
+- Only the booking owner can cancel.
+- Only future `PENDING` or `CONFIRMED` bookings can be cancelled.
+- Cancelling releases the selected time slots for another booking.
+- A paid VNPAY payment moves to `REFUND_PENDING`.
+- A cash payment already marked `PAID` must be handled by the Vendor.
+
 Response:
 
 ```json
