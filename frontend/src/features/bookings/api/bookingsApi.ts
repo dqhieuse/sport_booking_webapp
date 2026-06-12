@@ -1,39 +1,53 @@
 import { apiClient } from '@/lib/apiClient';
 import type { ApiSuccessResponse, PageResponse } from '@/types/api';
+
 import type {
+  BookingCancellationResponse,
+  BookingDetailResponse,
   CreateBookingRequest,
   CreateBookingResponse,
-  BookingDetailResponse,
   MyBookingResponse,
+  VendorCreateBookingRequest,
+  VendorCustomerLookupResponse,
 } from '../types';
 
-export async function createBooking(
-  data: CreateBookingRequest,
-  signal?: AbortSignal,
-): Promise<ApiSuccessResponse<CreateBookingResponse>> {
+export async function createBooking(data: CreateBookingRequest, signal?: AbortSignal) {
   return apiClient.post<CreateBookingResponse>('/bookings', data, { signal });
 }
 
-export async function getBookingDetail(
-  id: number,
-  signal?: AbortSignal,
-): Promise<ApiSuccessResponse<BookingDetailResponse>> {
-  return apiClient.get<BookingDetailResponse>(`/bookings/${id}`, { signal });
+export async function createVendorBooking(data: VendorCreateBookingRequest, signal?: AbortSignal) {
+  return apiClient.post<CreateBookingResponse>('/vendor/bookings', data, { signal });
 }
 
-export async function getMyBookings(
-  params: { status?: string; page?: number; size?: number } = {},
-  signal?: AbortSignal,
-): Promise<ApiSuccessResponse<PageResponse<MyBookingResponse>>> {
-  return apiClient.get<PageResponse<MyBookingResponse>>('/bookings/my', {
-    params,
+export async function lookupVendorCustomer(identifier: string, signal?: AbortSignal) {
+  return apiClient.get<VendorCustomerLookupResponse>('/vendor/bookings/customer-lookup', {
+    params: { identifier },
     signal,
   });
 }
 
-export async function cancelBooking(
-  id: number,
+export type MyBookingsParams = {
+  page?: number;
+  size?: number;
+};
+
+export async function getMyBookings(
+  params?: MyBookingsParams,
   signal?: AbortSignal,
-): Promise<ApiSuccessResponse<{ bookingId: number; bookingStatus: string; paymentStatus: string }>> {
-  return apiClient.put(`/bookings/${id}/cancel`, null, { signal });
+): Promise<ApiSuccessResponse<PageResponse<MyBookingResponse>>> {
+  return apiClient.get<PageResponse<MyBookingResponse>>('/bookings/my', { params, signal });
+}
+
+export async function getBookingDetail(
+  bookingId: number,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<BookingDetailResponse>> {
+  return apiClient.get<BookingDetailResponse>(`/bookings/${bookingId}`, { signal });
+}
+
+export async function cancelBooking(
+  bookingId: number,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<BookingCancellationResponse>> {
+  return apiClient.put<BookingCancellationResponse>(`/bookings/${bookingId}/cancel`, undefined, { signal });
 }

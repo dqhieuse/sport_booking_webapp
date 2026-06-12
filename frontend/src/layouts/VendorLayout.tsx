@@ -110,6 +110,12 @@ export function VendorLayout() {
             return items;
         }
 
+        if (pathname === routePaths.vendorBookingCreate) {
+            items.push({ label: "Bookings", to: routePaths.vendorBookings });
+            items.push({ label: "Create booking" });
+            return items;
+        }
+
         items.push({ label: "Vendor" });
         return items;
     })();

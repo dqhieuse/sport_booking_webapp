@@ -6,23 +6,13 @@ import {
 } from '@mynaui/icons-react';
 import { CalendarDays, CheckCircle2, Clock3, RefreshCw, Settings, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@/features/auth/useAuth';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { useAuth } from '@/features/auth/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BackBreadcrumb } from '@/components/back-breadcrumb';
@@ -204,8 +194,6 @@ function CourtDetailSkeleton() {
 }
 
 export function CourtDetailPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const { courtId } = useParams<{ courtId: string }>();
   const parsedId = Number(courtId);
 
@@ -218,12 +206,16 @@ export function CourtDetailPage() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [slots, setSlots] = useState<AvailableTimeSlot[]>([]);
   const [selectedSlotIds, setSelectedSlotIds] = useState<number[]>([]);
-  const [selectionMessage, setSelectionMessage] = useState(
+  const [, setSelectionMessage] = useState(
     'Select a start time, then add consecutive slots up to 3 hours.',
   );
   const [slotLoadState, setSlotLoadState] = useState<LoadState>('idle');
   const [slotErrorMessage, setSlotErrorMessage] = useState<string | null>(null);
   const [slotReloadKey, setSlotReloadKey] = useState(0);
+
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const isValidId = Number.isFinite(parsedId) && parsedId > 0;
   const { today, lastBookableDate } = getBookingWindow();
@@ -366,23 +358,22 @@ export function CourtDetailPage() {
     );
   }
 
-  function handleBookClick() {
-    if (selectedSlots.length === 0) return;
-    const checkoutSearch = `?date=${selectedDate}&slots=${selectedSlotIds.join(',')}`;
-    const checkoutPath = `/courts/${parsedId}/checkout`;
-
+  function handleBookNowClick(e: React.MouseEvent) {
     if (!isAuthenticated) {
-      navigate(routePaths.login, {
-        state: {
-          from: {
-            pathname: checkoutPath,
-            search: checkoutSearch,
-          },
-        },
-      });
-    } else {
-      navigate(`${checkoutPath}${checkoutSearch}`);
+      e.preventDefault();
+      navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`);
+      return;
     }
+    
+    if (selectedSlots.length === 0) return;
+
+    navigate(routePaths.bookingCreate, {
+      state: {
+        courtId: parsedId,
+        selectedDate,
+        selectedSlotIds,
+      }
+    });
   }
 
   if (!isValidId) {
@@ -743,13 +734,9 @@ export function CourtDetailPage() {
                   size="lg"
                   className="w-full"
                   disabled={court.status !== 'ACTIVE' || selectedSlots.length === 0}
-                  onClick={handleBookClick}
+                  onClick={handleBookNowClick}
                 >
-                  {!isAuthenticated
-                    ? 'Log in to book'
-                    : selectedSlots.length > 0
-                    ? 'Book now'
-                    : 'Select a time slot'}
+                  {selectedSlots.length > 0 ? 'Book now' : 'Select a time slot'}
                   <ChevronRight className="size-4" aria-hidden="true" />
                 </Button>
 

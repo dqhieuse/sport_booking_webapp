@@ -58,6 +58,10 @@ const vendorNavigation = [
         url: routePaths.vendorSlots,
       },
       {
+        title: "Create booking",
+        url: routePaths.vendorBookingCreate,
+      },
+      {
         title: "Bookings",
         url: routePaths.vendorBookings,
       },

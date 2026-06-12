@@ -4,20 +4,28 @@ import com.sportbooking.common.api.ApiResponse;
 import com.sportbooking.common.api.PageResponse;
 import com.sportbooking.module.booking.dto.VendorBookingResponse;
 import com.sportbooking.module.booking.dto.VendorBookingActionResponse;
+import com.sportbooking.module.booking.dto.VendorCustomerLookupResponse;
+import com.sportbooking.module.booking.dto.VendorCreateBookingRequest;
+import com.sportbooking.module.booking.dto.CreateBookingResponse;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.service.BookingService;
+import jakarta.validation.Valid;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,6 +34,28 @@ import org.springframework.web.bind.annotation.RestController;
 public class VendorBookingController {
 
     private final BookingService bookingService;
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<CreateBookingResponse> createBooking(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Valid @RequestBody VendorCreateBookingRequest request
+    ) {
+        CreateBookingResponse response = bookingService.createBookingByVendor(authorizationHeader, request);
+        return ApiResponse.success("Vendor booking created successfully", response);
+    }
+
+    @GetMapping("/customer-lookup")
+    public ApiResponse<VendorCustomerLookupResponse> lookupCustomer(
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestParam String identifier
+    ) {
+        VendorCustomerLookupResponse response = bookingService.lookupCustomerByVendor(
+                authorizationHeader,
+                identifier
+        );
+        return ApiResponse.success("Customer lookup completed", response);
+    }
 
     @GetMapping
     public ApiResponse<PageResponse<VendorBookingResponse>> getVendorBookings(

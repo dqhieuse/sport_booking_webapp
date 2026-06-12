@@ -25,6 +25,8 @@ import com.sportbooking.module.booking.dto.VendorBookingPaymentResponse;
 import com.sportbooking.module.booking.dto.VendorBookingResponse;
 import com.sportbooking.module.booking.dto.VendorBookingActionResponse;
 import com.sportbooking.module.booking.dto.VendorBookingUserResponse;
+import com.sportbooking.module.booking.dto.VendorCustomerLookupResponse;
+import com.sportbooking.module.booking.dto.VendorCreateBookingRequest;
 import com.sportbooking.module.booking.entity.Booking;
 import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
@@ -43,6 +45,8 @@ import com.sportbooking.module.payment.repository.PaymentRepository;
 import com.sportbooking.module.timeslot.entity.TimeSlotStatus;
 import com.sportbooking.module.user.entity.User;
 import com.sportbooking.module.user.entity.RoleName;
+import com.sportbooking.module.user.entity.UserStatus;
+import com.sportbooking.module.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -76,6 +80,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingTimeSlotRepository bookingTimeSlotRepository;
     private final PaymentRepository paymentRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<MyBookingResponse> getMyBookings(
@@ -127,6 +132,56 @@ public class BookingService {
         return PageResponse.from(bookingPage, items);
     }
 
+    @Transactional
+    public CreateBookingResponse createBookingByVendor(
+            String authorizationHeader,
+            VendorCreateBookingRequest request
+    ) {
+        User vendor = currentUserService.requireActiveVendor(authorizationHeader);
+        validateBookingDate(request.bookingDate());
+
+        Court court = courtRepository.findById(request.courtId())
+                .orElseThrow(() -> new ResourceNotFoundException("Court not found"));
+        if (!court.getVenue().getVendor().getId().equals(vendor.getId())) {
+            throw new ForbiddenException("You do not own this court");
+        }
+        if (court.getStatus() != CourtStatus.ACTIVE) {
+            throw new InvalidRequestException("Court is not active");
+        }
+
+        List<Long> timeSlotIds = normalizeTimeSlotIds(request.timeSlotIds());
+        List<CourtTimeSlot> courtTimeSlots = loadActiveCourtTimeSlots(court.getId(), timeSlotIds);
+        int durationMinutes = validateAndCalculateDuration(courtTimeSlots);
+        validateBookingTime(request.bookingDate(), courtTimeSlots);
+        validateNoDuplicateBookings(court.getId(), request.bookingDate(), courtTimeSlots);
+
+        Booking booking = createVendorBooking(court, request, courtTimeSlots);
+        Booking savedBooking = saveBookingWithDuplicateProtection(booking);
+        Payment savedPayment = paymentRepository.saveAndFlush(
+                createVendorPayment(savedBooking, request.paymentMethod())
+        );
+        return toResponse(savedBooking, savedPayment, durationMinutes);
+    }
+
+    @Transactional(readOnly = true)
+    public VendorCustomerLookupResponse lookupCustomerByVendor(
+            String authorizationHeader,
+            String identifier
+    ) {
+        currentUserService.requireActiveVendor(authorizationHeader);
+        User customer = findEligibleCustomer(identifier);
+        if (customer == null) {
+            return VendorCustomerLookupResponse.notFound();
+        }
+        return new VendorCustomerLookupResponse(
+                true,
+                customer.getId(),
+                customer.getFullName(),
+                maskEmail(customer.getEmail()),
+                maskPhone(customer.getPhone())
+        );
+    }
+
     private VendorBookingResponse toVendorBookingResponse(Booking booking) {
         List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
                 .sorted((first, second) -> first.getTimeSlot().getStartTime()
@@ -143,7 +198,11 @@ public class BookingService {
                 bookingTimeSlots.getLast().getTimeSlot().getEndTime(),
                 booking.getTotalPrice(),
                 booking.getStatus(),
-                new VendorBookingUserResponse(bookingUser.getId(), bookingUser.getFullName(), bookingUser.getPhone()),
+                new VendorBookingUserResponse(
+                        bookingUser == null ? null : bookingUser.getId(),
+                        bookingUser == null ? booking.getGuestCustomerName() : bookingUser.getFullName(),
+                        bookingUser == null ? booking.getGuestCustomerPhone() : bookingUser.getPhone()
+                ),
                 new VendorBookingCourtResponse(court.getId(), court.getName()),
                 new VendorBookingPaymentResponse(payment.getMethod(), payment.getStatus())
         );
@@ -259,7 +318,7 @@ public class BookingService {
         User currentUser = currentUserService.requireActiveCustomer(authorizationHeader);
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
-        if (!booking.getUser().getId().equals(currentUser.getId())) {
+        if (booking.getUser() == null || !booking.getUser().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("You cannot cancel this booking");
         }
 
@@ -438,6 +497,47 @@ public class BookingService {
         return booking;
     }
 
+    private Booking createVendorBooking(
+            Court court,
+            VendorCreateBookingRequest request,
+            List<CourtTimeSlot> courtTimeSlots
+    ) {
+        Booking booking = new Booking();
+        User customer = findEligibleCustomer(request.customerIdentifier());
+        if (normalizeOptionalText(request.customerIdentifier()) != null && customer == null) {
+            throw new InvalidRequestException("Customer account is no longer available");
+        }
+        if (customer != null) {
+            booking.setUser(customer);
+        } else {
+            booking.setGuestCustomerName(request.customerName().trim());
+            booking.setGuestCustomerPhone(normalizeOptionalText(request.customerPhone()));
+        }
+        booking.setCourt(court);
+        booking.setBookingDate(request.bookingDate());
+        booking.setStatus(
+                request.paymentMethod() == PaymentMethod.CASH_AT_COURT
+                        ? BookingStatus.CONFIRMED
+                        : BookingStatus.PENDING
+        );
+        booking.setNote(normalizeNote(request.note()));
+
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        for (CourtTimeSlot courtTimeSlot : courtTimeSlots) {
+            BigDecimal slotPrice = calculateSlotPrice(court, courtTimeSlot);
+            totalPrice = totalPrice.add(slotPrice);
+
+            BookingTimeSlot bookingTimeSlot = new BookingTimeSlot();
+            bookingTimeSlot.setCourt(court);
+            bookingTimeSlot.setBookingDate(request.bookingDate());
+            bookingTimeSlot.setTimeSlot(courtTimeSlot.getTimeSlot());
+            bookingTimeSlot.setSlotPrice(slotPrice);
+            booking.addTimeSlot(bookingTimeSlot);
+        }
+        booking.setTotalPrice(totalPrice);
+        return booking;
+    }
+
     private BigDecimal calculateSlotPrice(Court court, CourtTimeSlot courtTimeSlot) {
         long minutes = Duration.between(
                 courtTimeSlot.getTimeSlot().getStartTime(),
@@ -455,6 +555,15 @@ public class BookingService {
         payment.setMethod(paymentMethod);
         payment.setAmount(booking.getTotalPrice());
         payment.setStatus(paymentMethod == PaymentMethod.VNPAY ? PaymentStatus.PENDING : PaymentStatus.UNPAID);
+        return payment;
+    }
+
+    private Payment createVendorPayment(Booking booking, PaymentMethod paymentMethod) {
+        Payment payment = createPayment(booking, paymentMethod);
+        if (paymentMethod == PaymentMethod.CASH_AT_COURT) {
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(LocalDateTime.now());
+        }
         return payment;
     }
 
@@ -488,7 +597,7 @@ public class BookingService {
                 new BookingPaymentResponse(
                         payment.getMethod(),
                         payment.getStatus(),
-                        payment.getAmount(),
+                        booking.getTotalPrice(),
                         null
                 )
         );
@@ -525,7 +634,7 @@ public class BookingService {
     private void validateBookingDetailPermission(User currentUser, Booking booking) {
         RoleName roleName = currentUser.getRole().getName();
         boolean allowed = switch (roleName) {
-            case USER -> booking.getUser().getId().equals(currentUser.getId());
+            case USER -> booking.getUser() != null && booking.getUser().getId().equals(currentUser.getId());
             case VENDOR -> booking.getCourt().getVenue().getVendor().getId().equals(currentUser.getId());
             case ADMIN -> true;
         };
@@ -596,10 +705,10 @@ public class BookingService {
                 booking.getNote(),
                 slots,
                 new BookingDetailUserResponse(
-                        bookingUser.getId(),
-                        bookingUser.getFullName(),
-                        bookingUser.getEmail(),
-                        bookingUser.getPhone()
+                        bookingUser == null ? null : bookingUser.getId(),
+                        bookingUser == null ? booking.getGuestCustomerName() : bookingUser.getFullName(),
+                        bookingUser == null ? null : bookingUser.getEmail(),
+                        bookingUser == null ? booking.getGuestCustomerPhone() : bookingUser.getPhone()
                 ),
                 new BookingDetailCourtResponse(court.getId(), court.getName(), court.getPricePerHour()),
                 new BookingDetailVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
@@ -618,5 +727,41 @@ public class BookingService {
             return null;
         }
         return note.trim();
+    }
+
+    private String normalizeOptionalText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private User findEligibleCustomer(String identifier) {
+        String normalizedIdentifier = normalizeOptionalText(identifier);
+        if (normalizedIdentifier == null) {
+            return null;
+        }
+        return userRepository.findByEmailOrPhone(
+                        normalizedIdentifier.toLowerCase(),
+                        normalizedIdentifier
+                )
+                .filter(user -> user.getRole().getName() == RoleName.USER)
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                .orElse(null);
+    }
+
+    private String maskEmail(String email) {
+        int separatorIndex = email.indexOf('@');
+        if (separatorIndex <= 1) {
+            return email;
+        }
+        return email.charAt(0) + "***" + email.substring(separatorIndex);
+    }
+
+    private String maskPhone(String phone) {
+        if (phone.length() <= 4) {
+            return phone;
+        }
+        return "***" + phone.substring(phone.length() - 4);
     }
 }
