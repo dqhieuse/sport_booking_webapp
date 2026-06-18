@@ -136,3 +136,37 @@ export type BookingCancellationResponse = {
   bookingStatus: BookingStatus;
   paymentStatus: PaymentStatus;
 };
+
+export type VendorBookingUserResponse = {
+  id: number | null;
+  fullName: string;
+  phone: string | null;
+};
+
+export type VendorBookingCourtResponse = {
+  id: number;
+  name: string;
+};
+
+export type VendorBookingPaymentResponse = {
+  method: PaymentMethod;
+  status: PaymentStatus;
+};
+
+export type VendorBookingResponse = {
+  id: number;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  totalPrice: number;
+  status: BookingStatus;
+  user: VendorBookingUserResponse;
+  court: VendorBookingCourtResponse;
+  payment: VendorBookingPaymentResponse;
+};
+
+export type VendorBookingActionResponse = {
+  bookingId: number;
+  bookingStatus: BookingStatus;
+  paymentStatus: PaymentStatus;
+};

@@ -116,6 +116,12 @@ export function VendorLayout() {
             return items;
         }
 
+        if (/^\/vendor\/bookings\/\d+$/.test(pathname)) {
+            items.push({ label: "Bookings", to: routePaths.vendorBookings });
+            items.push({ label: "Booking details" });
+            return items;
+        }
+
         items.push({ label: "Vendor" });
         return items;
     })();

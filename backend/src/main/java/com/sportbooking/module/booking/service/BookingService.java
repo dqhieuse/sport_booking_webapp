@@ -56,10 +56,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,8 +96,24 @@ public class BookingService {
         var bookingPage = status == null
                 ? bookingRepository.findByUserId(user.getId(), pageable)
                 : bookingRepository.findByUserIdAndStatus(user.getId(), status, pageable);
+        List<Long> bookingIds = bookingPage.stream()
+                .map(Booking::getId)
+                .toList();
+        Map<Long, List<BookingTimeSlot>> timeSlotsByBookingId = loadTimeSlotsByBookingId(bookingIds);
+        Map<Long, Payment> paymentsByBookingId = loadPaymentsByBookingId(bookingIds);
+        Map<Long, String> primaryImageUrlByCourtId = loadPrimaryCourtImageUrls(
+                bookingPage.stream()
+                        .map(booking -> booking.getCourt().getId())
+                        .distinct()
+                        .toList()
+        );
         List<MyBookingResponse> items = bookingPage.stream()
-                .map(this::toMyBookingResponse)
+                .map(booking -> toMyBookingResponse(
+                        booking,
+                        timeSlotsByBookingId.getOrDefault(booking.getId(), List.of()),
+                        paymentsByBookingId.get(booking.getId()),
+                        primaryImageUrlByCourtId.get(booking.getCourt().getId())
+                ))
                 .toList();
 
         return PageResponse.from(bookingPage, items);
@@ -117,16 +137,38 @@ public class BookingService {
             }
         }
 
-        var bookingPage = bookingRepository.findVendorBookings(
-                vendor.getId(),
-                status,
-                courtId,
-                date,
-                pageable
-        );
+        Specification<Booking> specification = (root, query, criteriaBuilder) ->
+                criteriaBuilder.equal(root.get("court").get("venue").get("vendor").get("id"), vendor.getId());
+        if (status != null) {
+            specification = specification.and(
+                    (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), status)
+            );
+        }
+        if (courtId != null) {
+            specification = specification.and(
+                    (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("court").get("id"), courtId)
+            );
+        }
+        if (date != null) {
+            specification = specification.and(
+                    (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("bookingDate"), date)
+            );
+        }
+
+        var bookingPage = bookingRepository.findAll(specification, pageable);
+        List<Long> bookingIds = bookingPage.stream()
+                .map(Booking::getId)
+                .toList();
+
+        Map<Long, List<BookingTimeSlot>> timeSlotsByBookingId = loadTimeSlotsByBookingId(bookingIds);
+        Map<Long, Payment> paymentsByBookingId = loadPaymentsByBookingId(bookingIds);
 
         List<VendorBookingResponse> items = bookingPage.stream()
-                .map(this::toVendorBookingResponse)
+                .map(booking -> toVendorBookingResponse(
+                        booking,
+                        timeSlotsByBookingId.getOrDefault(booking.getId(), List.of()),
+                        paymentsByBookingId.get(booking.getId())
+                ))
                 .toList();
 
         return PageResponse.from(bookingPage, items);
@@ -182,12 +224,14 @@ public class BookingService {
         );
     }
 
-    private VendorBookingResponse toVendorBookingResponse(Booking booking) {
-        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
-                .sorted((first, second) -> first.getTimeSlot().getStartTime()
-                        .compareTo(second.getTimeSlot().getStartTime()))
-                .toList();
-        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+    private VendorBookingResponse toVendorBookingResponse(
+            Booking booking,
+            List<BookingTimeSlot> bookingTimeSlots,
+            Payment payment
+    ) {
+        if (bookingTimeSlots.isEmpty() || payment == null) {
+            throw new IllegalStateException("Booking data is incomplete: " + booking.getId());
+        }
         var court = booking.getCourt();
         var bookingUser = booking.getUser();
 
@@ -392,17 +436,16 @@ public class BookingService {
     }
 
     private List<CourtTimeSlot> loadActiveCourtTimeSlots(Long courtId, List<Long> timeSlotIds) {
-        List<CourtTimeSlot> courtTimeSlots = new ArrayList<>();
-        for (Long timeSlotId : timeSlotIds) {
-            CourtTimeSlot courtTimeSlot = courtTimeSlotRepository
-                    .findByCourtIdAndTimeSlotId(courtId, timeSlotId)
-                    .orElseThrow(() -> new InvalidRequestException("Time slot is not configured for this court"));
-
+        List<CourtTimeSlot> courtTimeSlots =
+                courtTimeSlotRepository.findByCourtIdAndTimeSlotIdIn(courtId, timeSlotIds);
+        if (courtTimeSlots.size() != timeSlotIds.size()) {
+            throw new InvalidRequestException("Time slot is not configured for this court");
+        }
+        for (CourtTimeSlot courtTimeSlot : courtTimeSlots) {
             if (courtTimeSlot.getStatus() != TimeSlotStatus.ACTIVE
                     || courtTimeSlot.getTimeSlot().getStatus() != TimeSlotStatus.ACTIVE) {
                 throw new InvalidRequestException("Time slot is not active for this court");
             }
-            courtTimeSlots.add(courtTimeSlot);
         }
 
         return courtTimeSlots.stream()
@@ -603,12 +646,15 @@ public class BookingService {
         );
     }
 
-    private MyBookingResponse toMyBookingResponse(Booking booking) {
-        List<BookingTimeSlot> bookingTimeSlots = booking.getTimeSlots().stream()
-                .sorted((first, second) -> first.getTimeSlot().getStartTime()
-                        .compareTo(second.getTimeSlot().getStartTime()))
-                .toList();
-        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+    private MyBookingResponse toMyBookingResponse(
+            Booking booking,
+            List<BookingTimeSlot> bookingTimeSlots,
+            Payment payment,
+            String primaryImageUrl
+    ) {
+        if (bookingTimeSlots.isEmpty() || payment == null) {
+            throw new IllegalStateException("Booking data is incomplete: " + booking.getId());
+        }
         var court = booking.getCourt();
         var venue = court.getVenue();
 
@@ -622,13 +668,44 @@ public class BookingService {
                 new MyBookingCourtResponse(
                         court.getId(),
                         court.getName(),
-                        courtImageRepository.findByCourtIdAndPrimaryTrue(court.getId())
-                                .map(image -> image.getImageUrl())
-                                .orElse(null)
+                        primaryImageUrl
                 ),
                 new MyBookingVenueResponse(venue.getId(), venue.getName(), venue.getAddress()),
                 new MyBookingPaymentResponse(payment.getMethod(), payment.getStatus())
         );
+    }
+
+    private Map<Long, List<BookingTimeSlot>> loadTimeSlotsByBookingId(List<Long> bookingIds) {
+        if (bookingIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return bookingTimeSlotRepository.findAllWithTimeSlotByBookingIdIn(bookingIds).stream()
+                .collect(Collectors.groupingBy(bookingTimeSlot -> bookingTimeSlot.getBooking().getId()));
+    }
+
+    private Map<Long, Payment> loadPaymentsByBookingId(List<Long> bookingIds) {
+        if (bookingIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return paymentRepository.findAllByBookingIdIn(bookingIds).stream()
+                .collect(Collectors.toMap(
+                        payment -> payment.getBooking().getId(),
+                        Function.identity()
+                ));
+    }
+
+    private Map<Long, String> loadPrimaryCourtImageUrls(List<Long> courtIds) {
+        if (courtIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return courtImageRepository.findPrimaryImagesByCourtIdIn(courtIds).stream()
+                .collect(Collectors.toMap(
+                        CourtImageRepository.PrimaryImageView::getCourtId,
+                        CourtImageRepository.PrimaryImageView::getImageUrl
+                ));
     }
 
     private void validateBookingDetailPermission(User currentUser, Booking booking) {

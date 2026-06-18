@@ -6,14 +6,20 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface VenueRepository extends JpaRepository<Venue, Long> {
 
+    @Override
+    @EntityGraph(attributePaths = "vendor")
+    Optional<Venue> findById(Long id);
+
     List<Venue> findByStatus(VenueStatus status);
 
+    @EntityGraph(attributePaths = "vendor")
     Optional<Venue> findByIdAndStatus(Long id, VenueStatus status);
 
     boolean existsByIdAndStatus(Long id, VenueStatus status);

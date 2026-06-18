@@ -3,7 +3,9 @@ package com.sportbooking.module.court.service;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -58,8 +60,9 @@ public class PublicCourtService {
                         toLikePattern(normalizedKeyword),
                         pageable
                 );
+        Map<Long, String> primaryImageUrlByCourtId = loadPrimaryImageUrls(courtPage.getContent());
         List<CourtListResponse> items = courtPage.stream()
-                .map(this::toListResponse)
+                .map(court -> toListResponse(court, primaryImageUrlByCourtId.get(court.getId())))
                 .toList();
 
         return PageResponse.from(courtPage, items);
@@ -136,7 +139,7 @@ public class PublicCourtService {
         return isBooked ? AvailableTimeSlotStatus.BOOKED : AvailableTimeSlotStatus.AVAILABLE;
     }
 
-    private CourtListResponse toListResponse(Court court) {
+    private CourtListResponse toListResponse(Court court, String primaryImageUrl) {
         return new CourtListResponse(
                 court.getId(),
                 court.getName(),
@@ -144,8 +147,21 @@ public class PublicCourtService {
                 court.getStatus(),
                 new CourtSportResponse(court.getSport().getId(), court.getSport().getName()),
                 new CourtVenueListResponse(court.getVenue().getId(), court.getVenue().getName(), court.getVenue().getAddress()),
-                getPrimaryImageUrl(court.getId())
+                primaryImageUrl
         );
+    }
+
+    private Map<Long, String> loadPrimaryImageUrls(List<Court> courts) {
+        if (courts.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> courtIds = courts.stream().map(Court::getId).toList();
+        return courtImageRepository.findPrimaryImagesByCourtIdIn(courtIds).stream()
+                .collect(Collectors.toMap(
+                        CourtImageRepository.PrimaryImageView::getCourtId,
+                        CourtImageRepository.PrimaryImageView::getImageUrl
+                ));
     }
 
     private CourtDetailResponse toDetailResponse(Court court) {

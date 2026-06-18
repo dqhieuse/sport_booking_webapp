@@ -15,10 +15,11 @@ export async function getPublicCourts(
   params: PublicCourtListParams = {},
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<PageResponse<Court>>> {
-  return apiClient.get<PageResponse<Court>>('/courts', {
-    params,
-    signal,
-  });
+  return apiClient.getCached<PageResponse<Court>>(
+    '/courts',
+    { params, signal },
+    { ttlMs: 30_000 },
+  );
 }
 
 export async function getPublicCourtById(

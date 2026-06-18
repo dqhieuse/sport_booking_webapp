@@ -2,22 +2,37 @@ package com.sportbooking.module.court.repository;
 
 import com.sportbooking.module.court.entity.Court;
 import com.sportbooking.module.court.entity.CourtStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CourtRepository extends JpaRepository<Court, Long> {
 
+    interface VenueCourtCountView {
+
+        Long getVenueId();
+
+        long getCourtCount();
+    }
+
+    @Override
+    @EntityGraph(attributePaths = {"sport", "venue", "venue.vendor"})
+    Optional<Court> findById(Long id);
+
     List<Court> findByStatus(CourtStatus status);
 
+    @EntityGraph(attributePaths = {"sport", "venue"})
     Optional<Court> findByIdAndStatus(Long id, CourtStatus status);
 
     boolean existsByIdAndStatus(Long id, CourtStatus status);
 
+    @EntityGraph(attributePaths = {"sport", "venue"})
     @Query("""
             SELECT court
             FROM Court court
@@ -32,6 +47,7 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
             Pageable pageable
     );
 
+    @EntityGraph(attributePaths = {"sport", "venue"})
     @Query("""
             SELECT court
             FROM Court court
@@ -52,6 +68,7 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
             Pageable pageable
     );
 
+    @EntityGraph(attributePaths = {"sport", "venue"})
     @Query("""
             SELECT court
             FROM Court court
@@ -73,4 +90,12 @@ public interface CourtRepository extends JpaRepository<Court, Long> {
     List<Court> findByVenueIdAndStatus(Long venueId, CourtStatus status);
 
     long countByVenueId(Long venueId);
+
+    @Query("""
+            select court.venue.id as venueId, count(court.id) as courtCount
+            from Court court
+            where court.venue.id in :venueIds
+            group by court.venue.id
+            """)
+    List<VenueCourtCountView> countByVenueIdIn(@Param("venueIds") Collection<Long> venueIds);
 }

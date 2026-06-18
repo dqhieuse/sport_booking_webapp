@@ -103,6 +103,39 @@ export function VendorCourtsPage() {
     const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
+        let isActive = true;
+
+        async function loadFilterOptions() {
+            try {
+                const [venueResponse, sportResponse] = await Promise.all([
+                    getVendorVenues({ status: "ACTIVE", page: 0, size: 100 }),
+                    getPublicSports(),
+                ]);
+
+                if (!isActive) {
+                    return;
+                }
+                setVenues(venueResponse.data.items);
+                setSports(
+                    sportResponse.data.filter(
+                        (sport) => sport.status === "ACTIVE",
+                    ),
+                );
+            } catch {
+                if (isActive) {
+                    setVenues([]);
+                    setSports([]);
+                }
+            }
+        }
+
+        void loadFilterOptions();
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    useEffect(() => {
         const controller = new AbortController();
 
         async function loadPage() {
@@ -110,44 +143,30 @@ export function VendorCourtsPage() {
             setErrorMessage(null);
 
             try {
-                const [courtResponse, venueResponse, sportResponse] =
-                    await Promise.all([
-                        getVendorCourts(
-                            {
-                                status:
-                                    statusFilter === ALL_VALUE
-                                        ? undefined
-                                        : (statusFilter as
-                                              | "ACTIVE"
-                                              | "INACTIVE"),
-                                venueId:
-                                    venueFilter === ALL_VALUE
-                                        ? undefined
-                                        : Number(venueFilter),
-                                sportId:
-                                    sportFilter === ALL_VALUE
-                                        ? undefined
-                                        : Number(sportFilter),
-                                page: requestedPage,
-                                size: PAGE_SIZE,
-                            },
-                            controller.signal,
-                        ),
-                        getVendorVenues(
-                            { status: "ACTIVE", page: 0, size: 10 },
-                            controller.signal,
-                        ),
-                        getPublicSports(controller.signal),
-                    ]);
+                const courtResponse = await getVendorCourts(
+                    {
+                        status:
+                            statusFilter === ALL_VALUE
+                                ? undefined
+                                : (statusFilter as
+                                      | "ACTIVE"
+                                      | "INACTIVE"),
+                        venueId:
+                            venueFilter === ALL_VALUE
+                                ? undefined
+                                : Number(venueFilter),
+                        sportId:
+                            sportFilter === ALL_VALUE
+                                ? undefined
+                                : Number(sportFilter),
+                        page: requestedPage,
+                        size: PAGE_SIZE,
+                    },
+                    controller.signal,
+                );
 
                 setCourts(courtResponse.data.items);
                 setCourtsPage(courtResponse.data);
-                setVenues(venueResponse.data.items);
-                setSports(
-                    sportResponse.data.filter(
-                        (sport) => sport.status === "ACTIVE",
-                    ),
-                );
                 setLoadState("success");
             } catch (error) {
                 if (controller.signal.aborted) {

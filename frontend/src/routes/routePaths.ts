@@ -26,6 +26,7 @@ export const routePaths = {
   vendorSlots: '/vendor/slots',
   vendorBookings: '/vendor/bookings',
   vendorBookingCreate: '/vendor/bookings/new',
+  vendorBookingDetail: '/vendor/bookings/:bookingId',
   adminDashboard: '/admin',
   adminProfile: '/admin/profile',
   adminSports: '/admin/sports',
@@ -45,4 +46,8 @@ export function getVendorCourtEditPath(courtId: number) {
 
 export function getBookingDetailPath(bookingId: number) {
   return routePaths.bookingDetail.replace(':bookingId', String(bookingId));
+}
+
+export function getVendorBookingDetailPath(bookingId: number) {
+  return routePaths.vendorBookingDetail.replace(':bookingId', String(bookingId));
 }

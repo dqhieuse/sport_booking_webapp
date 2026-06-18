@@ -7,6 +7,9 @@ import type {
   CreateBookingRequest,
   CreateBookingResponse,
   MyBookingResponse,
+  BookingStatus,
+  VendorBookingActionResponse,
+  VendorBookingResponse,
   VendorCreateBookingRequest,
   VendorCustomerLookupResponse,
 } from '../types';
@@ -50,4 +53,50 @@ export async function cancelBooking(
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<BookingCancellationResponse>> {
   return apiClient.put<BookingCancellationResponse>(`/bookings/${bookingId}/cancel`, undefined, { signal });
+}
+
+export type VendorBookingsParams = {
+  status?: BookingStatus;
+  courtId?: number;
+  date?: string;
+  sortBy?: 'createdAt' | 'bookingDate' | 'totalPrice';
+  direction?: 'asc' | 'desc';
+  page?: number;
+  size?: number;
+};
+
+export async function getVendorBookings(
+  params: VendorBookingsParams = {},
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<PageResponse<VendorBookingResponse>>> {
+  return apiClient.get<PageResponse<VendorBookingResponse>>('/vendor/bookings', { params, signal });
+}
+
+export async function getVendorBookingDetail(
+  bookingId: number,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<BookingDetailResponse>> {
+  return apiClient.get<BookingDetailResponse>(`/bookings/${bookingId}`, { signal });
+}
+
+function updateVendorBooking(bookingId: number, action: string) {
+  return apiClient.put<VendorBookingActionResponse>(
+    `/vendor/bookings/${bookingId}/${action}`,
+  );
+}
+
+export function confirmVendorBooking(bookingId: number) {
+  return updateVendorBooking(bookingId, 'confirm');
+}
+
+export function rejectVendorBooking(bookingId: number) {
+  return updateVendorBooking(bookingId, 'reject');
+}
+
+export function cancelVendorBooking(bookingId: number) {
+  return updateVendorBooking(bookingId, 'cancel');
+}
+
+export function markVendorBookingCashPaid(bookingId: number) {
+  return updateVendorBooking(bookingId, 'mark-cash-paid');
 }

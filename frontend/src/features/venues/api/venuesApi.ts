@@ -13,10 +13,11 @@ export async function getPublicVenues(
   params: PublicVenueListParams = {},
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<PageResponse<Venue>>> {
-  return apiClient.get<PageResponse<Venue>>('/venues', {
-    params,
-    signal,
-  });
+  return apiClient.getCached<PageResponse<Venue>>(
+    '/venues',
+    { params, signal },
+    { ttlMs: 60_000 },
+  );
 }
 
 export async function getPublicVenueById(

@@ -28,6 +28,8 @@ import { VendorImageCreatePage } from '../pages/vendor/VendorImageCreatePage';
 import { VendorImagesPage } from '../pages/vendor/VendorImagesPage';
 import { VendorProfilePage } from '../pages/vendor/VendorProfilePage';
 import { VendorBookingCreatePage } from '../pages/vendor/VendorBookingCreatePage';
+import { VendorBookingDetailPage } from '../pages/vendor/VendorBookingDetailPage';
+import { VendorBookingsPage } from '../pages/vendor/VendorBookingsPage';
 import { VendorVenueCreatePage } from '../pages/vendor/VendorVenueCreatePage';
 import { VendorVenueEditPage } from '../pages/vendor/VendorVenueEditPage';
 import { VendorVenuesPage } from '../pages/vendor/VendorVenuesPage';
@@ -149,11 +151,15 @@ export function AppRouter() {
             />
             <Route
               path={routePaths.vendorBookings}
-              element={<RoutePlaceholderPage title="Vendor bookings" description="Confirm, cancel, and manage venue bookings." />}
+              element={<VendorBookingsPage />}
             />
             <Route
               path={routePaths.vendorBookingCreate}
               element={<VendorBookingCreatePage />}
+            />
+            <Route
+              path={routePaths.vendorBookingDetail}
+              element={<VendorBookingDetailPage />}
             />
           </Route>
         </Route>
