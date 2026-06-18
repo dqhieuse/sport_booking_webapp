@@ -3,8 +3,12 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '../layouts/MainLayout';
 import { VendorLayout } from '../layouts/VendorLayout';
 import { AdminProfilePage } from '../pages/admin/AdminProfilePage';
+import { BookingDetailPage } from '../pages/BookingDetailPage';
+import { BookingHistoryPage } from '../pages/BookingHistoryPage';
+import { BookingResultPage } from '../pages/BookingResultPage';
 import { CourtDetailPage } from '../pages/CourtDetailPage';
 import { CourtsPage } from '../pages/CourtsPage';
+import { CreateBookingPage } from '../pages/CreateBookingPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -23,6 +27,9 @@ import { VendorDashboardPage } from '../pages/vendor/VendorDashboardPage';
 import { VendorImageCreatePage } from '../pages/vendor/VendorImageCreatePage';
 import { VendorImagesPage } from '../pages/vendor/VendorImagesPage';
 import { VendorProfilePage } from '../pages/vendor/VendorProfilePage';
+import { VendorBookingCreatePage } from '../pages/vendor/VendorBookingCreatePage';
+import { VendorBookingDetailPage } from '../pages/vendor/VendorBookingDetailPage';
+import { VendorBookingsPage } from '../pages/vendor/VendorBookingsPage';
 import { VendorVenueCreatePage } from '../pages/vendor/VendorVenueCreatePage';
 import { VendorVenueEditPage } from '../pages/vendor/VendorVenueEditPage';
 import { VendorVenuesPage } from '../pages/vendor/VendorVenuesPage';
@@ -78,7 +85,19 @@ export function AppRouter() {
             />
             <Route
               path={routePaths.bookingHistory}
-              element={<RoutePlaceholderPage title="Booking history" description="Review bookings and cancellation status." />}
+              element={<BookingHistoryPage />}
+            />
+            <Route
+              path={routePaths.bookingCreate}
+              element={<CreateBookingPage />}
+            />
+            <Route
+              path={routePaths.bookingResult}
+              element={<BookingResultPage />}
+            />
+            <Route
+              path={routePaths.bookingDetail}
+              element={<BookingDetailPage />}
             />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
@@ -132,7 +151,15 @@ export function AppRouter() {
             />
             <Route
               path={routePaths.vendorBookings}
-              element={<RoutePlaceholderPage title="Vendor bookings" description="Confirm, cancel, and manage venue bookings." />}
+              element={<VendorBookingsPage />}
+            />
+            <Route
+              path={routePaths.vendorBookingCreate}
+              element={<VendorBookingCreatePage />}
+            />
+            <Route
+              path={routePaths.vendorBookingDetail}
+              element={<VendorBookingDetailPage />}
             />
           </Route>
         </Route>

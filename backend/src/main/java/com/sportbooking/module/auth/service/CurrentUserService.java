@@ -42,6 +42,15 @@ public class CurrentUserService {
     }
 
     @Transactional(readOnly = true)
+    public User requireActiveCustomer(String authorizationHeader) {
+        return requireActiveUserWithAnyRole(
+                authorizationHeader,
+                "User role is required",
+                RoleName.USER
+        );
+    }
+
+    @Transactional(readOnly = true)
     public User requireActiveVendorOrAdmin(String authorizationHeader) {
         return requireActiveUserWithAnyRole(
                 authorizationHeader,
@@ -49,6 +58,15 @@ public class CurrentUserService {
                 RoleName.VENDOR,
                 RoleName.ADMIN
         );
+    }
+
+    @Transactional(readOnly = true)
+    public User requireActiveUser(String authorizationHeader) {
+        User user = requireCurrentUser(authorizationHeader);
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new ForbiddenException("Account is not active");
+        }
+        return user;
     }
 
     private User requireActiveUserWithAnyRole(

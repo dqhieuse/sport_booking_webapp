@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/apiClient';
 import type { ApiSuccessResponse, PageResponse } from '@/types/api';
 
-import type { Court, CourtDetail, CourtImage } from '../types';
+import type { Court, CourtAvailableSlots, CourtDetail, CourtImage } from '../types';
 
 export type PublicCourtListParams = {
   sportId?: number;
@@ -15,10 +15,11 @@ export async function getPublicCourts(
   params: PublicCourtListParams = {},
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<PageResponse<Court>>> {
-  return apiClient.get<PageResponse<Court>>('/courts', {
-    params,
-    signal,
-  });
+  return apiClient.getCached<PageResponse<Court>>(
+    '/courts',
+    { params, signal },
+    { ttlMs: 30_000 },
+  );
 }
 
 export async function getPublicCourtById(
@@ -33,4 +34,15 @@ export async function getPublicCourtImages(
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<CourtImage[]>> {
   return apiClient.get<CourtImage[]>(`/courts/${id}/images`, { signal });
+}
+
+export async function getCourtAvailableSlots(
+  id: number,
+  date: string,
+  signal?: AbortSignal,
+): Promise<ApiSuccessResponse<CourtAvailableSlots>> {
+  return apiClient.get<CourtAvailableSlots>(`/courts/${id}/available-slots`, {
+    params: { date },
+    signal,
+  });
 }

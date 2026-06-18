@@ -22,6 +22,8 @@ import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueImageRepository;
 import com.sportbooking.module.venue.repository.VenueRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -52,8 +54,15 @@ public class VendorVenueService {
         var venuePage = status == null
                 ? venueRepository.findByVendorId(vendor.getId(), pageable)
                 : venueRepository.findByVendorIdAndStatus(vendor.getId(), status, pageable);
+        List<Venue> venues = venuePage.getContent();
+        Map<Long, String> primaryImageUrlByVenueId = loadPrimaryImageUrls(venues);
+        Map<Long, Long> courtCountByVenueId = loadCourtCounts(venues);
         List<VendorVenueListResponse> items = venuePage.stream()
-                .map(this::toListResponse)
+                .map(venue -> toListResponse(
+                        venue,
+                        primaryImageUrlByVenueId.get(venue.getId()),
+                        courtCountByVenueId.getOrDefault(venue.getId(), 0L)
+                ))
                 .toList();
 
         return PageResponse.from(venuePage, items);
@@ -284,7 +293,11 @@ public class VendorVenueService {
         venue.setClosingTime(request.closingTime());
     }
 
-    private VendorVenueListResponse toListResponse(Venue venue) {
+    private VendorVenueListResponse toListResponse(
+            Venue venue,
+            String primaryImageUrl,
+            long courtCount
+    ) {
         return new VendorVenueListResponse(
                 venue.getId(),
                 venue.getName(),
@@ -293,10 +306,36 @@ public class VendorVenueService {
                 venue.getOpeningTime(),
                 venue.getClosingTime(),
                 venue.getStatus(),
-                getPrimaryImageUrl(venue.getId()),
-                courtRepository.countByVenueId(venue.getId()),
+                primaryImageUrl,
+                courtCount,
                 venue.getCreatedAt()
         );
+    }
+
+    private Map<Long, String> loadPrimaryImageUrls(List<Venue> venues) {
+        if (venues.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> venueIds = venues.stream().map(Venue::getId).toList();
+        return venueImageRepository.findPrimaryImagesByVenueIdIn(venueIds).stream()
+                .collect(Collectors.toMap(
+                        VenueImageRepository.PrimaryImageView::getVenueId,
+                        VenueImageRepository.PrimaryImageView::getImageUrl
+                ));
+    }
+
+    private Map<Long, Long> loadCourtCounts(List<Venue> venues) {
+        if (venues.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> venueIds = venues.stream().map(Venue::getId).toList();
+        return courtRepository.countByVenueIdIn(venueIds).stream()
+                .collect(Collectors.toMap(
+                        CourtRepository.VenueCourtCountView::getVenueId,
+                        CourtRepository.VenueCourtCountView::getCourtCount
+                ));
     }
 
     private VenueDetailResponse toDetailResponse(Venue venue) {

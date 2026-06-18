@@ -1,13 +1,8 @@
 package com.sportbooking.module.court.controller;
 
-import com.sportbooking.common.api.ApiResponse;
-import com.sportbooking.common.api.PageResponse;
-import com.sportbooking.module.court.dto.CourtDetailResponse;
-import com.sportbooking.module.court.dto.CourtImageResponse;
-import com.sportbooking.module.court.dto.CourtListResponse;
-import com.sportbooking.module.court.service.PublicCourtService;
+import java.time.LocalDate;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -16,6 +11,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.sportbooking.common.api.ApiResponse;
+import com.sportbooking.common.api.PageResponse;
+import com.sportbooking.module.court.dto.CourtAvailableSlotsResponse;
+import com.sportbooking.module.court.dto.CourtDetailResponse;
+import com.sportbooking.module.court.dto.CourtImageResponse;
+import com.sportbooking.module.court.dto.CourtListResponse;
+import com.sportbooking.module.court.service.PublicCourtService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/courts")
@@ -44,5 +49,13 @@ public class PublicCourtController {
     @GetMapping("/{id}/images")
     public ApiResponse<List<CourtImageResponse>> getCourtImages(@PathVariable Long id) {
         return ApiResponse.success("Success", publicCourtService.getActiveCourtImages(id));
+    }
+
+    @GetMapping("/{id}/available-slots")
+    public ApiResponse<CourtAvailableSlotsResponse> getAvailableSlots(
+            @PathVariable Long id,
+            @RequestParam LocalDate date
+    ) {
+        return ApiResponse.success("Success", publicCourtService.getAvailableSlots(id, date));
     }
 }

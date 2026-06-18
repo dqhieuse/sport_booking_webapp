@@ -13,7 +13,7 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, description, icon, action, className }: EmptyStateProps) {
   return (
-    <section className={cn('mx-auto flex max-w-md flex-col items-center justify-center px-4 py-16 text-center', className)}>
+    <section className={cn('mx-auto flex flex-col items-center justify-center px-4 py-16 text-center', className)}>
       <div className="mx-auto rounded-full border bg-muted p-2">
         {icon || <PlusHexagon className="size-6" aria-hidden="true" />}
       </div>

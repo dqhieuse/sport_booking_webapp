@@ -11,6 +11,8 @@ import com.sportbooking.module.venue.entity.VenueStatus;
 import com.sportbooking.module.venue.repository.VenueImageRepository;
 import com.sportbooking.module.venue.repository.VenueRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,8 +31,9 @@ public class PublicVenueService {
         var venuePage = normalizedKeyword == null
                 ? venueRepository.findPublicVenues(VenueStatus.ACTIVE, pageable)
                 : venueRepository.searchPublicVenues(VenueStatus.ACTIVE, toLikePattern(normalizedKeyword), pageable);
+        Map<Long, String> primaryImageUrlByVenueId = loadPrimaryImageUrls(venuePage.getContent());
         List<VenueListResponse> items = venuePage.stream()
-                .map(this::toListResponse)
+                .map(venue -> toListResponse(venue, primaryImageUrlByVenueId.get(venue.getId())))
                 .toList();
 
         return PageResponse.from(venuePage, items);
@@ -56,7 +59,7 @@ public class PublicVenueService {
                 .toList();
     }
 
-    private VenueListResponse toListResponse(Venue venue) {
+    private VenueListResponse toListResponse(Venue venue, String primaryImageUrl) {
         return new VenueListResponse(
                 venue.getId(),
                 venue.getName(),
@@ -65,8 +68,21 @@ public class PublicVenueService {
                 venue.getOpeningTime(),
                 venue.getClosingTime(),
                 venue.getStatus(),
-                getPrimaryImageUrl(venue.getId())
+                primaryImageUrl
         );
+    }
+
+    private Map<Long, String> loadPrimaryImageUrls(List<Venue> venues) {
+        if (venues.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> venueIds = venues.stream().map(Venue::getId).toList();
+        return venueImageRepository.findPrimaryImagesByVenueIdIn(venueIds).stream()
+                .collect(Collectors.toMap(
+                        VenueImageRepository.PrimaryImageView::getVenueId,
+                        VenueImageRepository.PrimaryImageView::getImageUrl
+                ));
     }
 
     private VenueDetailResponse toDetailResponse(Venue venue) {

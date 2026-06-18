@@ -994,8 +994,12 @@ Auth: USER, VENDOR, ADMIN
 
 Note:
 
-- Available slots are calculated from active `court_time_slots`.
-- The system excludes slots that already have active bookings on the selected date.
+- The response includes every time slot configured for the court, ordered by start time.
+- `AVAILABLE`: the slot can be selected.
+- `BOOKED`: the slot has a `PENDING` or `CONFIRMED` booking on the selected date.
+- `EXPIRED`: the slot has already started when the selected date is today.
+- `MAINTENANCE`: the court slot configuration or global time slot is inactive.
+- The booking window includes today and the next 13 days.
 
 Query params:
 
@@ -1017,13 +1021,13 @@ Response:
         "id": 1,
         "startTime": "06:00",
         "endTime": "07:00",
-        "available": true
+        "status": "BOOKED"
       },
       {
         "id": 2,
         "startTime": "07:00",
         "endTime": "08:00",
-        "available": true
+        "status": "MAINTENANCE"
       }
     ]
   }
@@ -1349,12 +1353,20 @@ Request body:
 ```json
 {
   "courtId": 1,
-  "timeSlotId": 3,
+  "timeSlotIds": [3, 4, 5],
   "bookingDate": "2026-05-15",
   "paymentMethod": "VNPAY",
   "note": "Booking for a group of 6 people"
 }
 ```
+
+Rules:
+
+- `timeSlotIds` must contain one to three unique slots.
+- Selected slots must be active for the court and consecutive by time.
+- Total duration must not exceed three hours.
+- Booking date must be within today and the next 13 days.
+- The backend recalculates all prices and validates availability inside one transaction.
 
 Response:
 
@@ -1367,12 +1379,23 @@ Response:
     "courtName": "Badminton Court 01",
     "bookingDate": "2026-05-15",
     "startTime": "08:00",
-    "endTime": "09:00",
-    "totalPrice": 120000,
+    "endTime": "11:00",
+    "durationMinutes": 180,
+    "totalPrice": 360000,
     "status": "PENDING",
+    "slots": [
+      {
+        "id": 21,
+        "timeSlotId": 3,
+        "startTime": "08:00",
+        "endTime": "09:00",
+        "slotPrice": 120000
+      }
+    ],
     "payment": {
       "method": "VNPAY",
       "status": "PENDING",
+      "amount": 360000,
       "paymentUrl": "https://sandbox.vnpayment.vn/paymentv2/..."
     }
   }
@@ -1394,6 +1417,12 @@ status=
 page=0
 size=10
 ```
+
+Notes:
+
+- Only bookings owned by the authenticated user are returned.
+- Results are ordered by creation time descending.
+- `status` is optional and accepts a `BookingStatus` value.
 
 Response:
 
@@ -1447,6 +1476,7 @@ Note:
 - User can only view their own bookings.
 - Vendor can only view bookings for their own courts.
 - Admin can view all bookings.
+- An authenticated caller without ownership permission receives `403 Forbidden`.
 
 Response:
 
@@ -1462,6 +1492,15 @@ Response:
     "totalPrice": 120000,
     "status": "PENDING",
     "note": "Booking for a group of 6 people",
+    "slots": [
+      {
+        "id": 21,
+        "timeSlotId": 3,
+        "startTime": "08:00",
+        "endTime": "09:00",
+        "slotPrice": 120000
+      }
+    ],
     "user": {
       "id": 1,
       "fullName": "Nguyen Van A",
@@ -1496,6 +1535,14 @@ PUT /bookings/{id}/cancel
 ```
 
 Auth: USER
+
+Cancellation rules:
+
+- Only the booking owner can cancel.
+- Only future `PENDING` or `CONFIRMED` bookings can be cancelled.
+- Cancelling releases the selected time slots for another booking.
+- A paid VNPAY payment moves to `REFUND_PENDING`.
+- A cash payment already marked `PAID` must be handled by the Vendor.
 
 Response:
 

@@ -10,7 +10,7 @@ This document describes the initial database design for Sport Booking WebApp. Th
 - Main tables should have `created_at` and `updated_at` columns.
 - Important data should not be hard deleted after bookings exist; prefer status-based deactivation.
 - Foreign key relationships must be clear.
-- Bookings must avoid duplicates by `court_id`, `booking_date`, and `time_slot_id` for active booking statuses.
+- Booking time slots must avoid duplicates by `court_id`, `booking_date`, and `time_slot_id` for active booking statuses.
 
 ## 3. Table List
 
@@ -232,16 +232,15 @@ Constraints:
 
 ### 3.12. bookings
 
-Stores court bookings.
+Stores one user booking transaction. A booking can include one to three consecutive time slots.
 
 | Column       | Data type     | Note                                                         |
 | ------------ | ------------- | ------------------------------------------------------------ |
 | id           | BIGINT        | Primary key                                                  |
 | user_id      | BIGINT        | FK to users                                                  |
 | court_id     | BIGINT        | FK to courts                                                 |
-| time_slot_id | BIGINT        | FK to time_slots                                             |
 | booking_date | DATE          | Booking date                                                 |
-| total_price  | NUMERIC(12,2) | Total price                                                  |
+| total_price  | NUMERIC(12,2) | Total price of all selected slots                            |
 | status       | VARCHAR(30)   | `PENDING`, `CONFIRMED`, `REJECTED`, `CANCELLED`, `COMPLETED` |
 | note         | VARCHAR(500)  | Note                                                         |
 | created_at   | TIMESTAMP     | Created date                                                 |
@@ -251,11 +250,34 @@ Constraints:
 
 - `user_id` references `users(id)`.
 - `court_id` references `courts(id)`.
-- `time_slot_id` references `time_slots(id)`.
-- The pair `court_id`, `time_slot_id` must exist in `court_time_slots` with `ACTIVE` status when creating a booking.
-- Do not allow duplicate `court_id`, `booking_date`, and `time_slot_id` when booking status is `PENDING` or `CONFIRMED`.
+- A booking has between one and three consecutive `booking_time_slots`.
+- `total_price` is calculated by the backend from the selected slot durations and court price.
 
-### 3.13. payments
+### 3.13. booking_time_slots
+
+Stores the individual time slots included in a booking.
+
+| Column          | Data type     | Note                                                    |
+| --------------- | ------------- | ------------------------------------------------------- |
+| id              | BIGINT        | Primary key                                             |
+| booking_id      | BIGINT        | FK to bookings                                          |
+| court_id        | BIGINT        | Denormalized FK to courts for database duplicate checks |
+| booking_date    | DATE          | Denormalized booking date for database duplicate checks |
+| time_slot_id    | BIGINT        | FK to time_slots                                        |
+| slot_price      | NUMERIC(12,2) | Price snapshot for this slot                            |
+| active_slot_key | VARCHAR(255)  | Nullable unique key while booking is active             |
+| created_at      | TIMESTAMP     | Created date                                            |
+
+Constraints:
+
+- `booking_id` references `bookings(id)`.
+- `court_id`, `time_slot_id` references an existing `court_time_slots` pair.
+- The pair `booking_id`, `time_slot_id` is unique.
+- `active_slot_key` is `<court_id>:<booking_date>:<time_slot_id>` while booking status is `PENDING` or `CONFIRMED`.
+- `active_slot_key` becomes `NULL` for terminal statuses so a cancelled or rejected slot can be booked again.
+- A unique index on `active_slot_key` provides database-level duplicate booking protection.
+
+### 3.14. payments
 
 Stores booking payment information. Payment status is separated from booking status to keep booking workflow simple.
 
@@ -277,7 +299,8 @@ Stores booking payment information. Payment status is separated from booking sta
 Constraints:
 
 - `booking_id` references `bookings(id)`.
-- Each booking should have one active payment record in MVP.
+- Each booking has exactly one payment record in the MVP.
+- When payment retry/history is implemented, this relation should evolve to one booking with multiple payment attempts.
 
 ## 4. Table Relationships
 
@@ -292,9 +315,10 @@ venues 1 - n courts
 venues 1 - n venue_images
 courts 1 - n bookings
 courts 1 - n court_images
-time_slots 1 - n bookings
 courts 1 - n court_time_slots
 time_slots 1 - n court_time_slots
+bookings 1 - n booking_time_slots
+time_slots 1 - n booking_time_slots
 bookings 1 - 1 payments
 ```
 
@@ -325,17 +349,17 @@ bookings 1 - 1 payments
   id PK              id PK              id PK
   user_id FK         sport_id FK        name
   court_id FK        venue_id FK        status
-  time_slot_id FK    name
-  booking_date       price_per_hour
-  total_price        status
-  status
-    ^
-    | n-1
-[time_slots]
-  id PK
-  start_time
-  end_time
-  status
+  booking_date       name
+  total_price        price_per_hour
+  status             status
+
+[bookings] 1 - n [booking_time_slots] n - 1 [time_slots]
+  booking_id FK
+  court_id FK
+  booking_date
+  time_slot_id FK
+  slot_price
+  active_slot_key
 
 [courts] 1 - n [court_time_slots] n - 1 [time_slots]
   court_id FK

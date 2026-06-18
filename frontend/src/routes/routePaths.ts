@@ -10,6 +10,9 @@ export const routePaths = {
   verifyEmail: '/verify-email',
   profile: '/profile',
   bookingHistory: '/bookings',
+  bookingCreate: '/bookings/create',
+  bookingResult: '/bookings/result',
+  bookingDetail: '/bookings/:bookingId',
   vendorDashboard: '/vendor',
   vendorProfile: '/vendor/profile',
   vendorVenues: '/vendor/venues',
@@ -22,6 +25,8 @@ export const routePaths = {
   vendorImageCreate: '/vendor/images/new',
   vendorSlots: '/vendor/slots',
   vendorBookings: '/vendor/bookings',
+  vendorBookingCreate: '/vendor/bookings/new',
+  vendorBookingDetail: '/vendor/bookings/:bookingId',
   adminDashboard: '/admin',
   adminProfile: '/admin/profile',
   adminSports: '/admin/sports',
@@ -37,4 +42,12 @@ export function getVendorVenueEditPath(venueId: number) {
 
 export function getVendorCourtEditPath(courtId: number) {
   return routePaths.vendorCourtEdit.replace(':courtId', String(courtId));
+}
+
+export function getBookingDetailPath(bookingId: number) {
+  return routePaths.bookingDetail.replace(':bookingId', String(bookingId));
+}
+
+export function getVendorBookingDetailPath(bookingId: number) {
+  return routePaths.vendorBookingDetail.replace(':bookingId', String(bookingId));
 }
