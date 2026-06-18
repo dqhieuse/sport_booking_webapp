@@ -81,8 +81,15 @@ public class VendorCourtService {
                 status,
                 pageable
         );
+        List<Court> courts = courtPage.getContent();
+        Map<Long, String> primaryImageUrlByCourtId = loadPrimaryImageUrls(courts);
+        Map<Long, Long> activeTimeSlotCountByCourtId = loadActiveTimeSlotCounts(courts);
         List<VendorCourtListResponse> items = courtPage.stream()
-                .map(this::toListResponse)
+                .map(court -> toListResponse(
+                        court,
+                        primaryImageUrlByCourtId.get(court.getId()),
+                        activeTimeSlotCountByCourtId.getOrDefault(court.getId(), 0L)
+                ))
                 .toList();
 
         return PageResponse.from(courtPage, items);
@@ -345,22 +352,29 @@ public class VendorCourtService {
         Set<Long> existingIds = existingSlots.stream()
                 .map(courtTimeSlot -> courtTimeSlot.getTimeSlot().getId())
                 .collect(Collectors.toSet());
-        List<CourtTimeSlot> newSlots = requestedIds.stream()
+        Set<Long> newTimeSlotIds = requestedIds.stream()
                 .filter(timeSlotId -> !existingIds.contains(timeSlotId))
-                .map(timeSlotId -> createCourtTimeSlot(court, timeSlotId))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<TimeSlot> newTimeSlots = newTimeSlotIds.isEmpty()
+                ? List.of()
+                : timeSlotRepository.findByIdIn(newTimeSlotIds);
+        if (newTimeSlots.size() != newTimeSlotIds.size()) {
+            throw new ResourceNotFoundException("Time slot not found");
+        }
+        if (newTimeSlots.stream().anyMatch(timeSlot -> timeSlot.getStatus() != TimeSlotStatus.ACTIVE)) {
+            throw new InvalidRequestException("Time slot must be active");
+        }
+        Map<Long, TimeSlot> newTimeSlotById = newTimeSlots.stream()
+                .collect(Collectors.toMap(TimeSlot::getId, timeSlot -> timeSlot));
+        List<CourtTimeSlot> newSlots = newTimeSlotIds.stream()
+                .map(timeSlotId -> createCourtTimeSlot(court, newTimeSlotById.get(timeSlotId)))
                 .toList();
 
         courtTimeSlotRepository.saveAll(existingSlots);
         courtTimeSlotRepository.saveAll(newSlots);
     }
 
-    private CourtTimeSlot createCourtTimeSlot(Court court, Long timeSlotId) {
-        TimeSlot timeSlot = timeSlotRepository.findById(timeSlotId)
-                .orElseThrow(() -> new ResourceNotFoundException("Time slot not found"));
-        if (timeSlot.getStatus() != TimeSlotStatus.ACTIVE) {
-            throw new InvalidRequestException("Time slot must be active");
-        }
-
+    private CourtTimeSlot createCourtTimeSlot(Court court, TimeSlot timeSlot) {
         CourtTimeSlot courtTimeSlot = new CourtTimeSlot();
         courtTimeSlot.setCourt(court);
         courtTimeSlot.setTimeSlot(timeSlot);
@@ -441,7 +455,11 @@ public class VendorCourtService {
         );
     }
 
-    private VendorCourtListResponse toListResponse(Court court) {
+    private VendorCourtListResponse toListResponse(
+            Court court,
+            String primaryImageUrl,
+            long activeTimeSlotCount
+    ) {
         return new VendorCourtListResponse(
                 court.getId(),
                 court.getName(),
@@ -449,10 +467,36 @@ public class VendorCourtService {
                 court.getStatus(),
                 new CourtSportResponse(court.getSport().getId(), court.getSport().getName()),
                 new VendorCourtVenueResponse(court.getVenue().getId(), court.getVenue().getName()),
-                getPrimaryImageUrl(court.getId()),
-                courtTimeSlotRepository.countByCourtIdAndStatus(court.getId(), TimeSlotStatus.ACTIVE),
+                primaryImageUrl,
+                activeTimeSlotCount,
                 court.getCreatedAt()
         );
+    }
+
+    private Map<Long, String> loadPrimaryImageUrls(List<Court> courts) {
+        if (courts.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> courtIds = courts.stream().map(Court::getId).toList();
+        return courtImageRepository.findPrimaryImagesByCourtIdIn(courtIds).stream()
+                .collect(Collectors.toMap(
+                        CourtImageRepository.PrimaryImageView::getCourtId,
+                        CourtImageRepository.PrimaryImageView::getImageUrl
+                ));
+    }
+
+    private Map<Long, Long> loadActiveTimeSlotCounts(List<Court> courts) {
+        if (courts.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> courtIds = courts.stream().map(Court::getId).toList();
+        return courtTimeSlotRepository.countByCourtIdInAndStatus(courtIds, TimeSlotStatus.ACTIVE).stream()
+                .collect(Collectors.toMap(
+                        CourtTimeSlotRepository.ActiveTimeSlotCountView::getCourtId,
+                        CourtTimeSlotRepository.ActiveTimeSlotCountView::getActiveCount
+                ));
     }
 
     private String getPrimaryImageUrl(Long courtId) {

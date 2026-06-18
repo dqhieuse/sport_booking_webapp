@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/apiClient';
+import { apiClient, invalidateApiCache } from '@/lib/apiClient';
 import type { ApiSuccessResponse, PageResponse } from '@/types/api';
 
 import type {
@@ -30,7 +30,7 @@ export async function getVendorVenues(
   params: VendorVenueListParams = {},
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<PageResponse<VendorVenue>>> {
-  return apiClient.get<PageResponse<VendorVenue>>('/vendor/venues', { params, signal });
+  return apiClient.getCached<PageResponse<VendorVenue>>('/vendor/venues', { params, signal });
 }
 
 export async function getVendorVenueById(
@@ -43,18 +43,25 @@ export async function getVendorVenueById(
 export async function createVendorVenue(
   data: VendorVenueRequest,
 ): Promise<ApiSuccessResponse<VendorVenueDetail>> {
-  return apiClient.post<VendorVenueDetail, VendorVenueRequest>('/vendor/venues', data);
+  const response = await apiClient.post<VendorVenueDetail, VendorVenueRequest>('/vendor/venues', data);
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function updateVendorVenue(
   id: number,
   data: VendorVenueRequest,
 ): Promise<ApiSuccessResponse<VendorVenueDetail>> {
-  return apiClient.put<VendorVenueDetail, VendorVenueRequest>(`/vendor/venues/${id}`, data);
+  const response = await apiClient.put<VendorVenueDetail, VendorVenueRequest>(`/vendor/venues/${id}`, data);
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function deactivateVendorVenue(id: number): Promise<ApiSuccessResponse<VendorVenueDetail>> {
-  return apiClient.delete<VendorVenueDetail>(`/vendor/venues/${id}`);
+  const response = await apiClient.delete<VendorVenueDetail>(`/vendor/venues/${id}`);
+  invalidateApiCache('/vendor/venues');
+  invalidateApiCache('/vendor/courts');
+  return response;
 }
 
 export async function uploadVendorVenueImage(
@@ -65,30 +72,36 @@ export async function uploadVendorVenueImage(
   const formData = new FormData();
   formData.append('file', file);
 
-  return apiClient.postForm<VendorManagedImage>(`/vendor/venues/${id}/images`, formData, {
+  const response = await apiClient.postForm<VendorManagedImage>(`/vendor/venues/${id}/images`, formData, {
     params: {
       sortOrder: options.sortOrder,
       isPrimary: options.isPrimary ?? false,
     },
   });
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function deleteVendorVenueImage(id: number, imageId: number): Promise<ApiSuccessResponse<void>> {
-  return apiClient.delete<void>(`/vendor/venues/${id}/images/${imageId}`);
+  const response = await apiClient.delete<void>(`/vendor/venues/${id}/images/${imageId}`);
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function setPrimaryVendorVenueImage(
   id: number,
   imageId: number,
 ): Promise<ApiSuccessResponse<VendorManagedImage>> {
-  return apiClient.put<VendorManagedImage>(`/vendor/venues/${id}/images/${imageId}/primary`);
+  const response = await apiClient.put<VendorManagedImage>(`/vendor/venues/${id}/images/${imageId}/primary`);
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function getVendorCourts(
   params: VendorCourtListParams = {},
   signal?: AbortSignal,
 ): Promise<ApiSuccessResponse<PageResponse<VendorCourt>>> {
-  return apiClient.get<PageResponse<VendorCourt>>('/vendor/courts', { params, signal });
+  return apiClient.getCached<PageResponse<VendorCourt>>('/vendor/courts', { params, signal });
 }
 
 export async function getVendorCourtById(
@@ -101,18 +114,26 @@ export async function getVendorCourtById(
 export async function createVendorCourt(
   data: VendorCourtRequest,
 ): Promise<ApiSuccessResponse<VendorCourtDetail>> {
-  return apiClient.post<VendorCourtDetail, VendorCourtRequest>('/vendor/courts', data);
+  const response = await apiClient.post<VendorCourtDetail, VendorCourtRequest>('/vendor/courts', data);
+  invalidateApiCache('/vendor/courts');
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function updateVendorCourt(
   id: number,
   data: VendorCourtRequest,
 ): Promise<ApiSuccessResponse<VendorCourtDetail>> {
-  return apiClient.put<VendorCourtDetail, VendorCourtRequest>(`/vendor/courts/${id}`, data);
+  const response = await apiClient.put<VendorCourtDetail, VendorCourtRequest>(`/vendor/courts/${id}`, data);
+  invalidateApiCache('/vendor/courts');
+  invalidateApiCache('/vendor/venues');
+  return response;
 }
 
 export async function deactivateVendorCourt(id: number): Promise<ApiSuccessResponse<VendorCourtDetail>> {
-  return apiClient.delete<VendorCourtDetail>(`/vendor/courts/${id}`);
+  const response = await apiClient.delete<VendorCourtDetail>(`/vendor/courts/${id}`);
+  invalidateApiCache('/vendor/courts');
+  return response;
 }
 
 export async function uploadVendorCourtImage(
@@ -123,23 +144,29 @@ export async function uploadVendorCourtImage(
   const formData = new FormData();
   formData.append('file', file);
 
-  return apiClient.postForm<VendorManagedImage>(`/vendor/courts/${id}/images`, formData, {
+  const response = await apiClient.postForm<VendorManagedImage>(`/vendor/courts/${id}/images`, formData, {
     params: {
       sortOrder: options.sortOrder,
       isPrimary: options.isPrimary ?? false,
     },
   });
+  invalidateApiCache('/vendor/courts');
+  return response;
 }
 
 export async function deleteVendorCourtImage(id: number, imageId: number): Promise<ApiSuccessResponse<void>> {
-  return apiClient.delete<void>(`/vendor/courts/${id}/images/${imageId}`);
+  const response = await apiClient.delete<void>(`/vendor/courts/${id}/images/${imageId}`);
+  invalidateApiCache('/vendor/courts');
+  return response;
 }
 
 export async function setPrimaryVendorCourtImage(
   id: number,
   imageId: number,
 ): Promise<ApiSuccessResponse<VendorManagedImage>> {
-  return apiClient.put<VendorManagedImage>(`/vendor/courts/${id}/images/${imageId}/primary`);
+  const response = await apiClient.put<VendorManagedImage>(`/vendor/courts/${id}/images/${imageId}/primary`);
+  invalidateApiCache('/vendor/courts');
+  return response;
 }
 
 export async function getVendorCourtTimeSlots(
@@ -153,7 +180,9 @@ export async function updateVendorCourtTimeSlots(
   id: number,
   timeSlotIds: number[],
 ): Promise<ApiSuccessResponse<VendorCourtTimeSlot[]>> {
-  return apiClient.put<VendorCourtTimeSlot[], { timeSlotIds: number[] }>(`/vendor/courts/${id}/time-slots`, {
+  const response = await apiClient.put<VendorCourtTimeSlot[], { timeSlotIds: number[] }>(`/vendor/courts/${id}/time-slots`, {
     timeSlotIds,
   });
+  invalidateApiCache('/vendor/courts');
+  return response;
 }

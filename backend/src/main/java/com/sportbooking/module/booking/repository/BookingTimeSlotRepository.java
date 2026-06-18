@@ -4,6 +4,7 @@ import com.sportbooking.module.booking.entity.BookingStatus;
 import com.sportbooking.module.booking.entity.BookingTimeSlot;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -29,5 +30,16 @@ public interface BookingTimeSlotRepository extends JpaRepository<BookingTimeSlot
             @Param("courtId") Long courtId,
             @Param("bookingDate") LocalDate bookingDate,
             @Param("statuses") Collection<BookingStatus> statuses
+    );
+
+    @Query("""
+            select bookingTimeSlot
+            from BookingTimeSlot bookingTimeSlot
+            join fetch bookingTimeSlot.timeSlot
+            where bookingTimeSlot.booking.id in :bookingIds
+            order by bookingTimeSlot.timeSlot.startTime
+            """)
+    List<BookingTimeSlot> findAllWithTimeSlotByBookingIdIn(
+            @Param("bookingIds") Collection<Long> bookingIds
     );
 }

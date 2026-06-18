@@ -6,22 +6,13 @@ import {
 } from '@mynaui/icons-react';
 import { CalendarDays, CheckCircle2, Clock3, RefreshCw, Settings, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { useAuth } from '@/features/auth/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BackBreadcrumb } from '@/components/back-breadcrumb';
@@ -215,12 +206,16 @@ export function CourtDetailPage() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [slots, setSlots] = useState<AvailableTimeSlot[]>([]);
   const [selectedSlotIds, setSelectedSlotIds] = useState<number[]>([]);
-  const [selectionMessage, setSelectionMessage] = useState(
+  const [, setSelectionMessage] = useState(
     'Select a start time, then add consecutive slots up to 3 hours.',
   );
   const [slotLoadState, setSlotLoadState] = useState<LoadState>('idle');
   const [slotErrorMessage, setSlotErrorMessage] = useState<string | null>(null);
   const [slotReloadKey, setSlotReloadKey] = useState(0);
+
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const isValidId = Number.isFinite(parsedId) && parsedId > 0;
   const { today, lastBookableDate } = getBookingWindow();
@@ -361,6 +356,24 @@ export function CourtDetailPage() {
         ? 'Maximum booking duration reached.'
         : 'Consecutive slot added to the booking preview.',
     );
+  }
+
+  function handleBookNowClick(e: React.MouseEvent) {
+    if (!isAuthenticated) {
+      e.preventDefault();
+      navigate(`/login?returnTo=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+    
+    if (selectedSlots.length === 0) return;
+
+    navigate(routePaths.bookingCreate, {
+      state: {
+        courtId: parsedId,
+        selectedDate,
+        selectedSlotIds,
+      }
+    });
   }
 
   if (!isValidId) {
@@ -717,72 +730,15 @@ export function CourtDetailPage() {
                   </div>
                 )}
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="lg"
-                      className="w-full"
-                      disabled={court.status !== 'ACTIVE' || selectedSlots.length === 0}
-                    >
-                      {selectedSlots.length > 0 ? 'Preview booking' : 'Select a time slot'}
-                      <ChevronRight className="size-4" aria-hidden="true" />
-                    </Button>
-                  </DialogTrigger>
-                  {firstSelectedSlot && lastSelectedSlot && (
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Booking preview</DialogTitle>
-                        <DialogDescription>
-                          Review the selected court and time before the booking API is connected.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Court</span>
-                          <span className="text-right font-medium">{court.name}</span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Date</span>
-                          <span className="text-right font-medium">
-                            {fullDateFormatter.format(parseLocalDate(selectedDate))}
-                          </span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Time</span>
-                          <span className="text-right font-medium">
-                            {formatTime(firstSelectedSlot.startTime)} - {formatTime(lastSelectedSlot.endTime)}
-                          </span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="text-muted-foreground">Duration</span>
-                          <span className="text-right font-medium">{formatDuration(selectedDurationMinutes)}</span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4 border-t pt-3">
-                          <span className="font-medium">Estimated total</span>
-                          <span className="font-display text-xl font-semibold text-primary">
-                            {currencyFormatter.format(bookingPreviewTotal)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        This preview does not reserve the court or send data to the server.
-                      </p>
-
-                      <DialogFooter>
-                        <Button type="button" disabled>
-                          Booking API not connected
-                        </Button>
-                        <DialogClose asChild>
-                          <Button type="button" variant="outline">
-                            Back to time slots
-                          </Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  )}
-                </Dialog>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={court.status !== 'ACTIVE' || selectedSlots.length === 0}
+                  onClick={handleBookNowClick}
+                >
+                  {selectedSlots.length > 0 ? 'Book now' : 'Select a time slot'}
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                </Button>
 
                 <p className="text-center text-xs text-muted-foreground" aria-live="polite">
                   {court.status !== 'ACTIVE' ? (

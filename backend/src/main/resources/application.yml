@@ -13,6 +13,7 @@ spring:
         open-in-view: false
         properties:
             hibernate:
+                default_batch_fetch_size: 50
                 format_sql: true
     flyway:
         enabled: true

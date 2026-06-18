@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +34,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -67,6 +69,156 @@ class VendorBookingControllerTest {
 
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Test
+    void createBookingByVendorCreatesPendingVnpayBooking() throws Exception {
+        String bookingDate = LocalDate.now().plusDays(1).toString();
+
+        mockMvc.perform(post("/api/vendor/bookings")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerName": "Walk-in Customer",
+                                  "customerPhone": "0901234567",
+                                  "courtId": 1,
+                                  "timeSlotIds": [1, 2],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "VNPAY",
+                                  "note": " Walk-in customer "
+                                }
+                                """.formatted(bookingDate)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message", is("Vendor booking created successfully")))
+                .andExpect(jsonPath("$.data.status", is("PENDING")))
+                .andExpect(jsonPath("$.data.durationMinutes", is(120)))
+                .andExpect(jsonPath("$.data.totalPrice", is(240000.0)))
+                .andExpect(jsonPath("$.data.payment.method", is("VNPAY")))
+                .andExpect(jsonPath("$.data.payment.status", is("PENDING")))
+                .andExpect(jsonPath("$.data.payment.amount", is(240000.0)));
+
+        Booking booking = bookingRepository.findAll().getFirst();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        assertThat(booking.getUser()).isNull();
+        assertThat(booking.getGuestCustomerName()).isEqualTo("Walk-in Customer");
+        assertThat(booking.getGuestCustomerPhone()).isEqualTo("0901234567");
+        assertThat(booking.getNote()).isEqualTo("Walk-in customer");
+        assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING);
+        assertThat(payment.getAmount()).isEqualByComparingTo(booking.getTotalPrice());
+        assertThat(payment.getPaidAt()).isNull();
+    }
+
+    @Test
+    void createBookingByVendorCreatesConfirmedCashBooking() throws Exception {
+        String bookingDate = LocalDate.now().plusDays(1).toString();
+
+        mockMvc.perform(post("/api/vendor/bookings")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerName": "Cash Customer",
+                                  "courtId": 1,
+                                  "timeSlotIds": [1],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT"
+                                }
+                                """.formatted(bookingDate)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status", is("CONFIRMED")))
+                .andExpect(jsonPath("$.data.payment.method", is("CASH_AT_COURT")))
+                .andExpect(jsonPath("$.data.payment.status", is("PAID")));
+
+        Booking booking = bookingRepository.findAll().getFirst();
+        Payment payment = paymentRepository.findByBookingId(booking.getId()).orElseThrow();
+        assertThat(payment.getPaidAt()).isNotNull();
+    }
+
+    @Test
+    void lookupCustomerByVendorReturnsActiveCustomerAccount() throws Exception {
+        User customer = userRepository.findByEmail("user@sportbooking.local").orElseThrow();
+
+        mockMvc.perform(get("/api/vendor/bookings/customer-lookup")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .param("identifier", customer.getPhone()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.found", is(true)))
+                .andExpect(jsonPath("$.data.userId", is(customer.getId().intValue())))
+                .andExpect(jsonPath("$.data.fullName", is(customer.getFullName())));
+    }
+
+    @Test
+    void createBookingByVendorLinksRegisteredCustomer() throws Exception {
+        User customer = userRepository.findByEmail("user@sportbooking.local").orElseThrow();
+
+        mockMvc.perform(post("/api/vendor/bookings")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerName": "%s",
+                                  "customerIdentifier": "%s",
+                                  "courtId": 1,
+                                  "timeSlotIds": [1],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT"
+                                }
+                                """.formatted(
+                                customer.getFullName(),
+                                customer.getEmail(),
+                                LocalDate.now().plusDays(1)
+                        )))
+                .andExpect(status().isCreated());
+
+        Booking booking = bookingRepository.findAll().getFirst();
+        assertThat(booking.getUser()).isNotNull();
+        assertThat(booking.getUser().getId()).isEqualTo(customer.getId());
+        assertThat(booking.getGuestCustomerName()).isNull();
+        assertThat(booking.getGuestCustomerPhone()).isNull();
+    }
+
+    @Test
+    void createBookingByVendorRejectsCourtOwnedByAnotherVendor() throws Exception {
+        User anotherVendor = createTestUser(
+                "vendor-create-other@sportbooking.local",
+                com.sportbooking.module.user.entity.RoleName.VENDOR
+        );
+        Venue anotherVenue = createTestVenue(anotherVendor, "Other Create Venue");
+        Court anotherCourt = createTestCourt(anotherVenue, "Other Create Court");
+
+        mockMvc.perform(post("/api/vendor/bookings")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerName": "Guest Customer",
+                                  "courtId": %d,
+                                  "timeSlotIds": [1],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT"
+                                }
+                                """.formatted(anotherCourt.getId(), LocalDate.now().plusDays(1))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", is("You do not own this court")));
+    }
+
+    @Test
+    void createBookingByVendorRequiresCustomerName() throws Exception {
+        mockMvc.perform(post("/api/vendor/bookings")
+                        .header("Authorization", bearerToken("vendor@sportbooking.local"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerName": " ",
+                                  "courtId": 1,
+                                  "timeSlotIds": [1],
+                                  "bookingDate": "%s",
+                                  "paymentMethod": "CASH_AT_COURT"
+                                }
+                                """.formatted(LocalDate.now().plusDays(1))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Validation failed")));
+    }
 
     @Test
     void getVendorBookingsReturnsOnlyOwnBookingsWithPagination() throws Exception {
