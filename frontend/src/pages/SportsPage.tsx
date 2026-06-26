@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Activity } from '@mynaui/icons-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
 import { EmptyState } from '@/components/empty-state';
@@ -21,7 +20,7 @@ function getErrorMessage(error: unknown) {
 
 function SportCardSkeleton() {
   return (
-    <div className="rounded-lg border bg-card p-5 shadow-sm">
+    <div className="border border-border bg-card p-5">
       <div className="flex items-start justify-between">
         <Skeleton className="size-12 rounded-md" />
         <Skeleton className="h-6 w-16" />
@@ -81,19 +80,16 @@ export function SportsPage() {
   const isError = loadState === 'error';
 
   return (
-    <div className="page-shell">
-      <section>
+    <div className="arena-page">
+      <section className="border-b border-border px-4 py-14 sm:px-8 lg:px-12">
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
           <div className="space-y-5">
-            <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
-              <Activity className="size-3.5" aria-hidden="true" />
-              Public Sports
-            </Badge>
+            <p className="eyebrow">Choose your sport</p>
             <div className="max-w-3xl space-y-4">
-              <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
-                Choose a sport, then find the right court.
+              <h1 className="arena-display-sm">
+                Sports <span className="text-primary">lineup.</span>
               </h1>
-              <p className="text-base leading-7 text-muted-foreground">
+              <p className="max-w-xl text-base font-semibold leading-7 text-muted-foreground">
                 Browse active sport categories from the booking system and continue to available courts.
               </p>
             </div>
@@ -102,7 +98,7 @@ export function SportsPage() {
       </section>
 
       {isLoading && (
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-1 px-4 py-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-3 lg:px-12">
           {Array.from({ length: 6 }).map((_, index) => (
             <SportCardSkeleton key={index} />
           ))}
@@ -122,13 +118,13 @@ export function SportsPage() {
           icon={<Activity className="size-6" aria-hidden="true" />}
           title="No active sports yet"
           description="Public sports are filtered by active status. Add active sports from the backend seed or admin flow to show them here."
-          className="max-w-none rounded-lg border bg-card"
+          className="mx-4 my-12 max-w-none border border-border bg-card sm:mx-8 lg:mx-12"
         />
       )}
 
       {hasSports && (
         <>
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-1 px-4 py-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-3 lg:px-12">
           {sports.map((sport) => (
             <SportCard key={sport.id} sport={sport} />
           ))}

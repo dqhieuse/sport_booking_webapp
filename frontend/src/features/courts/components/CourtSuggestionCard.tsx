@@ -37,20 +37,20 @@ export function CourtSuggestionCard({ court }: CourtSuggestionCardProps) {
 
         <CardContent className="flex h-full flex-col gap-4 p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge>{court.sport.name}</Badge>
+            <Badge className="border-primary bg-primary text-primary-foreground">{court.sport.name}</Badge>
           </div>
 
           <div className="space-y-2">
-            <h3 className="line-clamp-1 font-display text-xl font-semibold text-foreground">{court.name}</h3>
-            <p className="line-clamp-1 text-sm text-muted-foreground">{court.venue.name}</p>
-            <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+            <h3 className="line-clamp-1 font-display text-3xl font-black uppercase leading-none text-foreground">{court.name}</h3>
+            <p className="line-clamp-1 text-sm font-semibold text-muted-foreground">{court.venue.name}</p>
+            <p className="line-clamp-2 text-sm font-semibold leading-6 text-muted-foreground">
               <MapPin className="mr-1 inline size-4 text-muted-foreground" aria-hidden="true" />
               {court.venue.address}
             </p>
           </div>
 
           <div className="mt-auto flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="font-display text-lg font-semibold text-primary">
+            <p className="font-display text-2xl font-black text-primary">
               {currencyFormatter.format(court.pricePerHour)}
               <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">/ hour</span>
             </p>

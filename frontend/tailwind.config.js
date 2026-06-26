@@ -60,6 +60,7 @@ export default {
   		},
   		fontFamily: {
   			sans: [
+  				'Big Shoulders',
   				'SF Pro Text',
   				'SF Pro Display',
   				'-apple-system',
@@ -71,6 +72,7 @@ export default {
   				'sans-serif'
   			],
   			display: [
+  				'Big Shoulders',
   				'SF Pro Display',
   				'SF Pro Text',
   				'-apple-system',

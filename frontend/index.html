@@ -4,15 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Sport Booking WebApp frontend" />
-    <title>Sport Booking WebApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:opsz,wght@10..72,100..900&display=swap" rel="stylesheet" />
+    <title>Arenas — Book Your Court</title>
   </head>
   <body>
     <script>
       (function () {
         try {
           var theme = localStorage.getItem('sport-booking-theme');
-          var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-          var resolvedTheme = theme === 'light' || theme === 'dark' ? theme : prefersLight ? 'light' : 'dark';
+          var resolvedTheme = theme === 'light' || theme === 'dark' ? theme : 'dark';
 
           document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
           document.documentElement.dataset.theme = resolvedTheme;

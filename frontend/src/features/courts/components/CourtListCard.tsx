@@ -1,9 +1,7 @@
-import { ArrowRight, MapPin } from '@mynaui/icons-react';
+import { MapPin } from '@mynaui/icons-react';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { routePaths } from '@/routes/routePaths';
 
 import type { Court } from '../types';
@@ -12,59 +10,51 @@ type CourtListCardProps = {
   court: Court;
 };
 
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-});
+function formatCourtPrice(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(Math.max(1, Math.round(value / 25000)));
+}
 
 export function CourtListCard({ court }: CourtListCardProps) {
   return (
-    <Card className="group flex h-full flex-col overflow-hidden">
-      <div className="relative aspect-[16/8] shrink-0 overflow-hidden bg-muted">
-        {court.primaryImageUrl ? (
-          <img
-            src={court.primaryImageUrl}
-            alt={court.name}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.035]"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-secondary text-sm text-muted-foreground">
-            Court
+    <article className="arena-image-card group min-h-[320px]">
+      {court.primaryImageUrl ? (
+        <img
+          src={court.primaryImageUrl}
+          alt={court.name}
+          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,hsl(var(--primary)/0.2),transparent_28rem)]" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/10" />
+
+      <div className="relative flex min-h-[320px] flex-col justify-between p-6">
+        <span className="w-fit bg-primary px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-primary-foreground">
+          {court.sport.name}
+        </span>
+
+        <div>
+          <h2 className="font-display text-4xl font-black uppercase leading-none text-foreground">{court.name}</h2>
+          <p className="mt-3 line-clamp-1 text-base font-semibold text-muted-foreground">{court.venue.name}</p>
+          <p className="mt-3 text-sm font-black uppercase tracking-[0.14em] text-primary">3 slots open</p>
+          <div className="mt-1 flex items-end justify-between gap-4">
+            <div>
+              <p className="font-display text-3xl font-black leading-none text-foreground">{formatCourtPrice(court.pricePerHour)}/hr</p>
+              <p className="mt-2 line-clamp-1 text-xs font-semibold text-muted-foreground">
+                <MapPin className="mr-1 inline size-3" aria-hidden="true" />
+                {court.venue.address}
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link to={routePaths.courtDetail.replace(':courtId', String(court.id))}>Book</Link>
+            </Button>
           </div>
-        )}
-        <div className="absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
-          <Badge className="max-w-full gap-2 border bg-background text-foreground shadow-sm">
-            <span className="min-w-0 truncate">{court.sport.name}</span>
-          </Badge>
         </div>
       </div>
-
-      <CardContent className="flex flex-1 flex-col gap-5 p-5">
-        <div className="space-y-2">
-          <h2 className="line-clamp-1 font-display text-xl font-semibold text-foreground">{court.name}</h2>
-          <p className="line-clamp-1 text-sm font-medium text-foreground/80">{court.venue.name}</p>
-          <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-            <MapPin className="mr-1 inline size-4 text-muted-foreground" aria-hidden="true" />
-            {court.venue.address}
-          </p>
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 pt-4">
-          <div>
-            <p className="font-display text-xl font-semibold text-primary">
-              {currencyFormatter.format(court.pricePerHour)}
-            </p>
-            <p className="text-xs text-muted-foreground">per hour</p>
-          </div>
-          <Button asChild size="sm">
-            <Link to={routePaths.courtDetail.replace(':courtId', String(court.id))}>
-              View
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    </article>
   );
 }

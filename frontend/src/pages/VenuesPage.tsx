@@ -3,9 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiErrorMessage } from '@/components/ui/api-error-message';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
@@ -39,7 +37,7 @@ function getPageParam(searchParams: URLSearchParams) {
 
 function VenueCardSkeleton() {
   return (
-    <div className="rounded-lg border bg-card shadow-sm">
+    <div className="border border-border bg-card">
       <Skeleton className="h-36 rounded-b-none" />
       <div className="space-y-4 p-5">
         <Skeleton className="h-6 w-2/3" />
@@ -154,27 +152,20 @@ export function VenuesPage() {
   }, [isLoading, venuesPage]);
 
   return (
-    <div className="page-shell">
-      <section>
+    <div className="arena-page">
+      <section className="border-b border-border px-4 py-14 sm:px-8 lg:px-12">
         <div className="space-y-5">
-          <Badge variant="outline" className="w-fit gap-2 px-3 py-1">
-            <Building className="size-3.5" aria-hidden="true" />
-            Public Venues
-          </Badge>
+          <p className="eyebrow">Browse venues</p>
           <div className="max-w-3xl space-y-4">
-            <h1 className="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
-              Browse active venues before choosing a court.
+            <h1 className="arena-display-sm">
+              Active <span className="text-primary">venues.</span>
             </h1>
-            <p className="text-base leading-7 text-muted-foreground">
+            <p className="max-w-xl text-base font-semibold leading-7 text-muted-foreground">
               Compare locations, opening hours, and available venue information from the public API.
             </p>
           </div>
         </div>
-      </section>
-
-      <Card>
-        <CardContent className="p-3 sm:p-4">
-          <form onSubmit={handleSearchSubmit} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <form onSubmit={handleSearchSubmit} className="mt-10 grid max-w-3xl gap-3 border border-border bg-card p-4 sm:grid-cols-[1fr_auto_auto]">
             <label className="relative flex items-center">
               <Search className="pointer-events-none absolute left-3 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
               <span className="sr-only">Search venues</span>
@@ -193,12 +184,11 @@ export function VenuesPage() {
               <X className="size-4" aria-hidden="true" />
               Clear
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+        </form>
+      </section>
 
       {isLoading && (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-1 px-4 py-10 sm:px-8 md:grid-cols-2 lg:px-12 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <VenueCardSkeleton key={index} />
           ))}
@@ -218,29 +208,31 @@ export function VenuesPage() {
           icon={<Building className="size-6" aria-hidden="true" />}
           title="No venues match your search"
           description="Try another venue name or address to find more active places."
-          className="max-w-none rounded-lg border bg-card"
+          className="mx-4 my-12 max-w-none border border-border bg-card sm:mx-8 lg:mx-12"
         />
       )}
 
       {hasVenues && venuesPage && (
         <>
-          <div>
-            <p className="text-sm text-muted-foreground">Search results</p>
-            <p className="font-display text-2xl font-semibold text-foreground">{resultSummary}</p>
+          <div className="px-4 pt-10 sm:px-8 lg:px-12">
+            <p className="eyebrow">Search results</p>
+            <p className="mt-2 font-display text-4xl font-black uppercase text-foreground">{resultSummary}</p>
           </div>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <section className="grid gap-1 px-4 py-8 sm:px-8 md:grid-cols-2 lg:px-12 xl:grid-cols-3">
             {venues.map((venue) => (
               <VenueHighlightCard key={venue.id} venue={venue} />
             ))}
           </section>
 
-          <PaginationControls
-            page={venuesPage.page}
-            totalPages={venuesPage.totalPages}
-            totalItems={venuesPage.totalItems}
-            itemLabel="venues"
-            onPageChange={handlePageChange}
-          />
+          <div className="px-4 py-10 sm:px-8 lg:px-12">
+            <PaginationControls
+              page={venuesPage.page}
+              totalPages={venuesPage.totalPages}
+              totalItems={venuesPage.totalItems}
+              itemLabel="venues"
+              onPageChange={handlePageChange}
+            />
+          </div>
         </>
       )}
     </div>

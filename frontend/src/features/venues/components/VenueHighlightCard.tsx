@@ -16,7 +16,7 @@ export function VenueHighlightCard({ venue }: VenueHighlightCardProps) {
   return (
     <Card className="group h-full overflow-hidden">
       <Link to={detailPath} className="block h-full no-underline hover:no-underline">
-        <div className="relative h-36 overflow-hidden">
+        <div className="relative h-56 overflow-hidden">
           {venue.primaryImageUrl ? (
             <img
               src={venue.primaryImageUrl}
@@ -32,14 +32,14 @@ export function VenueHighlightCard({ venue }: VenueHighlightCardProps) {
 
         <CardContent className="space-y-4 p-5">
           <div>
-            <h3 className="line-clamp-1 font-display text-lg font-semibold text-foreground">{venue.name}</h3>
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
+            <h3 className="line-clamp-1 font-display text-4xl font-black uppercase leading-none text-foreground">{venue.name}</h3>
+            <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-muted-foreground">
               <MapPin className="mr-1 inline size-4 text-muted-foreground" aria-hidden="true" />
               {venue.address}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 border-t border-border/70 pt-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 border-t border-border pt-4 text-xs font-black uppercase tracking-[0.14em] text-primary">
             <ClockCircle className="size-4 text-muted-foreground" aria-hidden="true" />
             {venue.openingTime} - {venue.closingTime}
           </div>
