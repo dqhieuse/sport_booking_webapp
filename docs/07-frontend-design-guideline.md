@@ -16,24 +16,23 @@ The frontend should feel:
 - practical for browsing courts, venues, prices, images, and booking slots,
 - clean enough for repeated use by users, vendors, and admins.
 
-The product should not look like a corporate dashboard. The visual identity should be dark-first, high contrast, booking-friendly, and energetic enough for a multi-sport platform.
+The product should not look like a corporate dashboard. The visual identity should support an equal-quality light and dark theme, stay high contrast and booking-friendly, and feel energetic enough for a multi-sport platform.
 
 Recommended direction:
 
 ```text
-SportZone Dark + Electric Orange
+SportZone Light/Dark + Sport Blue
 ```
 
 This means:
 
 - use real venue and court images as the main visual signal,
-- use a near-black base for fast scanning and a stronger sport-booking mood,
-- use dark neutral surfaces for cards, filters, and page sections,
-- use electric orange as the primary action and brand color,
-- use softer orange accent only for hover, selected, and high-intent moments,
+- use a clean white base in light theme and a near-black base in dark theme,
+- use layered neutral surfaces for cards, filters, and page sections,
+- use Sport Blue as the primary action and brand color,
+- use Soft Blue only for hover, selected, and high-intent moments,
 - use off-white text for strong readability,
-- avoid green as a brand or interface color,
-- avoid blue as the main identity,
+- reserve green, yellow, and red for semantic status feedback,
 - keep information dense enough for comparison,
 - avoid decorative blobs, heavy gradients, and oversized marketing sections.
 
@@ -51,14 +50,15 @@ Use these colors as the product baseline:
 
 | Token | Purpose | Suggested color |
 | --- | --- | --- |
-| Deep Base | Main app background and default page base | `#0A0A0A` |
-| Surface 1 | Cards and primary panels | `#111111` |
-| Surface 2 | Filter bars, muted blocks, skeletons | `#181818` |
-| Surface 3 | Hover surfaces and elevated controls | `#1E1E1E` |
-| Line Charcoal | Borders, inputs, separators | `#2A2A2A` |
-| Electric Orange | Primary buttons, active navigation, main brand color | `#FF5A1F` |
-| Hover Orange | Primary hover color | `#E64E18` |
-| Soft Orange | Hover states, selected filters, small high-intent highlights | `#FF8C5A` |
+| Light Base | Main background in light theme | `#FFFFFF` |
+| Light Surface | Cards and muted sections in light theme | `#F7F7F8` |
+| Deep Base | Main background in dark theme | `#0A0A0A` |
+| Dark Surface | Cards and primary panels in dark theme | `#141414` |
+| Dark Elevated | Hover surfaces and elevated controls | `#1E1E1E` |
+| Line Neutral | Borders, inputs, separators | `#E5E7EB` / `#2A2A2A` |
+| Sport Blue | Primary buttons, active navigation, main brand color | `#2563EB` |
+| Hover Blue | Primary hover color | `#1D4ED8` |
+| Soft Blue | Selected filters and subtle highlights | `#DBEAFE` / `#172554` |
 | Warm Text | Main text, headings, strong UI anchors | `#F0F0F0` |
 | Muted Text | Secondary text, metadata, placeholders | `#A0A0A0` |
 | Disabled Text | Disabled or low-priority helper text | `#555555` |
@@ -69,13 +69,13 @@ Use these colors as the product baseline:
 
 ### Usage Rules
 
-- Primary actions should use Electric Orange.
-- Hover states, selected filters, and small high-intent emphasis should use Soft Orange.
-- Price emphasis and pending states can use Warning only when orange would not be clear enough.
+- Primary actions should use Sport Blue.
+- Hover states, selected filters, and small high-intent emphasis should use Soft Blue.
+- Price emphasis and pending states use Warning when they need semantic emphasis.
 - Info is allowed only for semantic informational states. It should not become the brand color.
 - Do not use green as a core brand, navigation, CTA, or page background color.
-- Avoid large blue surfaces as the main identity.
-- Avoid a one-color UI made only from orange shades. Use Deep Base, layered dark surfaces, Line Charcoal, Warm Text, and restrained semantic colors to keep the interface balanced.
+- Avoid large saturated blue backgrounds; blue should guide actions and selection, not overpower content.
+- Avoid a one-color UI. Use white/black neutral layers, clear borders, readable text, and restrained semantic colors to keep the interface balanced.
 - Text must remain high contrast on all backgrounds.
 
 ## 4. Layout Principles
@@ -133,8 +133,8 @@ Guidelines:
 
 ### Buttons
 
-- Primary buttons: Electric Orange background.
-- Booking or high-intent CTA should usually use Electric Orange. Use Warning only for price or pending-state emphasis.
+- Primary buttons: Sport Blue background.
+- Booking or high-intent CTA should use Sport Blue. Use Warning only for price or pending-state emphasis.
 - Secondary actions should be outline or ghost buttons.
 - Icon buttons should use recognizable icons when available.
 
