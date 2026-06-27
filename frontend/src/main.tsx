@@ -10,7 +10,7 @@ import "@/styles/index.css"
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <TooltipProvider>
           <App />
         </TooltipProvider>
