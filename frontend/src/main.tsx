@@ -5,15 +5,18 @@ import { ThemeProvider } from "next-themes"
 
 import App from "@/App"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { AuthProvider } from "@/modules/auth/context/AuthContext"
 import "@/styles/index.css"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <TooltipProvider>
-          <App />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <App />
+          </TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,

@@ -15,7 +15,7 @@ import {
     Star,
     Underline,
     User,
-} from "lucide-react";
+} from "@/components/icons";
 
 import {
     Accordion,

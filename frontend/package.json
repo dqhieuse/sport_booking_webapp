@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "latest",
+    "@remixicon/react": "^4.9.0",
     "axios": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
@@ -18,7 +19,6 @@
     "date-fns": "latest",
     "embla-carousel-react": "latest",
     "input-otp": "latest",
-    "lucide-react": "latest",
     "next-themes": "latest",
     "radix-ui": "^1.6.0",
     "react": "latest",

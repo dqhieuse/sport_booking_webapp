@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Boxes, CheckCircle2, Search } from "lucide-react"
+import { Boxes, CheckCircle2, Search } from "@/components/icons"
 
 import { ComponentSection } from "@/components/design-system/ComponentSection"
 import { ComponentPreview } from "@/components/design-system/ComponentPreview"

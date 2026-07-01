@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { BookOpen, CheckCircle2, Component } from "lucide-react"
+import { BookOpen, CheckCircle2, Component } from "@/components/icons"
 
 import { Badge } from "@/components/ui/badge"
 
