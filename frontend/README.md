@@ -1,106 +1,46 @@
-# Sport Booking Frontend
+# Sport Booking WebApp - Frontend
 
-React web app for Sport Booking WebApp.
+Frontend dùng React Router, Vite, TypeScript, Tailwind CSS, Hero UI và
+`@gravity-ui/icons`.
 
-## Prerequisites
-
-- Node.js 20 or newer
-- npm 10 or newer
-- Git
-
-## Tech Stack
-
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- shadcn/ui-style components
-- React Router
-- Axios
-
-## Project Structure
+## Cấu trúc chính
 
 ```text
-src
-├── components     # Reusable UI components
-├── config         # Environment-driven app configuration
-├── features      # Feature-based frontend modules
-├── layouts       # Shared page layouts
-├── lib           # Shared libraries such as API client
-├── pages         # Route-level screens
-├── routes        # React Router setup and path constants
-├── styles        # Global styles and Tailwind entry
-└── types         # Shared TypeScript types
+app/
+├── components/      # Component dùng chung: navigation, state, cards
+├── config/          # Cấu hình env
+├── features/        # Module theo domain: auth, sports, venues, courts, bookings
+├── layouts/         # Public layout và dashboard layout
+├── lib/             # API client, token store, helper
+├── pages/           # Page composition
+├── routes/          # React Router route files
+└── types/           # Type dùng chung
 ```
 
-## Environment
+## Cấu hình môi trường
 
-Create a local environment file:
+Tạo file `.env` từ `.env.example` nếu cần đổi API URL:
 
 ```bash
-cp .env.example .env
-```
-
-Current variables:
-
-```text
+VITE_APP_NAME=SportZone
 VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
-Do not commit `.env`.
-
-## Run Locally
-
-Install dependencies:
+## Chạy local
 
 ```bash
 npm install
-```
-
-Run the frontend:
-
-```bash
 npm run dev
 ```
 
-The app runs at:
+Ứng dụng chạy tại `http://localhost:5173`.
 
-```text
-http://localhost:5173
-```
-
-## UI Theme
-
-The frontend uses a shadcn/ui-style setup:
-
-- `src/styles/index.css` defines theme CSS variables.
-- `tailwind.config.js` maps Tailwind tokens to those variables.
-- `src/lib/utils.ts` provides `cn()` for class merging.
-- `src/components/ui/` contains reusable primitives such as `Button`, `Card`, `Badge`, and `Separator`.
-
-## API Client
-
-- `VITE_API_BASE_URL` controls the backend API base URL.
-- `src/config/env.ts` centralizes environment values.
-- `src/lib/apiClient.ts` wraps Axios and returns the backend `{ success, message, data, errors }` response shape.
-- `src/lib/authTokenStore.ts` prepares access-token attachment for later auth tasks.
-- `src/lib/apiError.ts` normalizes Axios failures into `ApiError`.
-
-## Route Skeleton
-
-- `/` - Home
-- `/sports` - Sport catalog
-- `/venues` - Venue browsing
-- `/courts` - Court browsing
-- `/courts/:courtId` - Court details
-- `/login` and `/register` - Authentication entry points
-- `/profile` and `/bookings` - User area
-- `/vendor/*` - Vendor workspace
-- `/admin/*` - Admin workspace
-
-## Verification
+## Kiểm tra
 
 ```bash
-npm run lint
+npm run typecheck
 npm run build
 ```
+
+Ghi chú: hiện tại chưa thêm `axios` vì dependency chưa có trong `package.json`.
+`app/lib/apiClient.ts` đang dùng `fetch` để giữ project build được trước.

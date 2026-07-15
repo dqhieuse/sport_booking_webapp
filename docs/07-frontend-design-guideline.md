@@ -16,66 +16,59 @@ The frontend should feel:
 - practical for browsing courts, venues, prices, images, and booking slots,
 - clean enough for repeated use by users, vendors, and admins.
 
-The product should not look like a corporate dashboard. The visual identity should be dark-first, high contrast, booking-friendly, and energetic enough for a multi-sport platform.
+The product should not look like a corporate dashboard. The visual identity should be clean, booking-friendly, and energetic enough for a multi-sport platform while staying close to Hero UI's default visual system.
 
 Recommended direction:
 
 ```text
-SportZone Dark + Electric Orange
+SportZone HeroUI Default
 ```
 
 This means:
 
 - use real venue and court images as the main visual signal,
-- use a near-black base for fast scanning and a stronger sport-booking mood,
-- use dark neutral surfaces for cards, filters, and page sections,
-- use electric orange as the primary action and brand color,
-- use softer orange accent only for hover, selected, and high-intent moments,
-- use off-white text for strong readability,
-- avoid green as a brand or interface color,
-- avoid blue as the main identity,
+- use Hero UI default background, surface, border, accent, and semantic tokens,
+- use Hero UI default primary/accent color for main actions,
+- keep page-level colors minimal and only override them when matching a specific Figma screen,
+- avoid introducing a separate custom brand palette,
+- avoid creating a custom light/dark theme system in the current phase,
 - keep information dense enough for comparison,
 - avoid decorative blobs, heavy gradients, and oversized marketing sections.
 
 ## 3. Color System
 
-The frontend must support both light and dark themes from the beginning.
+The frontend should use Hero UI's default theme in the current phase.
 
-- Store the selected theme in browser local storage.
-- Apply the theme at the root HTML level so all pages inherit the same CSS variables.
-- New pages and components must use theme tokens such as `background`, `foreground`, `card`, `secondary`, `muted`, `border`, `primary`, and `accent` instead of hard-coded light or dark colors.
+- Do not add a light/dark theme toggle yet.
+- Do not store theme preferences in browser local storage yet.
+- Do not override Hero UI's default accent color with a custom brand palette.
+- Use Hero UI semantic tokens such as `background`, `foreground`, `surface`, `border`, `default`, `accent`, `success`, `warning`, and `danger`.
+- Page-level hard-coded colors are allowed only when translating a specific Figma screen and should stay local to that screen.
 
 ### Primary Palette
 
-Use these colors as the product baseline:
+Use Hero UI's default tokens as the product baseline:
 
 | Token | Purpose | Suggested color |
 | --- | --- | --- |
-| Deep Base | Main app background and default page base | `#0A0A0A` |
-| Surface 1 | Cards and primary panels | `#111111` |
-| Surface 2 | Filter bars, muted blocks, skeletons | `#181818` |
-| Surface 3 | Hover surfaces and elevated controls | `#1E1E1E` |
-| Line Charcoal | Borders, inputs, separators | `#2A2A2A` |
-| Electric Orange | Primary buttons, active navigation, main brand color | `#FF5A1F` |
-| Hover Orange | Primary hover color | `#E64E18` |
-| Soft Orange | Hover states, selected filters, small high-intent highlights | `#FF8C5A` |
-| Warm Text | Main text, headings, strong UI anchors | `#F0F0F0` |
-| Muted Text | Secondary text, metadata, placeholders | `#A0A0A0` |
-| Disabled Text | Disabled or low-priority helper text | `#555555` |
-| Success | Positive semantic states only | `#1D9E75` |
-| Warning | Price emphasis, pending states, booking notes | `#EF9F27` |
-| Info | Informational status only | `#378ADD` |
-| Danger | Destructive actions and error states | `#E24B4A` |
+| Background | Main app background | Hero UI `background` |
+| Surface | Cards and primary panels | Hero UI `surface` |
+| Surface Secondary | Filter bars, muted blocks, skeletons | Hero UI `surface-secondary` |
+| Border | Borders, inputs, separators | Hero UI `border` / `separator` |
+| Accent | Primary buttons and active navigation | Hero UI `accent` |
+| Default | Secondary controls and neutral UI | Hero UI `default` |
+| Muted | Secondary text and metadata | Hero UI `muted` |
+| Success | Positive semantic states only | Hero UI `success` |
+| Warning | Price emphasis, pending states, booking notes | Hero UI `warning` |
+| Danger | Destructive actions and error states | Hero UI `danger` |
 
 ### Usage Rules
 
-- Primary actions should use Electric Orange.
-- Hover states, selected filters, and small high-intent emphasis should use Soft Orange.
-- Price emphasis and pending states can use Warning only when orange would not be clear enough.
-- Info is allowed only for semantic informational states. It should not become the brand color.
-- Do not use green as a core brand, navigation, CTA, or page background color.
-- Avoid large blue surfaces as the main identity.
-- Avoid a one-color UI made only from orange shades. Use Deep Base, layered dark surfaces, Line Charcoal, Warm Text, and restrained semantic colors to keep the interface balanced.
+- Primary actions should use Hero UI `Button` with `variant="primary"` unless the Figma screen specifies otherwise.
+- Hover states and selected filters should use Hero UI component variants first.
+- Price emphasis and pending states can use `warning`.
+- Do not introduce a separate custom brand color in new code.
+- Avoid a one-color UI made from one hue only. Use Hero UI surfaces, borders, default controls, and semantic colors to keep the interface balanced.
 - Text must remain high contrast on all backgrounds.
 
 ## 4. Layout Principles
@@ -115,10 +108,10 @@ Rules:
 
 ## 6. Typography
 
-Use an Apple-style system font stack for a cleaner booking interface and better numeric readability.
+Use Google Sans as the default app font for a clean booking interface and readable numeric UI.
 
-- Display font: `SF Pro Display`, then `SF Pro Text`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Arial`, `sans-serif`.
-- Body font: `SF Pro Text`, then `SF Pro Display`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Arial`, `sans-serif`.
+- Display font: `Google Sans`, then `GoogleSans`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Arial`, `sans-serif`.
+- Body font: `Google Sans`, then `GoogleSans`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, `Helvetica Neue`, `Arial`, `sans-serif`.
 
 Guidelines:
 
@@ -131,12 +124,45 @@ Guidelines:
 
 ## 7. Components
 
+### UI Library Direction
+
+The frontend should use Hero UI as the main component library.
+
+Use Hero UI components first for common interface needs:
+
+- Button,
+- Input,
+- Textarea,
+- Select,
+- Checkbox,
+- Radio,
+- Tabs,
+- Modal,
+- Drawer,
+- Card,
+- Table,
+- Pagination,
+- Tooltip,
+- Spinner,
+- Skeleton,
+- Badge or Chip-style status display.
+
+Use `@gravity-ui/icons` as the standard icon package for the frontend.
+
+Icon usage rules:
+
+- Use `@gravity-ui/icons` for navigation items, action buttons, status indicators, form affordances, and empty states.
+- Icon-only buttons must have accessible labels.
+- Keep icon size consistent within the same toolbar, table row, card, or navigation area.
+- Do not mix multiple icon libraries in new frontend code unless there is a clear compatibility reason.
+- Do not build custom SVG icons for standard actions when `@gravity-ui/icons` already provides a recognizable icon.
+
 ### Buttons
 
-- Primary buttons: Electric Orange background.
-- Booking or high-intent CTA should usually use Electric Orange. Use Warning only for price or pending-state emphasis.
+- Primary buttons should use Hero UI's default primary/accent styling.
+- Booking or high-intent CTA should usually use Hero UI `Button` with `variant="primary"`. Use `warning` only for price or pending-state emphasis.
 - Secondary actions should be outline or ghost buttons.
-- Icon buttons should use recognizable icons when available.
+- Icon buttons should use recognizable icons from `@gravity-ui/icons` when available.
 
 ### Cards
 
@@ -247,20 +273,22 @@ Guidelines:
 - Buttons and text must not overflow their containers.
 - Images should use stable aspect ratios to prevent layout shift.
 
-## 10. Current Frontend Alignment
+## 10. Target Frontend Alignment
 
-The current frontend already uses:
+The frontend should be rebuilt around:
 
 - React,
 - Tailwind CSS,
-- shadcn-style component primitives,
-- CSS variables for theme colors.
+- Hero UI,
+- `@gravity-ui/icons`,
+- Hero UI default theme tokens,
+- environment-driven API configuration.
 
-Future frontend tasks should update the theme tokens in `frontend/src/styles/index.css` to match this guideline before building public browsing pages.
+When the frontend is initialized again, configure Hero UI and Tailwind together so Hero UI components use the default Hero UI visual direction. Avoid adding a custom brand palette or a light/dark theme toggle during this phase.
 
 Recommended first implementation step:
 
-1. Update theme color variables.
+1. Initialize the React + Vite frontend and install Hero UI with `@gravity-ui/icons`.
 2. Replace the Sprint 0 technical home screen with a discovery-focused home page.
 3. Build sports, venues, and courts pages using real API data.
 4. Reuse shared list/card/filter patterns.

@@ -162,14 +162,16 @@ Backend:
 
 Frontend:
 
-- Use ReactJS, React Router, Axios, and Tailwind CSS.
+- Use ReactJS, React Router, Axios, Tailwind CSS, Hero UI, and `@gravity-ui/icons`.
 - Separate pages, components, API clients, auth state, and route guards.
 - Store access token and refresh token consistently.
 - Add Axios interceptor for attaching access token and refreshing expired access token.
 - Build simple but complete user, vendor, and admin flows.
 - Follow the frontend visual direction in `docs/07-frontend-design-guideline.md`.
+- Use Hero UI components for common controls such as Button, Input, Select, Tabs, Modal, Card, Table, Pagination, and Spinner before creating custom UI primitives.
+- Use `@gravity-ui/icons` for navigation, actions, status indicators, empty states, and icon-only buttons.
 - Public browsing screens should be image-forward, minimal, modern, and easy to scan.
-- Use the SportZone Dark + Electric Orange style from `docs/07-frontend-design-guideline.md` instead of a blue, green, or corporate dashboard look.
+- Use Hero UI's default visual theme as the frontend baseline unless a specific Figma screen requires a local page-level style.
 
 Database:
 

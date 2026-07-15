@@ -1,0 +1,18 @@
+export const routePaths = {
+  home: "/",
+  sports: "/sports",
+  venues: "/venues",
+  venueDetail: (id = ":id") => `/venues/${id}`,
+  courts: "/courts",
+  courtDetail: (id = ":id") => `/courts/${id}`,
+  login: "/login",
+  register: "/register",
+  forgotPassword: "/forgot-password",
+  verifyEmail: "/verify-email",
+  verifyEmailSuccess: "/verify-email/success",
+  verifyEmailFailed: "/verify-email/failed",
+  profile: "/profile",
+  bookingHistory: "/bookings",
+  vendorDashboard: "/vendor",
+  adminDashboard: "/admin",
+} as const;
