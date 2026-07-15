@@ -16,8 +16,9 @@ import {
   Typography,
 } from "@heroui/react";
 import { type FormEvent, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 
+import { usePageTransitionNavigate } from "~/components/common/PageTransition";
 import { getDefaultRouteForRole, useAuth } from "~/features/auth/AuthProvider";
 import { ApiError } from "~/lib/apiError";
 import { routePaths } from "~/routes/routePaths";
@@ -29,7 +30,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const navigateWithTransition = usePageTransitionNavigate();
   const [searchParams] = useSearchParams();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -44,7 +45,9 @@ export default function LoginPage() {
     try {
       const user = await login({ identifier, password });
       const redirectTo = searchParams.get("redirectTo");
-      navigate(redirectTo || getDefaultRouteForRole(user.role), { replace: true });
+      navigateWithTransition(redirectTo || getDefaultRouteForRole(user.role), {
+        replace: true,
+      });
     } catch (error) {
       setErrorMessage(
         error instanceof ApiError

@@ -5,8 +5,8 @@ import {
   CircleXmark,
 } from "@gravity-ui/icons";
 import { Button, Card, Link, Typography } from "@heroui/react";
-import { useNavigate } from "react-router";
 
+import { usePageTransitionNavigate } from "~/components/common/PageTransition";
 import { routePaths } from "~/routes/routePaths";
 
 type VerifyEmailStatusPageProps = {
@@ -38,7 +38,7 @@ const statusContent = {
 export default function VerifyEmailStatusPage({
   status,
 }: VerifyEmailStatusPageProps) {
-  const navigate = useNavigate();
+  const navigateWithTransition = usePageTransitionNavigate();
   const content = statusContent[status];
 
   return (
@@ -73,7 +73,7 @@ export default function VerifyEmailStatusPage({
                 className={`mt-2 h-11 w-full rounded-3xl text-[14px]! font-medium! ${content.buttonClassName}`}
                 type="button"
                 variant="primary"
-                onPress={() => navigate(content.actionTo)}
+                onPress={() => navigateWithTransition(content.actionTo)}
               >
                 {content.actionLabel}
                 {content.actionIcon}

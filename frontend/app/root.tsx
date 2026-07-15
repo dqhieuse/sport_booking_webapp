@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { PageTransition } from "./components/common/PageTransition";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import "./app.css";
 
@@ -36,7 +37,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Outlet />
+      <PageTransition />
     </AuthProvider>
   );
 }

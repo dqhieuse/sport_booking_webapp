@@ -17,8 +17,8 @@ import {
   Typography,
 } from "@heroui/react";
 import { type FormEvent, useState } from "react";
-import { useNavigate } from "react-router";
 
+import { usePageTransitionNavigate } from "~/components/common/PageTransition";
 import { useAuth } from "~/features/auth/AuthProvider";
 import { ApiError } from "~/lib/apiError";
 import { routePaths } from "~/routes/routePaths";
@@ -79,7 +79,7 @@ function PasswordField({
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const navigate = useNavigate();
+  const navigateWithTransition = usePageTransitionNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -109,9 +109,12 @@ export default function RegisterPage() {
 
     try {
       await register({ fullName, email, phone, password });
-      navigate(`${routePaths.verifyEmail}?email=${encodeURIComponent(email)}`, {
-        replace: true,
-      });
+      navigateWithTransition(
+        `${routePaths.verifyEmail}?email=${encodeURIComponent(email)}`,
+        {
+          replace: true,
+        },
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof ApiError

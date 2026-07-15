@@ -1,8 +1,9 @@
 import { ArrowRightFromSquare, Bars, ChevronDown } from "@gravity-ui/icons";
 import { Avatar, Button, Dropdown, Label, Link, Separator } from "@heroui/react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLocation } from "react-router";
 
+import { usePageTransitionNavigate } from "~/components/common/PageTransition";
 import { getDefaultRouteForRole, useAuth } from "~/features/auth/AuthProvider";
 import { cn } from "~/lib/utils";
 import { routePaths } from "~/routes/routePaths";
@@ -20,14 +21,89 @@ const sportMenuItems = [
 ];
 
 const navItems = [
-  { label: "Lịch đặt", to: routePaths.bookingHistory },
-  { label: "Liên hệ", to: "#contact" },
+  { id: "bookings", label: "Lịch đặt", to: routePaths.bookingHistory },
+  { id: "contact", label: "Liên hệ", to: "/#contact" },
 ];
 
+const navLinkClassName =
+  "relative flex h-9 items-center justify-center rounded-3xl px-4 text-sm font-normal leading-5 text-[#18181b] transition-colors!";
+
+type NavIndicator = {
+  left: number;
+  width: number;
+  visible: boolean;
+};
+
 export function AppHeader() {
-  const navigate = useNavigate();
+  const navigateWithTransition = usePageTransitionNavigate();
+  const location = useLocation();
   const { isAuthenticated, logout, status, user } = useAuth();
   const [isFloating, setIsFloating] = useState(false);
+  const [navIndicator, setNavIndicator] = useState<NavIndicator>({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
+  const navRef = useRef<HTMLElement | null>(null);
+
+  const isHomeActive = location.pathname === routePaths.home;
+  const isCourtsActive = location.pathname.startsWith(routePaths.courts);
+  const activeNavId = isHomeActive
+    ? "home"
+    : isCourtsActive
+      ? "courts"
+      : navItems.find((item) => isNavItemActive(item.to))?.id;
+
+  function isNavItemActive(to: string) {
+    if (to.startsWith("#")) {
+      return location.hash === to;
+    }
+
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  }
+
+  function moveNavIndicatorToElement(element: HTMLElement | null) {
+    const navElement = navRef.current;
+
+    if (!navElement || !element) {
+      setNavIndicator((current) => ({ ...current, visible: false }));
+      return;
+    }
+
+    const navRect = navElement.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+
+    setNavIndicator({
+      left: elementRect.left - navRect.left + 16,
+      width: Math.max(elementRect.width - 32, 0),
+      visible: true,
+    });
+  }
+
+  function moveNavIndicatorToActive() {
+    if (!activeNavId) {
+      moveNavIndicatorToElement(null);
+      return;
+    }
+
+    const activeElement = navRef.current?.querySelector<HTMLElement>(
+      `[data-nav-id="${activeNavId}"]`,
+    );
+
+    moveNavIndicatorToElement(activeElement ?? null);
+  }
+
+  function handleNavItemEnter(event: React.MouseEvent<Element>) {
+    moveNavIndicatorToElement(
+      event.currentTarget instanceof HTMLElement ? event.currentTarget : null,
+    );
+  }
+
+  function handleNavItemFocus(event: React.FocusEvent<Element>) {
+    moveNavIndicatorToElement(
+      event.currentTarget instanceof HTMLElement ? event.currentTarget : null,
+    );
+  }
 
   useEffect(() => {
     const updateHeaderState = () => {
@@ -39,6 +115,16 @@ export function AppHeader() {
 
     return () => window.removeEventListener("scroll", updateHeaderState);
   }, []);
+
+  useLayoutEffect(() => {
+    moveNavIndicatorToActive();
+  }, [activeNavId, isFloating]);
+
+  useEffect(() => {
+    window.addEventListener("resize", moveNavIndicatorToActive);
+
+    return () => window.removeEventListener("resize", moveNavIndicatorToActive);
+  }, [activeNavId, isFloating]);
 
   function userInitials(fullName?: string) {
     if (!fullName?.trim()) return "SZ";
@@ -54,23 +140,23 @@ export function AppHeader() {
     if (!user) return;
 
     if (key === "profile") {
-      navigate(routePaths.profile);
+      navigateWithTransition(routePaths.profile);
       return;
     }
 
     if (key === "bookings") {
-      navigate(routePaths.bookingHistory);
+      navigateWithTransition(routePaths.bookingHistory);
       return;
     }
 
     if (key === "dashboard") {
-      navigate(getDefaultRouteForRole(user.role));
+      navigateWithTransition(getDefaultRouteForRole(user.role));
       return;
     }
 
     if (key === "logout") {
       await logout();
-      navigate(routePaths.home);
+      navigateWithTransition(routePaths.home, { replace: true });
     }
   }
 
@@ -93,22 +179,48 @@ export function AppHeader() {
       >
         <div className="flex flex-row items-center gap-3">
           <Link
-            className="rounded-full border border-transparent px-2 py-1 text-[14px] font-bold leading-5 text-[#18181b] transition-all! hover:border-secondary"
+            className="rounded-full border border-transparent px-2 py-1 text-[14px] font-bold leading-5 text-[#18181b] transition-all!"
             href={routePaths.home}
           >
             SportZone<span className="text-success">.</span>
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Menu chính">
+          <nav
+            ref={navRef}
+            className="relative hidden items-center gap-1 lg:flex"
+            aria-label="Menu chính"
+            onMouseLeave={moveNavIndicatorToActive}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute bottom-1 h-0.5 rounded-full bg-accent transition-[left,width,opacity] duration-300 ease-out",
+                navIndicator.visible ? "opacity-100" : "opacity-0",
+              )}
+              style={{
+                left: navIndicator.left,
+                width: navIndicator.width,
+              }}
+            />
             <Separator orientation="vertical" className="h-4 w-0.5 my-auto"/>
             <Link
-              className="flex h-9 items-center font-normal justify-center rounded-3xl px-4 text-sm leading-5 text-[#18181b] transition-colors! hover:bg-default"
+              aria-current={isHomeActive ? "page" : undefined}
+              className={navLinkClassName}
+              data-nav-id="home"
               href={routePaths.home}
+              onFocus={handleNavItemFocus}
+              onMouseEnter={handleNavItemEnter}
             >
               Trang chủ
             </Link>
             <Dropdown>
-              <Dropdown.Trigger className="flex h-9 items-center justify-center gap-2 rounded-3xl px-4 text-sm! leading-5 text-[#18181b] outline-none transition-colors hover:bg-default">
+              <Dropdown.Trigger
+                aria-current={isCourtsActive ? "page" : undefined}
+                className={cn(navLinkClassName, "gap-2 text-sm! outline-none")}
+                data-nav-id="courts"
+                onFocus={handleNavItemFocus}
+                onMouseEnter={handleNavItemEnter}
+              >
                 Sân
                 <ChevronDown className="size-4" aria-hidden="true" />
               </Dropdown.Trigger>
@@ -121,7 +233,7 @@ export function AppHeader() {
                     );
 
                     if (item) {
-                      navigate(item.to);
+                      navigateWithTransition(item.to);
                     }
                   }}
                 >
@@ -135,9 +247,13 @@ export function AppHeader() {
             </Dropdown>
             {navItems.map((item) => (
               <Link
-                className="flex h-9 items-center font-normal justify-center rounded-3xl px-4 text-sm leading-5 text-[#18181b] transition-colors! hover:bg-default"
+                aria-current={isNavItemActive(item.to) ? "page" : undefined}
+                className={navLinkClassName}
+                data-nav-id={item.id}
                 href={item.to}
                 key={item.label}
+                onFocus={handleNavItemFocus}
+                onMouseEnter={handleNavItemEnter}
               >
                 {item.label}
               </Link>
@@ -208,7 +324,7 @@ export function AppHeader() {
                 className="h-9 rounded-3xl px-4 text-[14px]! font-medium!"
                 type="button"
                 variant="outline"
-                onPress={() => navigate(routePaths.login)}
+                onPress={() => navigateWithTransition(routePaths.login)}
               >
                 Đăng nhập
               </Button>
@@ -216,7 +332,7 @@ export function AppHeader() {
                 className="h-9 rounded-3xl px-4 text-[14px]! font-medium!"
                 type="button"
                 variant="primary"
-                onPress={() => navigate(routePaths.register)}
+                onPress={() => navigateWithTransition(routePaths.register)}
               >
                 Đăng ký
               </Button>

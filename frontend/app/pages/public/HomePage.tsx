@@ -1,9 +1,10 @@
 import {
   Calendar as CalendarIcon,
   CaretRight,
+  CreditCard,
   Envelope,
   Magnifier,
-  SquareCheck,
+  PaperPlane,
 } from "@gravity-ui/icons";
 import {
   Button,
@@ -11,6 +12,7 @@ import {
   Card,
   DateField,
   DatePicker,
+  Form,
   InputGroup,
   Label,
   Link,
@@ -20,6 +22,7 @@ import {
   TextField,
   Typography,
 } from "@heroui/react";
+import { type FormEvent } from "react";
 import { useNavigate } from "react-router";
 
 import { routePaths } from "~/routes/routePaths";
@@ -168,7 +171,7 @@ const bookingSteps: Step[] = [
       "Xem khung giờ còn trống, giá theo giờ và thông tin địa điểm trước khi đặt.",
   },
   {
-    icon: <SquareCheck className="size-5" aria-hidden="true" />,
+    icon: <CreditCard className="size-5" aria-hidden="true" />,
     step: "BƯỚC 3",
     title: "Thanh toán và tham gia đúng giờ",
     description:
@@ -179,14 +182,18 @@ const bookingSteps: Step[] = [
 export default function HomePage() {
   const navigate = useNavigate();
 
+  function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+  }
+
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <section className="px-2 pb-0">
         <div className="relative flex min-h-[420px] w-full overflow-hidden rounded-[32px] bg-[#111111] px-4 py-16 sm:min-h-[460px] sm:px-8 lg:min-h-[448px] lg:items-center lg:justify-center lg:px-12">
           <img
             alt="Sân bóng SportZone nhìn từ trên cao"
             className="absolute inset-0 h-full w-full object-cover"
-            src="/home/hero-field.png"
+            src="/home/hero-field.jpg"
           />
           <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
 
@@ -293,7 +300,7 @@ export default function HomePage() {
         className="bg-[#2c2c2c] pt-0"
         id="contact"
       >
-        <div className="rounded-b-[48px] bg-white px-6 py-12 lg:rounded-b-[72px] lg:px-12 lg:py-14">
+        <div className="bg-background px-6 py-12 lg:px-12 lg:py-14">
           <div className="flex max-w-[920px] flex-col gap-5">
             <Typography.Heading
               className="text-balance text-[40px] font-bold leading-[48px] text-[#1e1e1e] sm:text-[56px] sm:leading-[64px] lg:text-[72px] lg:leading-[86px]"
@@ -302,29 +309,33 @@ export default function HomePage() {
               Đặt sân nhanh chóng, tiết kiệm
             </Typography.Heading>
 
-            <TextField className="w-full max-w-[420px]" name="contact">
-              <Label>
-                Chúng tôi sẽ liên lạc với bạn qua email
-              </Label>
-              <InputGroup className="h-12 mt-2 rounded-2xl border-0 bg-default">
-                <InputGroup.Prefix>
-                  <Envelope className="size-4 text-muted" aria-hidden="true" />
-                </InputGroup.Prefix>
-                <InputGroup.Input
-                  className="text-[14px] placeholder:text-muted"
-                  placeholder="youremail@mail.com"
-                  type="email"
-                />
-              </InputGroup>
-            </TextField>
+            <Form
+              className="flex w-full max-w-[560px] flex-col items-stretch gap-3 sm:flex-row sm:items-end"
+              onSubmit={handleContactSubmit}
+            >
+              <TextField className="w-full flex-1" name="contact">
+                <Label>Chúng tôi sẽ liên lạc với bạn qua email</Label>
+                <InputGroup variant="primary" className="mt-2 h-12 rounded-2xl">
+                  <InputGroup.Prefix>
+                    <Envelope className="size-4 text-muted" aria-hidden="true" />
+                  </InputGroup.Prefix>
+                  <InputGroup.Input
+                    className="text-[14px] placeholder:text-muted"
+                    placeholder="youremail@mail.com"
+                    type="email"
+                  />
+                </InputGroup>
+              </TextField>
+
+              <Button
+                className="h-12 rounded-2xl px-4 text-[14px]! font-medium!"
+                type="submit"
+                variant="primary"
+              >
+                <PaperPlane/> Submit
+              </Button>
+            </Form>
           </div>
-        </div>
-        <div className="relative flex min-h-[360px] items-end justify-center overflow-hidden px-6">
-          <Typography
-            className="translate-y-10 text-[64px] font-bold leading-none text-white/0 [-webkit-text-stroke:1px_rgba(255,255,255,0.16)] sm:text-[120px] lg:text-[200px]"
-          >
-            SportZone.
-          </Typography>
         </div>
       </section>
     </div>
@@ -599,7 +610,7 @@ function BookingStepsSection() {
                   <Typography className="text-[12px] font-medium leading-4 text-[#18181b]">
                     {step.step}
                   </Typography>
-                  <Typography className="text-[14px] font-medium leading-5 text-[#18181b]">
+                  <Typography className="text-base font-medium leading-5 text-[#18181b]">
                     {step.title}
                   </Typography>
                 </div>
