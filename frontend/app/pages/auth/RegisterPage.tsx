@@ -207,7 +207,7 @@ export default function RegisterPage() {
                     <FieldError />
                   </TextField>
 
-                  <div className="flex md:flex-row flex-col md:gap-4 gap-0">
+                  <div className="flex md:flex-row flex-col gap-6">
                     <PasswordField
                       id="password"
                       label="Mật khẩu"

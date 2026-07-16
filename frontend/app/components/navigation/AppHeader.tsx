@@ -39,12 +39,14 @@ export function AppHeader() {
   const location = useLocation();
   const { isAuthenticated, logout, status, user } = useAuth();
   const [isFloating, setIsFloating] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [navIndicator, setNavIndicator] = useState<NavIndicator>({
     left: 0,
     width: 0,
     visible: false,
   });
   const navRef = useRef<HTMLElement | null>(null);
+  const isAccountReady = status === "authenticated" && isAuthenticated && user;
 
   const isHomeActive = location.pathname === routePaths.home;
   const isCourtsActive = location.pathname.startsWith(routePaths.courts);
@@ -126,6 +128,10 @@ export function AppHeader() {
     return () => window.removeEventListener("resize", moveNavIndicatorToActive);
   }, [activeNavId, isFloating]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.hash, location.pathname, location.search]);
+
   function userInitials(fullName?: string) {
     if (!fullName?.trim()) return "SZ";
 
@@ -158,6 +164,36 @@ export function AppHeader() {
       await logout();
       navigateWithTransition(routePaths.home, { replace: true });
     }
+  }
+
+  async function handleMobileAccountMenuAction(key: React.Key) {
+    setIsMobileMenuOpen(false);
+    await handleAccountMenuAction(key);
+  }
+
+  function handleMobileNavigate(to: string) {
+    setIsMobileMenuOpen(false);
+    navigateWithTransition(to);
+  }
+
+  function mobileButtonClassName(to: string) {
+    return cn(
+      "h-11 w-full justify-start rounded-2xl px-3 text-sm font-medium",
+      isNavItemActive(to) ? "bg-accent-soft text-accent" : "text-[#18181b]",
+    );
+  }
+
+  function mobileSportButtonClassName(to: string) {
+    const currentRoute = `${location.pathname}${location.search}`;
+    const isActive =
+      to === routePaths.courts
+        ? location.pathname === routePaths.courts && !location.search
+        : currentRoute === to;
+
+    return cn(
+      "h-10 w-full justify-start rounded-xl px-3 text-sm font-medium",
+      isActive ? "bg-accent text-accent-foreground" : "bg-default/70 text-muted",
+    );
   }
 
   return (
@@ -261,8 +297,8 @@ export function AppHeader() {
           </nav>
         </div>
 
-        <div className="hidden items-center gap-2 sm:flex">
-          {status === "authenticated" && isAuthenticated && user ? (
+        <div className="hidden items-center gap-2 lg:flex">
+          {isAccountReady ? (
             <Dropdown>
               <Dropdown.Trigger
                 aria-label="Mở menu tài khoản"
@@ -340,52 +376,199 @@ export function AppHeader() {
           )}
         </div>
 
-        {status === "authenticated" && isAuthenticated && user ? (
-          <Dropdown>
-            <Dropdown.Trigger
-              aria-label="Mở menu tài khoản"
-              className="flex size-10 items-center justify-center rounded-full outline-none transition-transform active:scale-[0.96] sm:hidden"
-            >
-              <Avatar className="size-9 border border-border bg-default">
-                {user.avatarUrl && (
-                  <Avatar.Image alt={user.fullName} src={user.avatarUrl} />
-                )}
-                <Avatar.Fallback>{userInitials(user.fullName)}</Avatar.Fallback>
-              </Avatar>
-            </Dropdown.Trigger>
-            <Dropdown.Popover className="min-w-[220px] rounded-2xl">
-              <Dropdown.Menu
-                aria-label="Tài khoản"
-                onAction={(key) => void handleAccountMenuAction(key)}
+        <div className="flex items-center gap-2 lg:hidden">
+          {isAccountReady && (
+            <Dropdown>
+              <Dropdown.Trigger
+                aria-label="Mở menu tài khoản"
+                className="flex size-10 items-center justify-center rounded-full outline-none transition-transform active:scale-[0.96]"
               >
-                <Dropdown.Item id="profile" textValue="Hồ sơ cá nhân">
-                  <Label>Hồ sơ cá nhân</Label>
-                </Dropdown.Item>
-                <Dropdown.Item id="bookings" textValue="Lịch đặt">
-                  <Label>Lịch đặt</Label>
-                </Dropdown.Item>
-                {(user.role === "ADMIN" || user.role === "VENDOR") && (
-                  <Dropdown.Item id="dashboard" textValue="Dashboard">
-                    <Label>Dashboard</Label>
+                <Avatar className="size-9 border border-border bg-default">
+                  {user.avatarUrl && (
+                    <Avatar.Image alt={user.fullName} src={user.avatarUrl} />
+                  )}
+                  <Avatar.Fallback>{userInitials(user.fullName)}</Avatar.Fallback>
+                </Avatar>
+              </Dropdown.Trigger>
+              <Dropdown.Popover className="min-w-[220px] rounded-2xl">
+                <Dropdown.Menu
+                  aria-label="Tài khoản"
+                  onAction={(key) => void handleAccountMenuAction(key)}
+                >
+                  <Dropdown.Item id="profile" textValue="Hồ sơ cá nhân">
+                    <Label>Hồ sơ cá nhân</Label>
                   </Dropdown.Item>
-                )}
-                <Dropdown.Item id="logout" textValue="Đăng xuất">
-                  <Label>Đăng xuất</Label>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown>
-        ) : (
+                  <Dropdown.Item id="bookings" textValue="Lịch đặt">
+                    <Label>Lịch đặt</Label>
+                  </Dropdown.Item>
+                  {(user.role === "ADMIN" || user.role === "VENDOR") && (
+                    <Dropdown.Item id="dashboard" textValue="Dashboard">
+                      <Label>Dashboard</Label>
+                    </Dropdown.Item>
+                  )}
+                  <Dropdown.Item id="logout" textValue="Đăng xuất">
+                    <Label>Đăng xuất</Label>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
+          )}
           <Button
             isIconOnly
-            aria-label="Mở menu"
-            className="sm:hidden"
+            aria-controls="mobile-navigation-menu"
+            aria-expanded={isMobileMenuOpen}
+            aria-label={isMobileMenuOpen ? "Đóng menu" : "Mở menu"}
             type="button"
             variant="tertiary"
+            onPress={() => setIsMobileMenuOpen((current) => !current)}
           >
             <Bars className="size-5" aria-hidden="true" />
           </Button>
+        </div>
+      </div>
+
+      <div
+        id="mobile-navigation-menu"
+        className={cn(
+          "absolute left-4 right-4 top-full z-50 mt-2 origin-top transition-[opacity,transform] duration-200 ease-out sm:left-auto sm:right-6 sm:w-[380px] lg:hidden",
+          isMobileMenuOpen
+            ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none -translate-y-2 scale-[0.98] opacity-0",
         )}
+      >
+        <div className="rounded-[22px] border border-border bg-white/95 p-2 shadow-[0_18px_54px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+          <nav className="grid gap-1" aria-label="Menu mobile">
+            <Button
+              className={mobileButtonClassName(routePaths.home)}
+              type="button"
+              variant="tertiary"
+              onPress={() => handleMobileNavigate(routePaths.home)}
+            >
+              Trang chủ
+            </Button>
+            <Button
+              className={mobileButtonClassName(routePaths.bookingHistory)}
+              type="button"
+              variant="tertiary"
+              onPress={() => handleMobileNavigate(routePaths.bookingHistory)}
+            >
+              Lịch đặt
+            </Button>
+            <Button
+              className={mobileButtonClassName("/#contact")}
+              type="button"
+              variant="tertiary"
+              onPress={() => handleMobileNavigate("/#contact")}
+            >
+              Liên hệ
+            </Button>
+
+            <div className="mt-1 rounded-[18px] border border-border bg-default/40 p-2">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <span
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    isCourtsActive ? "text-accent" : "text-muted",
+                  )}
+                >
+                  Sân thể thao
+                </span>
+                <span className="text-xs text-muted">
+                  {sportMenuItems.length} mục
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {sportMenuItems.map((item) => (
+                  <Button
+                    className={mobileSportButtonClassName(item.to)}
+                    key={item.id}
+                    type="button"
+                    variant="tertiary"
+                    onPress={() => handleMobileNavigate(item.to)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </nav>
+
+          <Separator className="my-2" />
+
+          {isAccountReady ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 rounded-[18px] bg-default/60 px-3 py-2">
+                <Avatar className="size-9 border border-border bg-default">
+                  {user.avatarUrl && (
+                    <Avatar.Image alt={user.fullName} src={user.avatarUrl} />
+                  )}
+                  <Avatar.Fallback>{userInitials(user.fullName)}</Avatar.Fallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[#18181b]">
+                    {user.fullName}
+                  </p>
+                  <p className="truncate text-xs text-muted">{user.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  className="h-10 rounded-xl text-sm"
+                  type="button"
+                  variant="secondary"
+                  onPress={() => void handleMobileAccountMenuAction("profile")}
+                >
+                  Hồ sơ
+                </Button>
+                <Button
+                  className="h-10 rounded-xl text-sm"
+                  type="button"
+                  variant="secondary"
+                  onPress={() => void handleMobileAccountMenuAction("bookings")}
+                >
+                  Lịch đặt
+                </Button>
+              </div>
+              {(user.role === "ADMIN" || user.role === "VENDOR") && (
+                <Button
+                  className="h-10 rounded-xl text-sm"
+                  type="button"
+                  variant="secondary"
+                  onPress={() => void handleMobileAccountMenuAction("dashboard")}
+                >
+                  {user.role === "ADMIN" ? "Admin Dashboard" : "Vendor Dashboard"}
+                </Button>
+              )}
+              <Button
+                className="h-10 rounded-xl text-sm"
+                type="button"
+                variant="danger"
+                onPress={() => void handleMobileAccountMenuAction("logout")}
+              >
+                Đăng xuất
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                className="h-10 rounded-xl text-sm"
+                type="button"
+                variant="outline"
+                onPress={() => handleMobileNavigate(routePaths.login)}
+              >
+                Đăng nhập
+              </Button>
+              <Button
+                className="h-10 rounded-xl text-sm"
+                type="button"
+                variant="primary"
+                onPress={() => handleMobileNavigate(routePaths.register)}
+              >
+                Đăng ký
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

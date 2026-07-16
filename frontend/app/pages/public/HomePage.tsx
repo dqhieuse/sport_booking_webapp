@@ -22,9 +22,14 @@ import {
   TextField,
   Typography,
 } from "@heroui/react";
-import { type FormEvent } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { courtsApi } from "~/features/courts/api/courtsApi";
+import type { Court } from "~/features/courts/types";
+import { sportsApi } from "~/features/sports/api/sportsApi";
+import type { Sport } from "~/features/sports/types";
+import { formatCurrency } from "~/lib/utils";
 import { routePaths } from "~/routes/routePaths";
 
 type CourtPreview = {
@@ -43,14 +48,6 @@ type Step = {
   description: string;
 };
 
-const sportFilters = [
-  { label: "Bóng đá", to: `${routePaths.courts}?sport=bong-da` },
-  { label: "Cầu lông", to: `${routePaths.courts}?sport=cau-long` },
-  { label: "Tennis", to: `${routePaths.courts}?sport=tennis` },
-  { label: "Pickleball", to: `${routePaths.courts}?sport=pickleball` },
-  { label: "Xem thêm", to: routePaths.sports },
-];
-
 const sportOptions = [
   { id: "all", label: "Tất cả môn thể thao" },
   { id: "bong-da", label: "Bóng đá" },
@@ -64,95 +61,6 @@ const areaOptions = [
   { id: "ha-noi", label: "Hà Nội" },
   { id: "ho-chi-minh", label: "TP. Hồ Chí Minh" },
   { id: "da-nang", label: "Đà Nẵng" },
-];
-
-const nearbyCourts: CourtPreview[] = [
-  {
-    id: 1,
-    name: "Sân cỏ nhân tạo Hòa Lạc",
-    address: "Hòa Lạc, TP. Hà Nội",
-    image: "/home/court-football.png",
-    price: "120.000đ/h",
-  },
-  {
-    id: 2,
-    name: "Sân bóng mini Thủ Đức",
-    address: "Linh Trung, TP. Hồ Chí Minh",
-    image: "/home/court-football.png",
-    price: "150.000đ/h",
-  },
-  {
-    id: 3,
-    name: "Sân bóng đá Phú Nhuận",
-    address: "Hoàng Văn Thụ, TP. Hồ Chí Minh",
-    image: "/home/court-football.png",
-    price: "128.000đ/h",
-  },
-  {
-    id: 4,
-    name: "Sân bóng Celadon Tân Phú",
-    address: "Sơn Kỳ, TP. Hồ Chí Minh",
-    image: "/home/court-football.png",
-    price: "180.000đ/h",
-  },
-];
-
-const popularCourts: CourtPreview[] = [
-  {
-    id: 5,
-    name: "Sân cầu lông Hòa Lạc",
-    address: "Khu CNC Hòa Lạc, Hà Nội",
-    image: "/home/court-badminton.png",
-    price: "120.000đ/h",
-  },
-  {
-    id: 6,
-    name: "Sân cầu lông Bình Thạnh",
-    address: "Ung Văn Khiêm, TP. Hồ Chí Minh",
-    image: "/home/court-badminton.png",
-    price: "110.000đ/h",
-  },
-  {
-    id: 7,
-    name: "Sân cầu lông Quận 10",
-    address: "Thành Thái, TP. Hồ Chí Minh",
-    image: "/home/court-badminton.png",
-    price: "130.000đ/h",
-  },
-  {
-    id: 8,
-    name: "Sân cầu lông Cầu Giấy",
-    address: "Dịch Vọng, Hà Nội",
-    image: "/home/court-badminton.png",
-    price: "125.000đ/h",
-  },
-];
-
-const ratedCourts: CourtPreview[] = [
-  {
-    id: 9,
-    name: "Cụm sân bóng đá Nam Quốc gia Hà Nội",
-    address: "Lê Đức Thọ, Mỹ Đình",
-    image: "/home/court-football.png",
-    price: "400.000 - 500.000",
-    time: "10:00 - 21:00",
-  },
-  {
-    id: 10,
-    name: "Sân vận động Mỹ Đình",
-    address: "Đường Lê Đức Thọ, Hà Nội",
-    image: "/home/court-football.png",
-    price: "350.000 - 450.000",
-    time: "06:30 - 22:30",
-  },
-  {
-    id: 11,
-    name: "Sân bóng đá Phú Nhuận",
-    address: "Nguyễn Kiệm, TP. Hồ Chí Minh",
-    image: "/home/court-football.png",
-    price: "670.000 - 290.000",
-    time: "17:00 - 21:00",
-  },
 ];
 
 const bookingSteps: Step[] = [
@@ -181,6 +89,54 @@ const bookingSteps: Step[] = [
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [isLoadingHomeData, setIsLoadingHomeData] = useState(true);
+  const [homeDataError, setHomeDataError] = useState<string | null>(null);
+
+  const loadHomeData = useCallback(async () => {
+    setIsLoadingHomeData(true);
+    setHomeDataError(null);
+
+    try {
+      const [sportsResponse, courtsResponse] = await Promise.all([
+        sportsApi.getSports(),
+        courtsApi.getCourts({ status: "ACTIVE", page: 0, size: 12 }),
+      ]);
+
+      setSports(sportsResponse.data);
+      setCourts(getItems(courtsResponse.data));
+    } catch (error) {
+      setHomeDataError(getErrorMessage(error));
+      setSports([]);
+      setCourts([]);
+    } finally {
+      setIsLoadingHomeData(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadHomeData();
+  }, [loadHomeData]);
+
+  const sportFilters = useMemo(
+    () => [
+      ...sports.slice(0, 4).map((sport) => ({
+        label: sport.name,
+        to: `${routePaths.courts}?sportId=${sport.id}`,
+      })),
+      { label: "Xem thêm", to: routePaths.sports },
+    ],
+    [sports],
+  );
+
+  const courtPreviews = useMemo(
+    () => courts.map(mapCourtToPreview),
+    [courts],
+  );
+  const nearbyCourts = courtPreviews.slice(0, 4);
+  const popularCourts = courtPreviews.slice(4, 8);
+  const ratedCourts = courtPreviews.slice(8, 11);
 
   function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -188,7 +144,7 @@ export default function HomePage() {
 
   return (
     <div className="bg-background">
-      <section className="px-2 pb-0">
+      <section className="px-2 pb-0 hidden">
         <div className="relative flex min-h-[420px] w-full overflow-hidden rounded-[32px] bg-[#111111] px-4 py-16 sm:min-h-[460px] sm:px-8 lg:min-h-[448px] lg:items-center lg:justify-center lg:px-12">
           <img
             alt="Sân bóng SportZone nhìn từ trên cao"
@@ -218,12 +174,12 @@ export default function HomePage() {
               <Card.Content className="grid w-full gap-3 p-4 text-left md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_198px_185px_186px_auto] xl:items-end">
                 <SearchField className="w-full" fullWidth>
                   <Label>Tìm theo từ khoá</Label>
-                  <SearchField.Group className="h-9 rounded-xl border-0 bg-white shadow-[0_2px_4px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06)]">
+                  <SearchField.Group className="h-11 rounded-2xl">
                     <SearchField.SearchIcon>
                       <Magnifier className="size-4 text-muted" aria-hidden="true" />
                     </SearchField.SearchIcon>
                     <SearchField.Input
-                      className="text-[14px] placeholder:text-muted"
+                      className="placeholder:text-muted"
                       placeholder="Tìm kiếm sân bóng đá, cầu lông,..."
                     />
                   </SearchField.Group>
@@ -263,25 +219,41 @@ export default function HomePage() {
         >
           Lựa chọn sân phù hợp theo môn thể thao
         </Typography.Heading>
-        <div className="flex flex-wrap gap-3">
-          {sportFilters.map((sport) => (
-            <Button
-              className="h-8 min-w-[132px] rounded-3xl border border-border bg-white px-4 text-[13px]! font-medium! text-[#18181b] shadow-none"
-              key={sport.label}
-              type="button"
-              variant="tertiary"
-              onPress={() => navigate(sport.to)}
-            >
-              {sport.label}
-            </Button>
-          ))}
-        </div>
+        {isLoadingHomeData ? (
+          <div className="flex flex-wrap gap-3" aria-busy="true">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                className="h-8 w-[132px] animate-pulse rounded-3xl bg-default"
+                key={index}
+              />
+            ))}
+          </div>
+        ) : sportFilters.length > 1 ? (
+          <div className="flex flex-wrap gap-3">
+            {sportFilters.map((sport) => (
+              <Button
+                className="h-8 min-w-[132px] rounded-3xl border border-border bg-white px-4 text-[13px]! font-medium! text-[#18181b] shadow-none"
+                key={sport.label}
+                type="button"
+                variant="tertiary"
+                onPress={() => navigate(sport.to)}
+              >
+                {sport.label}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <HomeInlineState message="Chưa có môn thể thao đang hoạt động." />
+        )}
 
         <CourtSection
           className="mt-10"
           eyebrow="Khu vực được đề xuất gần vị trí của bạn"
           title="Sân nổi bật gần bạn"
           courts={nearbyCourts}
+          errorMessage={homeDataError}
+          isLoading={isLoadingHomeData}
+          onRetry={loadHomeData}
         />
 
         <CourtSection
@@ -289,9 +261,17 @@ export default function HomePage() {
           eyebrow="Các sân người chơi thường xuyên lựa chọn"
           title="Được đặt nhiều"
           courts={popularCourts}
+          errorMessage={homeDataError}
+          isLoading={isLoadingHomeData}
+          onRetry={loadHomeData}
         />
 
-        <RatedCourtsSection />
+        <RatedCourtsSection
+          courts={ratedCourts}
+          errorMessage={homeDataError}
+          isLoading={isLoadingHomeData}
+          onRetry={loadHomeData}
+        />
 
         <BookingStepsSection />
       </section>
@@ -354,8 +334,8 @@ function FilterSelect({
   return (
     <Select className="w-full" placeholder={placeholder}>
       <Label>{label}</Label>
-      <Select.Trigger>
-        <Select.Value />
+      <Select.Trigger className={"h-11 rounded-2xl"}>
+        <Select.Value className={"my-auto text-[14px]!"}/>
         <Select.Indicator />
       </Select.Trigger>
       <Select.Popover>
@@ -376,7 +356,7 @@ function FilterDatePicker() {
   return (
     <DatePicker className="w-full" name="date">
       <Label>Date</Label>
-      <DateField.Group fullWidth>
+      <DateField.Group fullWidth className={"h-11 rounded-2xl"}>
         <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
         <DateField.Suffix>
           <DatePicker.Trigger>
@@ -414,22 +394,43 @@ function FilterDatePicker() {
 function CourtSection({
   className = "",
   courts,
+  errorMessage,
   eyebrow,
+  isLoading,
+  onRetry,
   title,
 }: {
   className?: string;
   courts: CourtPreview[];
+  errorMessage?: string | null;
   eyebrow: string;
+  isLoading?: boolean;
+  onRetry?: () => void;
   title: string;
 }) {
   return (
     <section className={className}>
       <SectionHeading eyebrow={eyebrow} title={title} />
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {courts.map((court) => (
-          <CourtPreviewCard court={court} key={court.id} />
-        ))}
-      </div>
+      {isLoading ? (
+        <CourtPreviewSkeleton className="mt-5" count={4} />
+      ) : errorMessage ? (
+        <HomeInlineState
+          className="mt-5"
+          message={errorMessage}
+          onRetry={onRetry}
+        />
+      ) : courts.length === 0 ? (
+        <HomeInlineState
+          className="mt-5"
+          message="Chưa có sân phù hợp để hiển thị."
+        />
+      ) : (
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {courts.map((court) => (
+            <CourtPreviewCard court={court} key={court.id} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -516,64 +517,172 @@ function CourtPreviewCard({ court }: { court: CourtPreview }) {
   );
 }
 
-function RatedCourtsSection() {
+function RatedCourtsSection({
+  courts,
+  errorMessage,
+  isLoading,
+  onRetry,
+}: {
+  courts: CourtPreview[];
+  errorMessage?: string | null;
+  isLoading?: boolean;
+  onRetry?: () => void;
+}) {
+  const navigate = useNavigate();
+
   return (
     <section className="mt-12">
       <SectionHeading
         eyebrow="Cụm sân được người chơi đánh giá cao"
         title="Cụm sân được đánh giá cao"
       />
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        {ratedCourts.map((court) => (
-          <Card
-            className="rounded-3xl p-1.5 border border-border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
-            key={court.id}
-          >
-            <Card.Content className="flex flex-row min-h-[96px] gap-3 p-0">
-              <img
-                alt={court.name}
-                className="w-[116px] shrink-0 rounded-2xl aspect-video object-cover"
-                src={court.image}
-              />
-              <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-1">
-                <div className="min-w-0">
-                  <Typography className="truncate text-base font-medium text-[#18181b]">
-                    {court.name}
-                  </Typography>
-                  <Typography.Paragraph
-                    className="text-[11px] leading-4 text-muted"
-                    size="xs"
-                  >
-                    {court.address}
-                  </Typography.Paragraph>
-                </div>
-                <div className="flex items-end justify-between gap-2">
-                  <div>
-                    <Typography className="text-[12px] font-medium leading-4 text-[#18181b]">
-                      {court.time}
+      {isLoading ? (
+        <CourtPreviewSkeleton className="mt-5 lg:grid-cols-3" count={3} />
+      ) : errorMessage ? (
+        <HomeInlineState
+          className="mt-5"
+          message={errorMessage}
+          onRetry={onRetry}
+        />
+      ) : courts.length === 0 ? (
+        <HomeInlineState
+          className="mt-5"
+          message="Chưa có cụm sân phù hợp để hiển thị."
+        />
+      ) : (
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {courts.map((court) => (
+            <Card
+              className="rounded-3xl p-1.5 border border-border bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+              key={court.id}
+            >
+              <Card.Content className="flex flex-row min-h-[96px] gap-3 p-0">
+                <img
+                  alt={court.name}
+                  className="w-[116px] shrink-0 rounded-2xl aspect-video object-cover"
+                  src={court.image}
+                />
+                <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-1">
+                  <div className="min-w-0">
+                    <Typography className="truncate text-base font-medium text-[#18181b]">
+                      {court.name}
                     </Typography>
                     <Typography.Paragraph
                       className="text-[11px] leading-4 text-muted"
                       size="xs"
                     >
-                      Thời gian mở cửa
+                      {court.address}
                     </Typography.Paragraph>
                   </div>
-                  <Button
-                    className="h-8 shrink-0 rounded-3xl px-3 text-[12px]! font-medium!"
-                    type="button"
-                    variant="tertiary"
-                  >
-                    Chi tiết
-                  </Button>
+                  <div className="flex items-end justify-between gap-2">
+                    <div>
+                      <Typography className="text-[12px] font-medium leading-4 text-[#18181b]">
+                        {court.time ?? "Đang cập nhật"}
+                      </Typography>
+                      <Typography.Paragraph
+                        className="text-[11px] leading-4 text-muted"
+                        size="xs"
+                      >
+                        Thời gian mở cửa
+                      </Typography.Paragraph>
+                    </div>
+                    <Button
+                      className="h-8 shrink-0 rounded-3xl px-3 text-[12px]! font-medium!"
+                      type="button"
+                      variant="tertiary"
+                      onPress={() => navigate(routePaths.courtDetail(String(court.id)))}
+                    >
+                      Chi tiết
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </Card.Content>
-          </Card>
-        ))}
-      </div>
+              </Card.Content>
+            </Card>
+          ))}
+        </div>
+      )}
     </section>
   );
+}
+
+function CourtPreviewSkeleton({
+  className = "",
+  count,
+}: {
+  className?: string;
+  count: number;
+}) {
+  return (
+    <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-4 ${className}`} aria-busy="true">
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          className="h-[220px] animate-pulse rounded-3xl border border-border bg-default"
+          key={index}
+        />
+      ))}
+    </div>
+  );
+}
+
+function HomeInlineState({
+  className = "",
+  message,
+  onRetry,
+}: {
+  className?: string;
+  message: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className={`rounded-3xl border border-border bg-white p-5 ${className}`}>
+      <Typography.Paragraph className="text-sm leading-5 text-muted" size="sm">
+        {message}
+      </Typography.Paragraph>
+      {onRetry ? (
+        <Button
+          className="mt-3 h-9 rounded-3xl px-4 text-[13px]! font-medium!"
+          type="button"
+          variant="tertiary"
+          onPress={onRetry}
+        >
+          Thử lại
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function mapCourtToPreview(court: Court): CourtPreview {
+  const openingTime = court.venueOpeningTime && court.venueClosingTime
+    ? `${court.venueOpeningTime} - ${court.venueClosingTime}`
+    : undefined;
+
+  return {
+    id: court.id,
+    name: court.name,
+    address: court.venueAddress ?? court.venueName ?? "Địa điểm đang cập nhật",
+    image: court.primaryImageUrl ?? getFallbackCourtImage(court.sportName),
+    price: `${formatCurrency(court.pricePerHour)}/h`,
+    time: openingTime,
+  };
+}
+
+function getFallbackCourtImage(sportName?: string) {
+  const normalizedSportName = sportName?.toLocaleLowerCase("vi-VN") ?? "";
+
+  if (normalizedSportName.includes("cầu lông") || normalizedSportName.includes("badminton")) {
+    return "/home/court-badminton.png";
+  }
+
+  return "/home/court-football.png";
+}
+
+function getItems<T>(data: T[] | { items: T[] }) {
+  return Array.isArray(data) ? data : data.items;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Không tải được dữ liệu trang chủ.";
 }
 
 function BookingStepsSection() {

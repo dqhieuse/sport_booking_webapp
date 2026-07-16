@@ -7,7 +7,7 @@ import { routePaths } from "~/routes/routePaths";
 
 export function SportCard({ sport }: { sport: Sport }) {
   return (
-    <Link to={`${routePaths.courts}?sport=${sport.slug ?? sport.id}`}>
+    <Link to={`${routePaths.courts}?sportId=${sport.id}`}>
       <Card
         className="border border-border bg-card transition hover:border-primary"
         variant="default"
@@ -19,7 +19,7 @@ export function SportCard({ sport }: { sport: Sport }) {
           <div>
             <h2 className="font-semibold">{sport.name}</h2>
             <p className="text-sm text-muted-foreground">
-              Tìm sân phù hợp theo môn
+              {sport.description || "Tìm sân phù hợp theo môn"}
             </p>
           </div>
         </Card.Content>

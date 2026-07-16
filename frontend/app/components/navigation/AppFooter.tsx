@@ -39,7 +39,7 @@ const contactItems = [
 ];
 
 const footerLinkClassName =
-  "relative inline-flex w-fit text-white/60 transition-colors before:absolute before:-bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-success before:transition-transform before:duration-300 before:ease-out hover:text-success hover:before:scale-x-100 focus-visible:text-success focus-visible:before:scale-x-100";
+  "relative inline-flex w-fit text-white/60 transition-colors before:absolute before:-bottom-1 before:left-0 before:h-px before:w-full before:origin-left before:scale-x-0 before:bg-accent before:transition-transform before:duration-300 before:ease-out hover:text-accent! hover:before:scale-x-100 focus-visible:text-success focus-visible:before:scale-x-100";
 
 export function AppFooter() {
   const currentYear = new Date().getFullYear();
